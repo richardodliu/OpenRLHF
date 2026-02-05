@@ -21,6 +21,102 @@ from openrlhf.utils.utils import zero_pad_sequences
 logger = init_logger(__name__)
 
 
+def _adaptive_token_normalization_single_group(group_adv, group_mask, group_idx=0, eps=1e-8, max_scale=10.0):
+    """Apply adaptive alpha/beta normalization to advantages of a single prompt group.
+
+    For a group with both positive and negative advantages, solve for alpha and beta such that:
+      - mean(A_hat) = 0 and var(A_hat) = 1 (on non-zero tokens)
+      - A_hat = alpha * A if A > 0, beta * A if A < 0, 0 if A = 0
+
+    Fallback: return original advantages when normalization cannot be applied
+    (e.g., all same sign, numerical issues).
+
+    Args:
+        group_adv: (n_samples, seq_len) advantages for one prompt group
+        group_mask: (n_samples, seq_len) action mask
+        group_idx: group index for logging
+        eps: small constant for numerical stability
+        max_scale: maximum allowed value for alpha/beta
+    Returns:
+        normalized group_adv (new tensor)
+    """
+    flat_adv = group_adv.flatten()
+    flat_mask = group_mask.flatten().bool()
+
+    masked_adv = flat_adv[flat_mask]
+    if masked_adv.numel() == 0:
+        return group_adv
+
+    # Separate positive and negative advantages (exclude exact zeros from both)
+    pos_mask = masked_adv > 0
+    neg_mask = masked_adv < 0
+
+    token_pos = pos_mask.sum().float()  # |P| = number of positive tokens
+    token_neg = neg_mask.sum().float()  # |N| = number of negative tokens
+
+    # Fallback: all same sign → skip normalization, return original
+    if token_pos == 0 or token_neg == 0:
+        logger.info(
+            f"[ProMax] group {group_idx}: skip (same sign), token_pos={int(token_pos)}, token_neg={int(token_neg)}"
+        )
+        return group_adv
+
+    # Compute statistics for normalization
+    # S+ = sum of positive advantages, S- = sum of negative advantages
+    sum_pos = masked_adv[pos_mask].sum()
+    sum_neg = masked_adv[neg_mask].sum()
+
+    # Fallback: sum too small → skip normalization to avoid numerical issues
+    if sum_pos.abs() < eps or sum_neg.abs() < eps:
+        logger.info(
+            f"[ProMax] group {group_idx}: skip (sum too small), "
+            f"sum_pos={sum_pos.item():.6e}, sum_neg={sum_neg.item():.6e}"
+        )
+        return group_adv
+
+    # Q+ = sum of squared positive advantages, Q- = sum of squared negative advantages
+    sum_sq_pos = (masked_adv[pos_mask] ** 2).sum()
+    sum_sq_neg = (masked_adv[neg_mask] ** 2).sum()
+
+    ratio = sum_pos / sum_neg  # S+/S-, sum_pos > 0, sum_neg < 0 → ratio < 0
+
+    # N = number of non-zero tokens only
+    # This ensures var(A_hat) = 1 is computed over non-zero tokens only
+    token_nonzero = token_pos + token_neg
+
+    # alpha = sqrt(N / (Q+ + (S+/S-)^2 * Q-))
+    # Clamp ratio^2 * sum_sq_neg to avoid overflow when ratio is very large
+    ratio_sq_sum_sq_neg = (ratio**2 * sum_sq_neg).clamp(max=1e8)
+    alpha = torch.sqrt(token_nonzero / (sum_sq_pos + ratio_sq_sum_sq_neg + eps))
+    beta = -alpha * ratio  # ratio < 0, so beta > 0
+
+    # Fallback: numerical issues → skip normalization
+    if not (torch.isfinite(alpha) and torch.isfinite(beta)):
+        logger.info(
+            f"[ProMax] group {group_idx}: skip (alpha/beta not finite), "
+            f"alpha={alpha.item()}, beta={beta.item()}, ratio={ratio.item():.6e}"
+        )
+        return group_adv
+
+    # Clamp alpha and beta to reasonable range for numerical stability
+    alpha = alpha.clamp(min=eps, max=max_scale)
+    beta = beta.clamp(min=eps, max=max_scale)
+
+    # Scale positive advantages by alpha, negative by beta, zero stays zero
+    result = torch.where(group_adv > 0, alpha * group_adv, torch.where(group_adv < 0, beta * group_adv, group_adv))
+    result = result * group_mask
+
+    # Log per-group diagnostics (only non-zero tokens)
+    normed_vals = result.flatten()[flat_mask]
+    normed_nonzero = normed_vals[normed_vals != 0]
+    logger.info(
+        f"[ProMax] group {group_idx}: alpha={alpha.item():.4f}, beta={beta.item():.4f}, "
+        f"token_pos={int(token_pos)}, token_neg={int(token_neg)}, "
+        f"normed_mean={normed_nonzero.mean().item():.4f}, normed_var={normed_nonzero.var().item():.4f}"
+    )
+    return result
+
+
 def to(tensor: Union[torch.Tensor, list[torch.Tensor]], device):
     if isinstance(tensor, list):
         return [to(t, device) for t in tensor]
@@ -725,9 +821,48 @@ class RemoteExperienceMaker:
                 experience.info["group_reward_std"] = group_reward_std
 
         # reward shaping
-        if args.advantage_estimator == "rloo":
+        # all_same_groups_mask: (num_prompts,) bool tensor marking groups with all-same rewards
+        # Only used when uniform_scale is enabled to skip RLOO and normalization for these groups
+        all_same_groups_mask = None
+        if args.advantage_estimator in ["rloo", "reinforce_pro_max"]:
+            # RLOO baseline: b_i = (sum(r_j) - r_i) / (n - 1)
             baseline = (rewards.sum(-1, keepdim=True) - rewards) / (args.n_samples_per_prompt - 1)
-            rewards = rewards - baseline
+            shaped_rewards = rewards - baseline
+
+            # When uniform_scale is enabled: detect all-same reward groups and handle specially
+            if args.advantage_estimator == "reinforce_pro_max" and args.uniform_scale:
+                # Detect all-same reward groups (std == 0)
+                group_std = rewards.std(-1, keepdim=True)
+                all_same_groups_mask = (group_std.squeeze(-1) < 1e-8)  # (num_prompts,)
+                all_same_mask = all_same_groups_mask.unsqueeze(-1).expand_as(rewards)
+
+                # For all-same groups: use reward / n instead of RLOO
+                # This preserves gradient signal for uniformly good/bad responses
+                fallback_rewards = rewards / args.n_samples_per_prompt
+
+                # Combine: use RLOO for mixed groups, fallback for all-same groups
+                rewards = torch.where(all_same_mask, fallback_rewards, shaped_rewards)
+
+                num_all_same_groups = all_same_groups_mask.sum().item()
+                logger.info(
+                    f"[ProMax] RLOO reward shaping (uniform_scale=True): "
+                    f"raw_reward_mean={raw_rewards.mean().item():.4f}, "
+                    f"raw_reward_std={raw_rewards.std().item():.4f}, "
+                    f"shaped_reward_mean={rewards.mean().item():.4f}, "
+                    f"shaped_reward_std={rewards.std().item():.4f}, "
+                    f"all_same_groups={num_all_same_groups}/{rewards.shape[0]}"
+                )
+            else:
+                # For rloo and reinforce_pro_max (without uniform_scale): use standard RLOO for all groups
+                rewards = shaped_rewards
+
+                if args.advantage_estimator == "reinforce_pro_max":
+                    logger.info(
+                        f"[ProMax] RLOO reward shaping: raw_reward_mean={raw_rewards.mean().item():.4f}, "
+                        f"raw_reward_std={raw_rewards.std().item():.4f}, "
+                        f"shaped_reward_mean={rewards.mean().item():.4f}, "
+                        f"shaped_reward_std={rewards.std().item():.4f}"
+                    )
         elif args.advantage_estimator in ["reinforce_baseline", "dr_grpo"]:
             # REINFORCE++-baseline and Dr. GRPO removed the `/std` in GRPO as `/ std` is not needed in RL variance reduction theory.
             # And `k3 KL` has a larger variance than `k1 KL` under a categorical distribution.
@@ -755,14 +890,22 @@ class RemoteExperienceMaker:
                     args.gamma,
                     args.lambd,
                 )
-            elif self.advantage_estimator in ["reinforce", "rloo", "reinforce_baseline", "group_norm", "dr_grpo"]:
+            elif self.advantage_estimator in [
+                "reinforce",
+                "rloo",
+                "reinforce_baseline",
+                "group_norm",
+                "dr_grpo",
+                "reinforce_pro_max",
+            ]:
                 if args.gamma != 1.0 and self.advantage_estimator in [
                     "rloo",
                     "reinforce_baseline",
                     "group_norm",
                     "dr_grpo",
+                    "reinforce_pro_max",
                 ]:
-                    logger.warning("gamma is set to 1.0 for rloo, reinforce_baseline, and group_norm")
+                    logger.warning("gamma is set to 1.0 for rloo, reinforce_baseline, group_norm, dr_grpo, and reinforce_pro_max")
                     args.gamma = 1.0
 
                 experience.returns = self.get_cumulative_returns(
@@ -804,6 +947,177 @@ class RemoteExperienceMaker:
             # Apply normalization to each experience
             for exp in experiences:
                 exp.advantages = (exp.advantages - mean) * rstd
+
+        # Per-prompt adaptive token-level normalization for REINFORCE Pro Max
+        elif self.args.advantage_estimator == "reinforce_pro_max":
+            scale_uniform = args.uniform_scale
+            log_prefix = "[ProMax]"
+
+            # Sanity checks
+            n = args.n_samples_per_prompt
+            total_samples = sum(exp_len)
+            assert n > 1, f"{log_prefix} n_samples_per_prompt must be > 1, got {n}"
+            assert total_samples % n == 0, (
+                f"{log_prefix} total_samples ({total_samples}) must be divisible by n_samples_per_prompt ({n})"
+            )
+
+            # Log experience structure for packing_samples verification
+            logger.info(
+                f"{log_prefix} experience structure: num_experiences={len(experiences)}, "
+                f"exp_lens={exp_len}, total_samples={total_samples}"
+            )
+            for i, exp in enumerate(experiences):
+                logger.info(
+                    f"{log_prefix} exp[{i}]: advantages.shape={exp.advantages.shape}, "
+                    f"action_mask.shape={exp.action_mask.shape}, "
+                    f"index={exp.index}, "
+                    f"num_valid_tokens={exp.action_mask.sum().item()}"
+                )
+
+            # 1. Pad all advantages/masks to the same max seq_len (micro-batches may differ)
+            orig_seq_lens = [exp.advantages.shape[-1] for exp in experiences]
+            max_seq_len = max(orig_seq_lens)
+            padded_advs, padded_masks = [], []
+            for exp, seq_len in zip(experiences, orig_seq_lens):
+                if seq_len < max_seq_len:
+                    pad_len = max_seq_len - seq_len
+                    padded_advs.append(torch.nn.functional.pad(exp.advantages, (0, pad_len), value=0.0))
+                    padded_masks.append(torch.nn.functional.pad(exp.action_mask, (0, pad_len), value=0))
+                else:
+                    padded_advs.append(exp.advantages)
+                    padded_masks.append(exp.action_mask)
+
+            all_adv = torch.cat(padded_advs, dim=0)
+            all_mask = torch.cat(padded_masks, dim=0)
+
+            logger.info(
+                f"{log_prefix} after padding: orig_seq_lens={orig_seq_lens}, max_seq_len={max_seq_len}, "
+                f"all_adv.shape={all_adv.shape}, all_mask.shape={all_mask.shape}"
+            )
+
+            # Ensure indices is on the same device as data
+            indices = indices.to(all_adv.device)
+
+            # === Sanity check 2.2: indices must be a permutation of 0..B-1 ===
+            # This ensures sorted_adv[indices] = all_adv works correctly without overwrites or gaps
+            B = all_adv.shape[0]
+            assert indices.numel() == B, (
+                f"{log_prefix} indices length mismatch: got {indices.numel()}, expected {B}"
+            )
+            assert torch.unique(indices).numel() == B, (
+                f"{log_prefix} indices has duplicates: unique count {torch.unique(indices).numel()} != {B}"
+            )
+            assert indices.min().item() == 0, (
+                f"{log_prefix} indices min is {indices.min().item()}, expected 0"
+            )
+            assert indices.max().item() == B - 1, (
+                f"{log_prefix} indices max is {indices.max().item()}, expected {B - 1}"
+            )
+
+            sorted_adv = torch.empty_like(all_adv)
+            sorted_mask = torch.empty_like(all_mask)
+            sorted_adv[indices] = all_adv
+            sorted_mask[indices] = all_mask
+
+            logger.info(
+                f"{log_prefix} indices mapping: indices.shape={indices.shape}, "
+                f"indices[:16]={indices[:16].tolist()}, "
+                f"sorted_adv.shape={sorted_adv.shape}"
+            )
+
+            # 2. Reshape by prompt groups: (num_prompts, n_samples_per_prompt, seq_len)
+            num_prompts = sorted_adv.shape[0] // n
+            grouped_adv = sorted_adv.reshape(num_prompts, n, -1)
+            grouped_mask = sorted_mask.reshape(num_prompts, n, -1)
+
+            # === Sanity check 2.1: each group must contain samples from the same prompt ===
+            # Collect all prompts in sorted order (after indices mapping)
+            all_prompts = sum([exp.prompts for exp in experiences], [])
+            if len(all_prompts) == B:
+                # Sort prompts by indices to match the grouped order
+                sorted_prompts = [None] * B
+                for i, idx in enumerate(indices.tolist()):
+                    sorted_prompts[idx] = all_prompts[i]
+
+                # Check each group has consistent prompts
+                for g in range(num_prompts):
+                    group_prompts = sorted_prompts[g * n : (g + 1) * n]
+                    first_prompt = group_prompts[0]
+                    if not all(p == first_prompt for p in group_prompts):
+                        # Log detailed error info
+                        unique_prompts = list(set(group_prompts))
+                        raise AssertionError(
+                            f"{log_prefix} group {g} has inconsistent prompts! "
+                            f"Found {len(unique_prompts)} unique prompts in group: {unique_prompts[:3]}... "
+                            f"This indicates the original sample order is not prompt-major. "
+                            f"Ensure each prompt's n_samples_per_prompt samples are contiguous in the batch."
+                        )
+                logger.info(f"{log_prefix} prompt grouping validation passed: all {num_prompts} groups are consistent")
+            else:
+                raise AssertionError(
+                    f"{log_prefix} cannot validate prompt grouping: "
+                    f"all_prompts length ({len(all_prompts)}) != batch size ({B}). "
+                    f"ProMax requires prompts information to ensure correct per-prompt grouping."
+                )
+
+            logger.info(
+                f"{log_prefix} reshape to groups: n_samples_per_prompt={n}, num_prompts={num_prompts}, "
+                f"grouped_adv.shape={grouped_adv.shape}, grouped_mask.shape={grouped_mask.shape}"
+            )
+
+            # Log per-group token distribution before normalization
+            for i in range(num_prompts):
+                group_valid_tokens = grouped_mask[i].sum().item()
+                per_sample_tokens = [grouped_mask[i, j].sum().item() for j in range(n)]
+                logger.info(
+                    f"{log_prefix} group[{i}] before norm: total_valid_tokens={group_valid_tokens}, "
+                    f"per_sample_tokens={per_sample_tokens}"
+                )
+
+            # 3. Apply adaptive normalization per prompt group
+            # When uniform_scale is enabled: Skip normalization for all-same reward groups (they already have reward/n)
+            # Otherwise: Apply normalization to all groups
+            num_skipped = 0
+            for i in range(num_prompts):
+                if scale_uniform and all_same_groups_mask is not None and all_same_groups_mask[i]:
+                    # Skip normalization for all-same groups, keep advantages as-is
+                    num_skipped += 1
+                    logger.info(f"{log_prefix} group {i}: skip normalization (all-same reward group)")
+                else:
+                    grouped_adv[i] = _adaptive_token_normalization_single_group(grouped_adv[i], grouped_mask[i], group_idx=i)
+
+            if num_skipped > 0:
+                logger.info(f"{log_prefix} skipped {num_skipped}/{num_prompts} groups (all-same reward)")
+
+            # 4. Map back to shuffled order, trim to original seq_lens, and assign
+            sorted_adv = grouped_adv.reshape(-1, max_seq_len)
+            unshuffled_adv = sorted_adv[indices]
+
+            exp_offset = 0
+            for exp, seq_len in zip(experiences, orig_seq_lens):
+                exp_size = len(exp.index)
+                exp.advantages = unshuffled_adv[exp_offset : exp_offset + exp_size, :seq_len]
+                exp_offset += exp_size
+
+            # Log batch summary statistics (only non-zero tokens)
+            all_normed = grouped_adv.reshape(-1)[sorted_mask.reshape(-1).bool()]
+            all_normed_nonzero = all_normed[all_normed != 0]
+            if all_normed_nonzero.numel() > 0:
+                token_pos = (all_normed > 0).sum().item()
+                token_neg = (all_normed < 0).sum().item()
+                # Count pos/neg samples by checking mean advantage per sample in grouped layout
+                sample_means = (grouped_adv * grouped_mask).sum(dim=-1) / grouped_mask.sum(dim=-1).clamp(min=1)
+                sample_pos = (sample_means > 0).sum().item()
+                sample_neg = (sample_means < 0).sum().item()
+
+                logger.info(
+                    f"{log_prefix} batch summary: num_prompts={num_prompts}, "
+                    f"total_samples={num_prompts * n}, "
+                    f"sample_pos={sample_pos}, sample_neg={sample_neg}, "
+                    f"token_pos={token_pos}, token_neg={token_neg}, "
+                    f"global_mean={all_normed_nonzero.mean().item():.4f}, global_std={all_normed_nonzero.std().item():.4f}, "
+                    f"global_min={all_normed_nonzero.min().item():.4f}, global_max={all_normed_nonzero.max().item():.4f}"
+                )
 
         return experiences
 
