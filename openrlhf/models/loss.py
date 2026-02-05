@@ -87,6 +87,7 @@ class PolicyLoss(nn.Module):
         enable_vllm_is_correction: bool = False,
         vllm_is_truncated_threshold: list = None,
         vllm_is_correction_type: str = "tis",
+        prefix_method: str = "geometric",  # "geometric" or "arithmetic"
     ) -> None:
         super().__init__()
         self.clip_eps_low = clip_eps_low
@@ -97,6 +98,7 @@ class PolicyLoss(nn.Module):
         self.enable_vllm_is_correction = enable_vllm_is_correction
         self.vllm_is_truncated_threshold = vllm_is_truncated_threshold
         self.vllm_is_correction_type = vllm_is_correction_type
+        self.prefix_method = prefix_method
 
         # GSPO requires sequence-level loss
         if policy_loss_type == "gspo":
@@ -130,6 +132,32 @@ class PolicyLoss(nn.Module):
                 log_ratio = log_probs - old_log_probs
             ratio = (log_ratio * action_mask).sum(dim=-1) / action_mask.sum(dim=-1)
             ratio = ratio.exp().unsqueeze(-1) * action_mask
+
+        elif self.policy_loss_type == "prefix":
+            # Prefix Cumulative IS: use cumulative probability ratio from first token to current position
+            # See PREFIX_CUMULATIVE_IS.md for details
+            if self.enable_vllm_is_correction:
+                log_ratio = log_probs - rollout_log_probs
+            else:
+                log_ratio = log_probs - old_log_probs
+
+            cumsum_log_ratio = torch.cumsum(log_ratio * action_mask, dim=-1)
+            positions = torch.cumsum(action_mask.float(), dim=-1).clamp(min=1)
+
+            if self.prefix_method == "geometric":
+                # Geometric mean: (Π ratio[i])^{1/t} = exp(Σ log_ratio[0:t] / t)
+                # More stable, less sensitive to outliers
+                prefix_log_ratio = cumsum_log_ratio / positions
+                ratio = prefix_log_ratio.exp()
+            elif self.prefix_method == "arithmetic":
+                # Arithmetic mean: Σ ratio[0:t] / t
+                # Computed incrementally: cumsum(ratio) / positions
+                ratio_per_token = (log_ratio * action_mask).exp() * action_mask
+                cumsum_ratio = torch.cumsum(ratio_per_token, dim=-1)
+                ratio = cumsum_ratio / positions
+            else:
+                raise ValueError(f"Invalid prefix_method: {self.prefix_method}, expected 'geometric' or 'arithmetic'")
+
         else:
             raise ValueError(f"Invalid policy loss type: {self.policy_loss_type}")
 
@@ -148,6 +176,7 @@ class PolicyLoss(nn.Module):
             loss = -torch.where(advantages < 0, clip2, clip1)
 
         # Your Efficient RL Framework Secretly Brings You Off-Policy RL Training: https://fengyao.notion.site/off-policy-rl
+        # Apply TIS/ICEPOP correction for ppo and prefix modes (loss reweighting)
         vllm_kl = None
         if self.enable_vllm_is_correction and self.policy_loss_type == "ppo":
             low_threshold, high_threshold = self.vllm_is_truncated_threshold
@@ -169,6 +198,27 @@ class PolicyLoss(nn.Module):
             else:
                 # TIS: token-level clamp with low and high thresholds
                 vllm_is = torch.exp(log_ratio).clamp(min=low_threshold, max=high_threshold).detach()
+                loss = vllm_is * loss
+            vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
+        elif self.enable_vllm_is_correction and self.policy_loss_type == "prefix":
+            # Apply IS truncation to vllm_is (loss reweighting, same as PPO mode)
+            if self.vllm_is_truncated_threshold is not None:
+                low_threshold, high_threshold = self.vllm_is_truncated_threshold
+                log_ratio = old_log_probs - rollout_log_probs
+                if self.vllm_is_correction_type == "icepop":
+                    # ICEPOP: set coefficients outside the interval to 0
+                    vllm_is = torch.exp(log_ratio).detach()
+                    mask = (vllm_is >= low_threshold) & (vllm_is <= high_threshold)
+                    vllm_is = vllm_is * mask
+                elif self.vllm_is_correction_type == "mis":
+                    seq_log_ratio = masked_mean(log_ratio, action_mask, dim=-1)
+                    seq_is = torch.exp(seq_log_ratio)
+                    seq_mask = (seq_is >= low_threshold) & (seq_is <= high_threshold)
+                    vllm_is = torch.exp(log_ratio).detach()
+                    vllm_is = seq_mask.unsqueeze(-1) * vllm_is
+                else:
+                    # TIS: token-level clamp with low and high thresholds
+                    vllm_is = torch.exp(log_ratio).clamp(min=low_threshold, max=high_threshold).detach()
                 loss = vllm_is * loss
             vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
 
