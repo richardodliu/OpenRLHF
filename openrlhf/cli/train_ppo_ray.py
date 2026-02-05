@@ -379,7 +379,7 @@ if __name__ == "__main__":
         type=str,
         default="geometric",
         choices=["geometric", "arithmetic"],
-        help="Prefix cumulative IS method: 'geometric' for geometric mean, 'arithmetic' for arithmetic mean",
+        help="Prefix cumulative IS method: geometric for geometric mean, arithmetic for arithmetic mean",
     )
     parser.add_argument(
         "--kl_estimator",
