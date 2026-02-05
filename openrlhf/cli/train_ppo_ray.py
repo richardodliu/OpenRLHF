@@ -379,11 +379,7 @@ if __name__ == "__main__":
         type=str,
         default="geometric",
         choices=["geometric", "arithmetic"],
-        help=(
-            "Prefix cumulative IS method: "
-            "'geometric' for $\\left(\\prod_{i=1}^{t} r_i\\right)^{1/t}$, "
-            "'arithmetic' for $\\frac{1}{t}\\sum_{i=1}^{t} r_i$"
-        ),
+        help="Prefix cumulative IS method: 'geometric' for geometric mean, 'arithmetic' for arithmetic mean",
     )
     parser.add_argument(
         "--kl_estimator",
