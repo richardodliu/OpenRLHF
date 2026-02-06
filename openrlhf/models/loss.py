@@ -201,24 +201,35 @@ class PolicyLoss(nn.Module):
                 loss = vllm_is * loss
             vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
         elif self.enable_vllm_is_correction and self.policy_loss_type == "prefix":
-            # Apply IS truncation to vllm_is (loss reweighting, same as PPO mode)
+            # Prefix Cumulative IS correction: use the same prefix cumulative method
+            # to compute vllm_is weights, consistent with ratio computation above
             if self.vllm_is_truncated_threshold is not None:
                 low_threshold, high_threshold = self.vllm_is_truncated_threshold
                 log_ratio = old_log_probs - rollout_log_probs
+                cumsum_log_ratio = torch.cumsum(log_ratio * action_mask, dim=-1)
+                positions = torch.cumsum(action_mask.float(), dim=-1).clamp(min=1)
+
+                if self.prefix_method == "geometric":
+                    # Geometric mean: exp(Σ log_ratio[0:t] / t)
+                    vllm_is = (cumsum_log_ratio / positions).exp().detach()
+                else:
+                    # Arithmetic mean: Σ exp(log_ratio[0:t]) / t
+                    ratio_per_token = (log_ratio * action_mask).exp() * action_mask
+                    vllm_is = (torch.cumsum(ratio_per_token, dim=-1) / positions).detach()
+
                 if self.vllm_is_correction_type == "icepop":
                     # ICEPOP: set coefficients outside the interval to 0
-                    vllm_is = torch.exp(log_ratio).detach()
                     mask = (vllm_is >= low_threshold) & (vllm_is <= high_threshold)
                     vllm_is = vllm_is * mask
                 elif self.vllm_is_correction_type == "mis":
+                    # MIS: sequence-level geometric mean for filtering
                     seq_log_ratio = masked_mean(log_ratio, action_mask, dim=-1)
                     seq_is = torch.exp(seq_log_ratio)
                     seq_mask = (seq_is >= low_threshold) & (seq_is <= high_threshold)
-                    vllm_is = torch.exp(log_ratio).detach()
                     vllm_is = seq_mask.unsqueeze(-1) * vllm_is
                 else:
-                    # TIS: token-level clamp with low and high thresholds
-                    vllm_is = torch.exp(log_ratio).clamp(min=low_threshold, max=high_threshold).detach()
+                    # TIS: clamp prefix cumulative IS weights
+                    vllm_is = vllm_is.clamp(min=low_threshold, max=high_threshold)
                 loss = vllm_is * loss
             vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
 
