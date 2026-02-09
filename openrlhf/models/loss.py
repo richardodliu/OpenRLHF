@@ -221,8 +221,8 @@ class PolicyLoss(nn.Module):
                     # ICEPOP: set coefficients outside the interval to 0
                     mask = (vllm_is >= low_threshold) & (vllm_is <= high_threshold)
                     vllm_is = vllm_is * mask
-                elif self.vllm_is_correction_type == "mis":
-                    # MIS: sequence-level geometric mean for filtering
+                elif self.vllm_is_correction_type == "seq-mask-tis":
+                    # seq-mask-tis: sequence-level geometric mean for filtering
                     seq_log_ratio = masked_mean(log_ratio, action_mask, dim=-1)
                     seq_is = torch.exp(seq_log_ratio)
                     seq_mask = (seq_is >= low_threshold) & (seq_is <= high_threshold)
