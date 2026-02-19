@@ -253,8 +253,8 @@ if __name__ == "__main__":
         "--vllm_is_correction_type",
         type=str,
         default="tis",
-        choices=["tis", "icepop", "seq-mask-tis"],
-        help="vLLM IS correction type: tis (token-level clamp), icepop (token-level filter), seq-mask-tis (sequence-level geom mean)",
+        choices=["tis", "icepop", "seq-mask-tis", "reinforce_pro"],
+        help="vLLM IS correction type: tis (token-level clamp), icepop (token-level filter), seq-mask-tis (sequence-level geom mean), reinforce_pro (prefix cumulative token-level mask)",
     )
 
     # Async training using ray
@@ -373,14 +373,7 @@ if __name__ == "__main__":
     parser.add_argument("--kl_target", type=float, default=None)
     parser.add_argument("--kl_horizon", type=int, default=10000)
     parser.add_argument("--init_kl_coef", type=float, default=0.01, help="KL penalty in PPO")
-    parser.add_argument("--policy_loss_type", type=str, default="ppo", choices=["ppo", "gspo", "reinforce_pro"])
-    parser.add_argument(
-        "--prefix_method",
-        type=str,
-        default="geometric",
-        choices=["geometric", "arithmetic"],
-        help="Prefix cumulative IS method: geometric for geometric mean, arithmetic for arithmetic mean",
-    )
+    parser.add_argument("--policy_loss_type", type=str, default="ppo", choices=["ppo", "gspo"])
     parser.add_argument(
         "--kl_estimator",
         type=str,
