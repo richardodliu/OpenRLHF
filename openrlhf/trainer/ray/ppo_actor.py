@@ -78,7 +78,6 @@ class ActorPPOTrainer(ABC):
                 self.args.vllm_is_truncated_threshold if self.args.enable_vllm_is_correction else None
             ),
             vllm_is_correction_type=self.args.vllm_is_correction_type,
-            prefix_method=getattr(self.args, "prefix_method", "geometric"),
         )
 
         # Mixtral 8x7b
