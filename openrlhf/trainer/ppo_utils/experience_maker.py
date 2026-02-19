@@ -824,13 +824,13 @@ class RemoteExperienceMaker:
         # all_same_groups_mask: (num_prompts,) bool tensor marking groups with all-same rewards
         # Only used when uniform_scale is enabled to skip RLOO and normalization for these groups
         all_same_groups_mask = None
-        if args.advantage_estimator in ["rloo", "reinforce_pro_max"]:
+        if args.advantage_estimator in ["rloo", "reinforce_max"]:
             # RLOO baseline: b_i = (sum(r_j) - r_i) / (n - 1)
             baseline = (rewards.sum(-1, keepdim=True) - rewards) / (args.n_samples_per_prompt - 1)
             shaped_rewards = rewards - baseline
 
             # When uniform_scale is enabled: detect all-same reward groups and handle specially
-            if args.advantage_estimator == "reinforce_pro_max" and args.uniform_scale:
+            if args.advantage_estimator == "reinforce_max" and args.uniform_scale:
                 # Detect all-same reward groups (std == 0)
                 group_std = rewards.std(-1, keepdim=True)
                 all_same_groups_mask = (group_std.squeeze(-1) < 1e-8)  # (num_prompts,)
@@ -853,10 +853,10 @@ class RemoteExperienceMaker:
                     f"all_same_groups={num_all_same_groups}/{rewards.shape[0]}"
                 )
             else:
-                # For rloo and reinforce_pro_max (without uniform_scale): use standard RLOO for all groups
+                # For rloo and reinforce_max (without uniform_scale): use standard RLOO for all groups
                 rewards = shaped_rewards
 
-                if args.advantage_estimator == "reinforce_pro_max":
+                if args.advantage_estimator == "reinforce_max":
                     logger.info(
                         f"[ProMax] RLOO reward shaping: raw_reward_mean={raw_rewards.mean().item():.4f}, "
                         f"raw_reward_std={raw_rewards.std().item():.4f}, "
@@ -896,16 +896,16 @@ class RemoteExperienceMaker:
                 "reinforce_baseline",
                 "group_norm",
                 "dr_grpo",
-                "reinforce_pro_max",
+                "reinforce_max",
             ]:
                 if args.gamma != 1.0 and self.advantage_estimator in [
                     "rloo",
                     "reinforce_baseline",
                     "group_norm",
                     "dr_grpo",
-                    "reinforce_pro_max",
+                    "reinforce_max",
                 ]:
-                    logger.warning("gamma is set to 1.0 for rloo, reinforce_baseline, group_norm, dr_grpo, and reinforce_pro_max")
+                    logger.warning("gamma is set to 1.0 for rloo, reinforce_baseline, group_norm, dr_grpo, and reinforce_max")
                     args.gamma = 1.0
 
                 experience.returns = self.get_cumulative_returns(
@@ -949,7 +949,7 @@ class RemoteExperienceMaker:
                 exp.advantages = (exp.advantages - mean) * rstd
 
         # Per-prompt adaptive token-level normalization for REINFORCE Pro Max
-        elif self.args.advantage_estimator == "reinforce_pro_max":
+        elif self.args.advantage_estimator == "reinforce_max":
             scale_uniform = args.uniform_scale
             log_prefix = "[ProMax]"
 

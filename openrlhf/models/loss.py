@@ -133,9 +133,9 @@ class PolicyLoss(nn.Module):
             ratio = (log_ratio * action_mask).sum(dim=-1) / action_mask.sum(dim=-1)
             ratio = ratio.exp().unsqueeze(-1) * action_mask
 
-        elif self.policy_loss_type == "prefix":
+        elif self.policy_loss_type == "reinforce_pro":
             # Prefix Cumulative IS: use cumulative probability ratio from first token to current position
-            # See PREFIX_CUMULATIVE_IS.md for details
+            # See REINFORCE_PRO.md for details
             if self.enable_vllm_is_correction:
                 log_ratio = log_probs - rollout_log_probs
             else:
@@ -200,7 +200,7 @@ class PolicyLoss(nn.Module):
                 vllm_is = torch.exp(log_ratio).clamp(min=low_threshold, max=high_threshold).detach()
                 loss = vllm_is * loss
             vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
-        elif self.enable_vllm_is_correction and self.policy_loss_type == "prefix":
+        elif self.enable_vllm_is_correction and self.policy_loss_type == "reinforce_pro":
             # Prefix Cumulative IS correction: use the same prefix cumulative method
             # to compute vllm_is weights, consistent with ratio computation above
             if self.vllm_is_truncated_threshold is not None:
