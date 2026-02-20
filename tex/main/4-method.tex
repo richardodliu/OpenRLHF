@@ -145,7 +145,7 @@ training policy $\pitheta$ is updated from $\piroll$ by gradient steps. This mat
 
 The per-token importance ratio between these two policies is
 \begin{equation}
-    \rho_t := \IStoken{t} = \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
+    \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
 \end{equation}
 as defined in \eqref{eq:ratio}. Throughout this section, we restrict attention to masking strategies constructed solely from
 $(\rho_t)_{t=1}^T$ (equivalently, the log-ratios $r_t=\log\rho_t$ in \eqref{eq:log-ratio}), and we do not introduce additional
@@ -153,11 +153,11 @@ intermediate policies.
 
 \paragraph{A TRM-style view.}
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
-$M^{\mathrm{TRM}}(x,y)$, yielding a masked surrogate objective of the form
+$M(x,y)$, yielding a masked surrogate objective of the form
 \begin{equation}
     L_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
     := \E_{\piroll}\!\left[
-        M^{\mathrm{TRM}}(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
+        M(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
     \label{eq:trm-masked-surrogate}
 \end{equation}

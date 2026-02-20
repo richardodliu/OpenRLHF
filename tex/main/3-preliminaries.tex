@@ -31,24 +31,17 @@ Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ 
 \end{itemize}
 This is the same two-policy setup as in long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
 
-\textbf{IS ratios.} The per-token importance sampling (IS) ratio and its log-ratio are
+\textbf{Importance ratios.} The per-token importance ratio and its log-ratio are
 \begin{align}
-    \IStoken{t}
+    \rho_t
     &:= \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
     \label{eq:ratio}
     \\
     r_t
-    &:= \log \IStoken{t}
+    &:= \log \rho_t
     = \log \pitheta(y_t \mid c_t) - \log \piroll(y_t \mid c_t).
     \label{eq:log-ratio}
 \end{align}
-
-\noindent\textbf{TRM ratio notation.} Following trust-region masking style analyses~\citep{li2025trm}, we also write
-\begin{equation}
-    \rho_t := \IStoken{t},
-    \qquad
-    \log \rho_t = r_t.
-\end{equation}
 
 \begin{remark}[From three distributions to two]
 \label{rem:three-to-two}
@@ -56,7 +49,7 @@ Practical LLM-RL pipelines can exhibit an apparent three-distribution structure:
 inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations \emph{recompute}
 the behavior log-probabilities inside the training stack, yielding a recomputed distribution that can differ from the true rollout
 distribution even when parameters are identical. Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the IS
-ratio) must be anchored to the original behavior distribution that generated the data. Accordingly, we define $\IStoken{t}$ in
+ratio) must be anchored to the original behavior distribution that generated the data. Accordingly, we define $\rho_t$ in
 \eqref{eq:ratio} using $\piroll$ and assume access to $\log \piroll(y_t\mid c_t)$ via rollout-time caching. The theoretical development
 therefore involves only the policy pair $(\piroll,\pitheta)$, as in~\citet{li2025trm}.
 \par
@@ -226,26 +219,31 @@ whose prefixes violate the threshold.
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{llll}
 \toprule
-\textbf{Method} & \textbf{IS Weight} & \textbf{Granularity} & \textbf{Causal} \\
+\textbf{Method} & \textbf{Weight} & \textbf{Granularity} & \textbf{Causal} \\
 \midrule
-TIS & $\IStoken{t}$ clamped to $[\lambda, \Lambda]$ & Token & No \\
-ICEPOP & $\IStoken{t} \cdot \mathbb{I}[\IStoken{t} \in [\lambda, \Lambda]]$ & Token & No \\
-TRM & $M^{\mathrm{TRM}}(x,y) \cdot \IStoken{t}$ & Sequence & No \\
-GSPO & $\ISseq$ & Sequence & No \\
+TIS & $\mathrm{clip}(\rho_t,\lambda,\Lambda)$ & Token & No \\
+ICEPOP & $\rho_t \cdot \mathbb{I}[\rho_t \in [\lambda, \Lambda]]$ & Token & No \\
+TRM & $M(x,y) \cdot \rho_t$ & Sequence & No \\
+GSPO & $\rhoseq$ & Sequence & No \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent Here $\ISseq$ is the sequence-level geometric-mean ratio,
+\noindent Here $\rhoseq$ is the length-normalized sequence likelihood ratio (a geometric mean of token ratios),
 \begin{equation}
-    \ISseq := \exp(\bar{r}),
+    \rhoseq
+    := \left(\frac{\pitheta(y \mid x)}{\piroll(y \mid x)}\right)^{\frac{1}{|y|}}
+    = \exp(\bar{r}),
     \qquad
     \bar{r} := \frac{\sum_t r_t m_t}{\sum_t m_t},
 \end{equation}
-and $m_t$ is the action mask. TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask
-$M^{\mathrm{TRM}}(x,y)$ to discard trajectories that violate the trust region. A standard (max-based) criterion is
+and $m_t$ is the action mask. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$ in the
+GSPO paper) up to notation.
+
+TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask $M(x,y)$ to discard trajectories that violate the
+trust region. A standard (max-based) criterion is
 \begin{equation}
-    M^{\mathrm{TRM}}(x,y)
+    M(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
     \label{eq:trm-mask}
 \end{equation}
