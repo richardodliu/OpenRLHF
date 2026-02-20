@@ -46,10 +46,6 @@ This notation follows long-horizon trust-region analyses for LLM-RL (e.g., \cite
 \textbf{Rollout-time anchoring.} In practice, inference and training stacks can differ. We compute $\rho_t$ using rollout-time cached
 log-probabilities $\log \piroll(y_t\mid c_t)$; see Appendix~\ref{app:mismatch} for practical mismatch modes and implementation mappings.
 
-\textbf{Action mask.} We use an action mask $m_t \in \{0,1\}$ to select active action-token positions (excluding padding, and excluding
-prompt-only positions if a unified tokenization is used). When we index only over action tokens without padding, one can take $m_t \equiv 1$.
-Sums such as $\sum_t f_t m_t$ should be read as summing over active positions.
-
 \subsection{Divergence Measures}
 \label{sec:divergence}
 
@@ -220,13 +216,13 @@ GSPO & $\rhoseq$ & $\mathrm{clip}(\rhoseq,\lambda,\Lambda)$ & Sequence & No \\
 \noindent Here $\rhoseq$ is the length-normalized sequence likelihood ratio (a geometric mean of token ratios),
 \begin{equation}
     \rhoseq
-    := \left(\frac{\pitheta(y \mid x)}{\piroll(y \mid x)}\right)^{\frac{1}{|y|}}
+    := \left(\frac{P^{\pitheta}(y \mid x)}{P^{\piroll}(y \mid x)}\right)^{\frac{1}{T}}
     = \exp(\bar{r}),
     \qquad
-    \bar{r} := \frac{\sum_t r_t m_t}{\sum_t m_t},
+    \bar{r} := \frac{1}{T}\sum_{t=1}^{T} r_t,
 \end{equation}
-and $m_t$ is the action mask. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$ in the
-GSPO paper) up to notation.
+where $T=|y|$ is the response length. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$
+in the GSPO paper) up to notation.
 
 TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask $M(x,y)$ to discard trajectories that violate the
 trust region. A standard (max-based) criterion is

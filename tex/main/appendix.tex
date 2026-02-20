@@ -20,6 +20,7 @@ behavior log-probabilities inside the training stack, yielding a recomputed anch
 when parameters are identical. Importantly, this third object is not an additional policy in our theory; it is an alternative
 implementation-time anchor for the denominator of $\rho_t$.
 
+\paragraph{Trust Region Setup.}
 Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the importance ratio) must be anchored to the original rollout
 distribution that generated the data, which we denote by $\piroll$. Accordingly, we define $\rho_t := \pitheta(y_t\mid c_t) /
 \piroll(y_t\mid c_t)$ and assume access to rollout-time cached log-probabilities $\log \piroll(y_t\mid c_t)$. The theoretical development
