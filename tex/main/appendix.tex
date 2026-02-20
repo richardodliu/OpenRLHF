@@ -236,9 +236,10 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
         M_t^{\mathrm{prefix}}
-        := \mathbb{I}\!\big[\bar{r}_t \in [-\tau_-,\tau_+]\big],
+        := \mathbb{I}\!\big[\rhoprefix{t} \in [\lambda,\Lambda]\big]
+        = \mathbb{I}\!\big[\log\rhoprefix{t} \in [-\tau_-,\tau_+]\big],
     \end{equation}
-    where $\bar{r}_t := \frac{1}{t}\sum_{s=1}^{t}r_s$.
+    where $\rhoprefix{t}$ is defined in \eqref{eq:prefix-is}.
 \end{itemize}
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
@@ -252,49 +253,45 @@ so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since
 ICEPOP masks only position $t=1$.
 
 \smallskip
-For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because the prefix average at $t=1$ is $\bar{r}_1=r_1 \notin
-[-\tau_-,\tau_+]$. To quantify how long the rejection can persist, write
+For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because $\rhoprefix{1}=\rho_1\notin[\lambda,\Lambda]$. To quantify how
+long the rejection can persist, use \eqref{eq:prefix-is}:
 \begin{equation}
-    L_t := \sum_{s=1}^{t}r_s = r_1 + \sum_{s=2}^{t}r_s,
+    \log\rhoprefix{t}
+    = \frac{1}{t}\sum_{s=1}^{t} r_s
+    = \frac{1}{t}\left(r_1 + \sum_{s=2}^{t}r_s\right).
 \end{equation}
-so that $\bar{r}_t = L_t/t$. If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, hence
-\begin{equation}
-    L_t \ge r_1 - \varepsilon(t-1).
-\end{equation}
-Therefore, if $t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then
+If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, hence $\sum_{s=2}^{t}r_s \ge -(t-1)\varepsilon$ and therefore
 \begin{align}
-    \bar{r}_t
-    = \frac{L_t}{t}
-    &\ge \frac{r_1-\varepsilon(t-1)}{t}
-    = \frac{r_1+\varepsilon}{t} - \varepsilon
-    > \tau_+,
+    \log\rhoprefix{t}
+    &\ge \frac{1}{t}\big(r_1-(t-1)\varepsilon\big)
+    = \frac{r_1+\varepsilon}{t} - \varepsilon.
 \end{align}
-so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $r_1<-\tau_-$ is symmetric: since $r_s \le \varepsilon$ for $s\ge2$, we have
-$L_t \le r_1 + \varepsilon(t-1)$. If $t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then
+Thus, if $t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{prefix}}=0$.
+The lower-violation case $r_1<-\tau_-$ is symmetric: since $r_s \le \varepsilon$ for $s\ge2$, we have
+$\sum_{s=2}^{t}r_s \le \varepsilon(t-1)$ and therefore
 \begin{align}
-    \bar{r}_t
-    = \frac{L_t}{t}
-    &\le \frac{r_1+\varepsilon(t-1)}{t}
-    = \frac{r_1-\varepsilon}{t} + \varepsilon
-    < -(\tau_-+\varepsilon) + \varepsilon
-    = -\tau_-,
+    \log\rhoprefix{t}
+    &\le \frac{1}{t}\big(r_1+\varepsilon(t-1)\big)
+    = \frac{r_1-\varepsilon}{t} + \varepsilon.
 \end{align}
-and hence $M_t^{\mathrm{prefix}}=0$. This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
+If $t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{prefix}}=0$.
+This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
 \par
 \noindent\textbf{Part (b): Late deviation.}
 Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
-Since $\bar{r}_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $\bar{r}_t \in [-\tau_-,\tau_+]$, and hence
-$M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
+Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}r_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
+$\log\rhoprefix{t} \in [-\tau_-,\tau_+]$, and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur
+for positions $t\ge t^*$, which implies
 \begin{equation}
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
 \end{equation}
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
 For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $r_{t^*}=L$ and $r_t=0$
-for $t\neq t^*$. Then $\bar{r} = L/T$ and $\bar{r}_{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
+for $t\neq t^*$. Then $\bar{r} = L/T$ and $\log\rhoprefix{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
 Thus whenever
 \begin{equation}
     \frac{L}{t^*} > \tau_+
@@ -305,7 +302,7 @@ we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$
 
 \par
 \noindent\textbf{Part (c): Monotone violation.}
-If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\bar{r}_t > \tau_+$, since it is an
+If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\log\rhoprefix{t} > \tau_+$, since it is an
 average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
 $\bar{r}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $r_s < -\tau_-$
 is symmetric.
@@ -322,12 +319,7 @@ training policy $\pitheta$. We write the per-token importance ratio and log-rati
     \qquad
     r_t := \log \rho_t.
 \end{equation}
-We also reuse the prefix cumulative sums from \Cref{def:prefix-is}:
-\begin{equation}
-    L_t := \sum_{s=1}^{t} r_s,
-    \qquad
-    \bar{r}_t := \frac{1}{t}L_t.
-\end{equation}
+We also reuse the prefix statistic $\rhoprefix{t}$ from \Cref{def:prefix-is}.
 For thresholds $0<\lambda\le 1 \le \Lambda$, define the log-threshold interval
 \begin{equation}
     [\log\lambda,\log\Lambda] = [-\tau_-,\tau_+],
@@ -345,7 +337,7 @@ once a prefix violates the threshold, all subsequent positions are rejected.
 
 \begin{equation}
     \widetilde{M}_t^{\mathrm{prefix}}
-    := \mathbb{I}\!\big[\bar{r}_t \in [-\tau_-,\tau_+]\big],
+    := \mathbb{I}\!\big[\rhoprefix{t} \in [\lambda,\Lambda]\big],
     \qquad
     M_t^{\mathrm{abs\text{-}prefix}}
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{prefix}}.
