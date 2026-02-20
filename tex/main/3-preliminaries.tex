@@ -37,9 +37,8 @@ This notation follows long-horizon trust-region analyses for LLM-RL (e.g., \cite
     &:= \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
     \label{eq:ratio}
     \\
-    r_t
-    &:= \log \rho_t
-    = \log \pitheta(y_t \mid c_t) - \log \piroll(y_t \mid c_t).
+    \log\rho_t
+    &= \log \pitheta(y_t \mid c_t) - \log \piroll(y_t \mid c_t).
     \label{eq:log-ratio}
 \end{align}
 
@@ -181,7 +180,7 @@ motivates our prefix-level Causal Trust Region masking component.
 \label{sec:existing-is}
 
 Several methods have been proposed to stabilize policy-gradient updates by constraining the per-token importance ratio $\rho_t$ between the
-training policy $\pitheta$ and the behavior policy $\piroll$. We use the per-token log-ratio $r_t = \log \rho_t$ defined in
+training policy $\pitheta$ and the behavior policy $\piroll$. We use the per-token log-ratio $\log\rho_t$ defined in
 \eqref{eq:log-ratio}.
 \par
 \noindent\textbf{A unified view by granularity.} We adopt a trust-region masking viewpoint: when mismatch between $\piroll$ and
@@ -215,11 +214,13 @@ GSPO & $\rhoseq$ & $\mathrm{clip}(\rhoseq,\lambda,\Lambda)$ & Sequence & No \\
 
 \noindent Here $\rhoseq$ is the length-normalized sequence likelihood ratio (a geometric mean of token ratios),
 \begin{equation}
-    \rhoseq
-    := \left(\frac{P^{\pitheta}(y \mid x)}{P^{\piroll}(y \mid x)}\right)^{\frac{1}{T}}
-    = \exp(\bar{r}),
-    \qquad
-    \bar{r} := \frac{1}{T}\sum_{t=1}^{T} r_t,
+    \begin{aligned}
+        \rhoseq
+        &:= \left(\frac{P^{\pitheta}(y \mid x)}{P^{\piroll}(y \mid x)}\right)^{\frac{1}{T}}
+        \\
+        &= \left(\prod_{t=1}^{T}\rho_t\right)^{\frac{1}{T}}
+        = \exp\!\left(\frac{1}{T}\sum_{t=1}^{T}\log\rho_t\right),
+    \end{aligned}
 \end{equation}
 where $T=|y|$ is the response length. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$
 in the GSPO paper) up to notation.

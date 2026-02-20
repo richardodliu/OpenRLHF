@@ -215,7 +215,7 @@ log-threshold interval as
     \qquad
     \tau_- := -\log\lambda,
 \end{equation}
-so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
+so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
@@ -223,16 +223,16 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+
     \begin{equation}
         M_t^{\mathrm{token}}
         := \mathbb{I}\!\big[\rho_t \in [\lambda,\Lambda]\big]
-        = \mathbb{I}\!\big[r_t \in [-\tau_-,\tau_+]\big].
+        = \mathbb{I}\!\big[\log\rho_t \in [-\tau_-,\tau_+]\big].
     \end{equation}
     \item \textbf{Sequence-level (GSPO / sequence-level ratio gate):}
     \begin{equation}
         M_t^{\mathrm{seq}}
-        := \mathbb{I}\!\big[\bar{r} \in [-\tau_-,\tau_+]\big],
+        := \mathbb{I}\!\big[\log\rhoseq \in [-\tau_-,\tau_+]\big],
         \qquad
-        \bar{r} := \frac{1}{T}\sum_{s=1}^{T}r_s,
+        \log\rhoseq := \frac{1}{T}\sum_{s=1}^{T}\log\rho_s,
     \end{equation}
-    for all $t$ (equivalently, $\rhoseq=\exp(\bar{r})$).
+    for all $t$.
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
         M_t^{\mathrm{prefix}}
@@ -244,10 +244,10 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
 \noindent\textbf{Part (a): Early deviation.}
-Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
+Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|\log\rho_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
 \begin{equation}
-    r_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
+    \log\rho_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \end{equation}
 so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\rho_1 \notin [\lambda,\Lambda]$). Hence token-level
 ICEPOP masks only position $t=1$.
@@ -257,32 +257,32 @@ For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because $\rhopref
 long the rejection can persist, use \eqref{eq:prefix-is}:
 \begin{equation}
     \log\rhoprefix{t}
-    = \frac{1}{t}\sum_{s=1}^{t} r_s
-    = \frac{1}{t}\left(r_1 + \sum_{s=2}^{t}r_s\right).
+    = \frac{1}{t}\sum_{s=1}^{t} \log\rho_s
+    = \frac{1}{t}\left(\log\rho_1 + \sum_{s=2}^{t}\log\rho_s\right).
 \end{equation}
-If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, hence $\sum_{s=2}^{t}r_s \ge -(t-1)\varepsilon$ and therefore
+If $\log\rho_1>\tau_+$, then $\log\rho_s \ge -\varepsilon$ for all $s\ge2$, hence $\sum_{s=2}^{t}\log\rho_s \ge -(t-1)\varepsilon$ and therefore
 \begin{align}
     \log\rhoprefix{t}
-    &\ge \frac{1}{t}\big(r_1-(t-1)\varepsilon\big)
-    = \frac{r_1+\varepsilon}{t} - \varepsilon.
+    &\ge \frac{1}{t}\big(\log\rho_1-(t-1)\varepsilon\big)
+    = \frac{\log\rho_1+\varepsilon}{t} - \varepsilon.
 \end{align}
-Thus, if $t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{prefix}}=0$.
-The lower-violation case $r_1<-\tau_-$ is symmetric: since $r_s \le \varepsilon$ for $s\ge2$, we have
-$\sum_{s=2}^{t}r_s \le \varepsilon(t-1)$ and therefore
+Thus, if $t < (\log\rho_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{prefix}}=0$.
+The lower-violation case $\log\rho_1<-\tau_-$ is symmetric: since $\log\rho_s \le \varepsilon$ for $s\ge2$, we have
+$\sum_{s=2}^{t}\log\rho_s \le \varepsilon(t-1)$ and therefore
 \begin{align}
     \log\rhoprefix{t}
-    &\le \frac{1}{t}\big(r_1+\varepsilon(t-1)\big)
-    = \frac{r_1-\varepsilon}{t} + \varepsilon.
+    &\le \frac{1}{t}\big(\log\rho_1+\varepsilon(t-1)\big)
+    = \frac{\log\rho_1-\varepsilon}{t} + \varepsilon.
 \end{align}
-If $t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{prefix}}=0$.
+If $t < (-\log\rho_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{prefix}}=0$.
 This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
 \par
 \noindent\textbf{Part (b): Late deviation.}
-Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|\log\rho_t|\le \varepsilon$
 for all $t\neq t^*$, with
-$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
-Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}r_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
+$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\log\rho_s \in [-\tau_-,\tau_+]$.
+Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
 $\log\rhoprefix{t} \in [-\tau_-,\tau_+]$, and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur
 for positions $t\ge t^*$, which implies
 \begin{equation}
@@ -290,8 +290,8 @@ for positions $t\ge t^*$, which implies
 \end{equation}
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
-For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $r_{t^*}=L$ and $r_t=0$
-for $t\neq t^*$. Then $\bar{r} = L/T$ and $\log\rhoprefix{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
+For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $\log\rho_{t^*}=L$ and
+$\log\rho_t=0$ for $t\neq t^*$. Then $\log\rhoseq = L/T$ and $\log\rhoprefix{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
 Thus whenever
 \begin{equation}
     \frac{L}{t^*} > \tau_+
@@ -302,9 +302,9 @@ we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$
 
 \par
 \noindent\textbf{Part (c): Monotone violation.}
-If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\log\rhoprefix{t} > \tau_+$, since it is an
+If $\log\rho_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\log\rhoprefix{t} > \tau_+$, since it is an
 average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
-$\bar{r}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $r_s < -\tau_-$
+$\log\rhoseq$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $\log\rho_s < -\tau_-$
 is symmetric.
 \end{proof}
 
@@ -313,11 +313,9 @@ is symmetric.
 
 This appendix collects several masking variants that are compatible with the ratio setup in the main text
 (\Cref{sec:offpolicy-problem}). Throughout, samples are generated by the behavior policy $\piroll$ and gradients are computed under the
-training policy $\pitheta$. We write the per-token importance ratio and log-ratio as
+training policy $\pitheta$. We write the per-token importance ratio as
 \begin{equation}
-    \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
-    \qquad
-    r_t := \log \rho_t.
+    \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}.
 \end{equation}
 We also reuse the prefix statistic $\rhoprefix{t}$ from \Cref{def:prefix-is}.
 For thresholds $0<\lambda\le 1 \le \Lambda$, define the log-threshold interval
