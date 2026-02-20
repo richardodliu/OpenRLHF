@@ -24,12 +24,12 @@ Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ 
 \subsection{Notation}
 \label{sec:notation}
 
-\textbf{Two policies.} We consider two policies:
+\textbf{Policies.} We consider:
 \begin{itemize}
     \item $\piroll$: the \emph{behavior} (rollout) policy used to generate samples; it is fixed during each policy update;
     \item $\pitheta$: the \emph{training} policy being optimized by gradient steps.
 \end{itemize}
-This is the same two-policy setup as in long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
+This notation follows long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
 
 \textbf{Importance ratios.} The per-token importance ratio and its log-ratio are
 \begin{align}
@@ -43,20 +43,8 @@ This is the same two-policy setup as in long-horizon trust-region analyses for L
     \label{eq:log-ratio}
 \end{align}
 
-\begin{remark}[From three distributions to two]
-\label{rem:three-to-two}
-Practical LLM-RL pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
-inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations \emph{recompute}
-the behavior log-probabilities inside the training stack, yielding a recomputed distribution that can differ from the true rollout
-distribution even when parameters are identical. Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the IS
-ratio) must be anchored to the original behavior distribution that generated the data. Accordingly, we define $\rho_t$ in
-\eqref{eq:ratio} using $\piroll$ and assume access to $\log \piroll(y_t\mid c_t)$ via rollout-time caching. The theoretical development
-therefore involves only the policy pair $(\piroll,\pitheta)$, as in~\citet{li2025trm}.
-\par
-\noindent\textbf{Notation mapping.} In PPO-style implementations, the behavior snapshot used for rollouts is often denoted $\piold$.
-Within a single policy update, this snapshot is precisely the data-generating policy $\piroll$ in our theory; we do not introduce a third
-distribution.
-\end{remark}
+\textbf{Rollout-time anchoring.} In practice, inference and training stacks can differ. We compute $\rho_t$ using rollout-time cached
+log-probabilities $\log \piroll(y_t\mid c_t)$; see Appendix~\ref{app:mismatch} for practical mismatch modes and implementation mappings.
 
 \textbf{Action mask.} We use an action mask $m_t \in \{0,1\}$ to select active action-token positions (excluding padding, and excluding
 prompt-only positions if a unified tokenization is used). When we index only over action tokens without padding, one can take $m_t \equiv 1$.
@@ -217,14 +205,14 @@ only the token-level loss terms whose prefixes violate the threshold.
 \caption{Existing trust-region and IS stabilization methods in critic-free LLM-RL.}
 \label{tab:existing-is}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{llll}
+\begin{tabular}{lllll}
 \toprule
-\textbf{Method} & \textbf{Weight} & \textbf{Granularity} & \textbf{Causal} \\
+\textbf{Method} & \textbf{IS Ratio} & \textbf{Mask / Clip} & \textbf{Granularity} & \textbf{Causal} \\
 \midrule
-TIS & $\mathrm{clip}(\rho_t,\lambda,\Lambda)$ & Token & No \\
-ICEPOP & $\rho_t \cdot \mathbb{I}[\rho_t \in [\lambda, \Lambda]]$ & Token & No \\
-TRM & $M(x,y) \cdot \rho_t$ & Sequence & No \\
-GSPO & $\rhoseq$ & Sequence & No \\
+TIS & $\rho_t$ & $\mathrm{clip}(\rho_t,\lambda,\Lambda)$ & Token & No \\
+ICEPOP & $\rho_t$ & $\mathbb{I}[\rho_t \in [\lambda, \Lambda]]$ & Token & No \\
+TRM & $\rho_t$ & $M(x,y)$ (max-KL) & Sequence & No \\
+GSPO & $\rhoseq$ & $\mathrm{clip}(\rhoseq,\lambda,\Lambda)$ & Sequence & No \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -40,16 +40,9 @@
 % - token-level ratio: \rho_t
 % - sequence-level geometric-mean ratio: \rhoseq
 % - prefix-level geometric-mean ratio: \rhoprefix{t}
-%
-% For backward compatibility with earlier drafts, we keep the legacy \IS* macros
-% as aliases that render to the corresponding \rho-based symbols.
 %==============================================================================
 \newcommand{\rhoseq}{\rho^{\mathrm{seq}}}
 \newcommand{\rhoprefix}[1]{\rho_{#1}^{\mathrm{prefix}}}
-
-\newcommand{\IStoken}[1]{\rho_{#1}}
-\newcommand{\ISseq}{\rhoseq}
-\newcommand{\ISprefix}[1]{\rhoprefix{#1}}
 
 %==============================================================================
 % DIVERGENCE MEASURES (following TRM paper convention)
