@@ -20,7 +20,9 @@ For IS masking, we use thresholds $[\lambda,\Lambda]=[0.5,5.0]$ unless otherwise
 \subsection{Metrics}
 \label{sec:exp-metrics}
 
-\textbf{Baseline self-correlation.} We measure $\mathrm{corr}(r_i, b_i)$ between each sample reward $r_i$ and its baseline $b_i$. A correlated baseline can couple a sample with its own control variate, breaking the clean second-moment factorization used in RLOO analyses.
+\textbf{Baseline self-correlation.} We measure $\mathrm{corr}(r_i, b_i)$ between each sample reward $r_i$ and its baseline $b_i$. A
+correlated baseline can couple a sample with its own control variate, complicating the clean second-moment analysis enabled by RLOO (see
+\Cref{app:rloo-proof}).
 
 \textbf{Sign flip rate under normalization.} After token expansion, we compute the token-weighted fraction of non-zero tokens whose normalized advantage changes sign, i.e., $\mathbb{I}[\mathrm{sign}(\hat{A}_{i,t}) \neq \mathrm{sign}(A_{i,t})]$. Sign flips are undesirable because they can turn punishment into reinforcement (or vice versa).
 
@@ -62,7 +64,10 @@ Monotone drift ($\ell_t{=}2$ for all $t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & 
 \end{tabular}
 \end{table}
 
-\noindent Prefix masking rejects a contiguous suffix once the prefix average log-ratio crosses the threshold, preserving positional information that is lost by sequence-level masking, and masking more off-policy tokens than token-level masking in the early-deviation regime (as predicted by \Cref{thm:prefix-tighter}).
+\noindent In the analyzed deviation patterns (where the post-deviation log-ratios remain in-bound), prefix masking rejects a contiguous
+block starting at the first threshold violation of the prefix statistic, preserving positional information that is lost by sequence-level
+masking, and masking more off-policy tokens than token-level masking in the early-deviation regime (as predicted by
+\Cref{thm:prefix-tighter}).
 
 \subsection{Ablations}
 \label{sec:exp-ablations}

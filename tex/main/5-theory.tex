@@ -8,9 +8,19 @@ The error decomposition (\Cref{eq:error-decomp}) has two factors at each positio
     |\mathrm{Error}| \le \sum_{t=1}^T \underbrace{2\|g_t\|_\infty}_{\text{advantage factor}} \cdot \underbrace{\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}}_{\text{context shift factor}}.
 \end{equation}
 
-\textbf{Component 1 (REINFORCE Max)} controls the advantage factor. The leave-one-out baseline provides statistical independence between each sample and its baseline (\Cref{prop:rloo-variance}), and the adaptive normalization ensures $\Var[\hat{A}] = 1$, stabilizing the effective advantage scale and mitigating the impact of outlier advantages on gradient magnitude.
+\textbf{Component 1 (REINFORCE Max)} controls the advantage factor. The leave-one-out baseline provides statistical independence between
+each sample and its baseline (\Cref{prop:rloo-variance}), and the adaptive normalization enforces zero empirical mean and unit empirical
+variance on non-zero tokens (equivalently, the constraints in \Cref{def:adaptive-norm}), stabilizing the effective advantage scale and
+mitigating the impact of outlier advantages on gradient magnitude.
 
-\textbf{Component 2 (REINFORCE Pro)} targets the rollout/training mismatch. Prefix IS masks tokens whose prefix average log-ratio falls outside the threshold interval, i.e., it enforces a per-position, sample-level constraint on the cumulative $\piold/\piroll$ log-ratio (\Cref{cor:per-position-trust}). The KL chain rule yields an expectation identity relating the cumulative log-ratio to a joint KL divergence (\Cref{thm:prefix-adaptive}), which motivates viewing prefix masking as a trust-region style proxy. Note that the error decomposition involves $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}$, while prefix masking directly concerns the $\piold/\piroll$ mismatch; relating $\piold$ to $\pitheta$ requires additional assumptions on the PPO update (e.g., small policy drift enforced by clipping), so we keep the formal scope of the proxy at the $\piold$ level.
+\textbf{Component 2 (REINFORCE Pro)} targets the rollout/training mismatch. Prefix IS masks tokens whose prefix average log-ratio falls
+outside the threshold interval, i.e., it enforces a per-position, sample-level constraint on the cumulative $\piold/\piroll$ log-ratio
+(\Cref{cor:per-position-trust}). The KL chain rule yields an expectation identity relating the cumulative log-ratio to a joint KL
+divergence between prefix distributions (\Cref{lem:cumsum-kl}); together with the threshold equivalence
+(\Cref{rem:prefix-proxy}), this motivates viewing prefix masking as a trust-region style proxy. Note that the error decomposition involves
+$\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}$, while prefix masking directly concerns the $\piold/\piroll$ mismatch; relating $\piold$
+to $\pitheta$ requires additional assumptions on the PPO update (e.g., small policy drift enforced by clipping), so we keep the formal scope
+of the proxy at the $\piold$ level.
 
 Together, both factors are addressed simultaneously, intuitively yielding a tighter effective bound than addressing either factor alone. This is an intuitive summary rather than a formal inequality: the joint benefit arises because both terms in the error decomposition (\Cref{eq:error-decomp}) are targeted---the advantage magnitude by normalization, and the rollout/training mismatch by sample-level prefix filtering.
 
@@ -27,8 +37,8 @@ Algorithm~\ref{alg:promax} presents the complete REINFORCE Pro Max training proc
 \caption{REINFORCE Pro Max (minimizing $\mathcal{L} = -L_{\piroll}(\pitheta)$)}
 \label{alg:promax}
 \begin{algorithmic}[1]
-    \REQUIRE Prompt $q$; $n$ samples; thresholds $[\lambda, \Lambda]$
-    \STATE \textbf{Rollout:} Generate $\{o_1, \ldots, o_n\} \sim \piroll(\cdot|q)$ using vLLM; store $\log \piroll(y_t|c_t)$
+    \REQUIRE Prompt $x$; $n$ samples; thresholds $[\lambda, \Lambda]$
+    \STATE \textbf{Rollout:} Generate $\{y^{(1)}, \ldots, y^{(n)}\} \sim \piroll(\cdot|x)$ using vLLM; store $\log \piroll(y_t|c_t)$
     \STATE \textbf{Reward:} Compute rewards $\{r_1, \ldots, r_n\}$
     \STATE \textbf{Baseline:} $\tilde{r}_i \leftarrow r_i - \frac{1}{n-1}\sum_{j \neq i} r_j$ \hfill \COMMENT{leave-one-out}
     \STATE \textbf{Token Expansion:} $A_{i,t} \leftarrow \tilde{r}_i$ \hfill \COMMENT{sparse reward, $\gamma\!=\!1$}
@@ -49,7 +59,11 @@ Algorithm~\ref{alg:promax} presents the complete REINFORCE Pro Max training proc
 
 \emph{Baseline and Token Expansion (Lines~3--4).} The leave-one-out baseline (\Cref{def:rloo}) ensures that each sample's baseline $b_i$ is statistically independent of its own reward $r_i$, avoiding the correlated baseline artifacts of the mean baseline (\Cref{app:rloo-proof}). Under sparse reward with $\gamma = 1$ (\Cref{app:gamma-one}), the token-level advantage reduces to the shaped reward: $A_{i,t} = \tilde{r}_i$ for all positions $t$, eliminating the need for per-token reward assignment or discounted cumulative sums.
 
-\emph{Adaptive Normalization (Lines~5--6).} The scaling factors $\alpha$ and $\beta$ are computed in closed form from Eq.~\eqref{eq:alpha-beta}, ensuring $\E[\hat{A}] = 0$ and $\Var[\hat{A}] = 1$ on non-zero tokens while preserving the sign and relative ordering of advantages (\Cref{prop:gradient-direction}). When all $n$ samples receive the same reward (i.e., $\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), the RLOO baseline yields zero advantages; in this degenerate case, normalization is skipped and the optional uniform scale mode (\Cref{app:uniform-scale}) can be used to recover gradient signal.
+\emph{Adaptive Normalization (Lines~5--6).} The scaling factors $\alpha$ and $\beta$ are computed in closed form from
+Eq.~\eqref{eq:alpha-beta}, enforcing the empirical constraints in \Cref{def:adaptive-norm} on non-zero tokens while preserving the sign
+and relative ordering of advantages (\Cref{prop:gradient-direction}). When all $n$ samples receive the same reward (i.e.,
+$\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), the RLOO baseline yields zero advantages; in this degenerate case,
+normalization is skipped and the optional uniform scale mode (\Cref{app:uniform-scale}) can be used to recover gradient signal.
 
 \emph{Forward Pass (Line~7).} The training framework computes log-probabilities under both the current policy $\pitheta$ and the old policy $\piold$. The old policy corresponds to the actor parameters at the start of the current training step (before mini-batch updates). In standard PPO implementations, $\log\piold$ is already computed and cached, so this step introduces no additional forward pass.
 
@@ -87,4 +101,10 @@ DAPO + ICEPOP & Mean & Global $(\mu,\sigma)$ & Token mask & No \\
 
 \textbf{IS correction methods.} DAPO~\citep{yu2025dapo} combined with TIS clamps the per-token IS weight to a fixed interval $[\lambda, \Lambda]$, retaining a biased but bounded correction at every position. DAPO combined with ICEPOP takes a harder approach: tokens whose IS weight falls outside the interval are zeroed out entirely, which eliminates bias from extreme weights but discards potentially useful gradient signal. Both methods operate at the token level and treat each position independently. As shown in \Cref{prop:token-is-fails}, this means that an early deviation ($w_1 \gg 1$) is corrected only at position~1, while all subsequent positions---whose contexts are sampled from a mismatched distribution---remain uncorrected.
 
-\textbf{REINFORCE Pro Max.} Our method is the only one in this comparison that simultaneously addresses all four dimensions. The RLOO baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves gradient direction while ensuring $\E[\hat{A}] = 0$ and $\Var[\hat{A}] = 1$ (\Cref{prop:alpha-beta}, \Cref{prop:gradient-direction}); and prefix cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many small mismatches (\Cref{thm:prefix-tighter}). Each design choice targets a specific factor in the error decomposition, and the two components are complementary (\Cref{sec:unified}): REINFORCE Max targets the advantage factor while REINFORCE Pro targets the context shift factor.
+\textbf{REINFORCE Pro Max.} Our method is the only one in this comparison that simultaneously addresses all four dimensions. The RLOO
+baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves gradient direction while enforcing
+zero empirical mean and unit empirical variance on non-zero tokens (\Cref{prop:alpha-beta}, \Cref{prop:gradient-direction}); and prefix
+cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many
+small mismatches (\Cref{thm:prefix-tighter}). Each design choice targets a specific factor in the error decomposition, and the two
+components are complementary (\Cref{sec:unified}): REINFORCE Max targets the advantage factor while REINFORCE Pro targets the context shift
+factor.

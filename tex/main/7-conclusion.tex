@@ -3,6 +3,13 @@
 
 We presented REINFORCE Pro Max, a unified framework for critic-free LLM reinforcement learning that addresses two fundamental challenges: high-variance advantage estimation and off-policy mismatch.
 
-The first component, REINFORCE Max, combines a leave-one-out baseline (statistically independent of each sample, enabling clean second-moment factorization, \Cref{prop:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while ensuring zero mean and unit variance, \Cref{prop:alpha-beta}). The second component, REINFORCE Pro, introduces prefix cumulative importance sampling that preserves the causal structure of autoregressive generation---we showed it can provide tighter masking than both token-level and sequence-level alternatives in the analyzed deviation patterns (\Cref{thm:prefix-tighter}), subject to the conditions stated therein. The connection to the Adaptive bound from the trust region framework shows that prefix IS acts as a sample-level proxy for per-position trust region constraints via the KL chain rule (\Cref{thm:prefix-adaptive}); the proxy operates through filtering trajectories and corresponds to the population-level KL in expectation.
+The first component, REINFORCE Max, combines a leave-one-out baseline (statistically independent of each sample, enabling clean
+second-moment analysis, \Cref{prop:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while enforcing the
+empirical constraints in \Cref{def:adaptive-norm}, \Cref{prop:alpha-beta}). The second component, REINFORCE Pro, introduces prefix
+cumulative importance sampling that preserves the causal structure of autoregressive generation---we showed it can provide tighter
+masking than both token-level and sequence-level alternatives in the analyzed deviation patterns (\Cref{thm:prefix-tighter}), subject to
+the conditions stated therein. The connection to the Adaptive bound from the trust region framework highlights that prefix IS acts as a
+sample-level proxy for per-position trust region filtering: the KL chain rule yields an expectation identity for the cumulative log-ratio
+(\Cref{lem:cumsum-kl}), while the prefix thresholding rule enforces a per-position sample constraint (\Cref{rem:prefix-proxy}).
 
 \textbf{Limitations and future work.} The prefix IS threshold $[\lambda, \Lambda]$ is a hyperparameter that requires tuning. The sample-level prefix IS constraint is a proxy for the population-level KL bound, and the gap between the two is not formally characterized. The theoretical analysis assumes bounded rewards and overlapping policy supports (\Cref{sec:assumptions}), which may not hold in all practical settings. Empirical validation on large-scale benchmarks is ongoing; we plan to evaluate on mathematical reasoning tasks (AIME, MATH) with ablations on each component.

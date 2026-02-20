@@ -4,76 +4,96 @@
 \section{Proof of Leave-One-Out Baseline Properties}
 \label{app:rloo-proof}
 
-We provide a detailed property analysis of the leave-one-out and mean-baseline gradient estimators.
+We provide a rigorous analysis of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}.
 
 \begin{proposition}[Properties of the Leave-One-Out Baseline]
 \label{prop:rloo-variance}
-Let $f_i = \nabla_\theta \log P^{\pitheta}(o_i | q)$ denote the score function for sample $i$, and let $g_i(b) = (r_i - b) f_i$ denote the per-sample policy gradient contribution with baseline $b$. The leave-one-out gradient estimator $\hat{g} = \frac{1}{n}\sum_i g_i(b_i)$ satisfies:
+Fix a prompt $x$ and draw $n \ge 2$ i.i.d.\ responses $\{y^{(1)}, \ldots, y^{(n)}\} \sim \pitheta(\cdot|x)$ with rewards
+$r_i = R(x, y^{(i)})$. Let
+\begin{equation}
+    f_i = \nabla_\theta \log P^{\pitheta}(y^{(i)} \mid x)
+\end{equation}
+denote the trajectory score function for sample $i$, and define the per-sample policy gradient contribution with baseline $b$ as
+$g_i(b) = (r_i - b) f_i$. With the leave-one-out baseline $b_i = \frac{1}{n-1}\sum_{j \neq i} r_j$, the estimator
+\begin{equation}
+    \hat{g} = \frac{1}{n}\sum_{i=1}^{n} g_i(b_i)
+\end{equation}
+satisfies:
 \begin{enumerate}
     \item \textbf{Unbiasedness:} $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
-    \item \textbf{Zero cross-covariance:} For each $i$, $\Cov\!\big(f_i,\; b_i\big) = 0$.
-    \item \textbf{Second-moment factorization:} The independence between $b_i$ and $(r_i, f_i)$ yields the factorization $\E[(r_i - b_i)^2 f_i f_i^\top] = \E[(r_i - b_i)^2]\,\E[f_i f_i^\top]$, which does not hold for the mean baseline $b^{\mathrm{mean}}$ due to its dependence on $r_i$.
+    \item \textbf{Baseline independence:} For each $i$, $b_i$ is independent of $(r_i, f_i)$; in particular, $\E[b_i f_i] = 0$ and
+    $\Cov(f_i, b_i) = 0$.
+    \item \textbf{Mean-baseline scaling:} Let $b^{\mathrm{mean}} = \frac{1}{n}\sum_{j=1}^{n} r_j$ and
+    $\hat{g}^{\mathrm{mean}} = \frac{1}{n}\sum_{i=1}^{n}(r_i - b^{\mathrm{mean}}) f_i$. Then deterministically
+    $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$, and hence $\E[\hat{g}^{\mathrm{mean}}] = \frac{n-1}{n}\nabla_\theta J(\pitheta)$.
+    \item \textbf{Second-moment decomposition:} Let $\mu(x) = \E[r_i \mid x]$ and $\sigma^2(x) = \Var(r_i \mid x)$. Then
+    $\Var(b_i \mid x) = \sigma^2(x)/(n-1)$, and
+    \begin{equation}
+        \E\!\big[(r_i - b_i)^2 f_i f_i^\top \mid x\big]
+        = \E\!\big[(r_i - \mu(x))^2 f_i f_i^\top \mid x\big] + \Var(b_i \mid x)\, \E[f_i f_i^\top \mid x].
+        \label{eq:rloo-second-moment}
+    \end{equation}
 \end{enumerate}
 \end{proposition}
 
 \begin{remark}[Relationship between the two estimators]
 \label{rem:rloo-mean-scaling}
-Note that $r_i - b^{\mathrm{mean}} = \frac{n-1}{n}(r_i - b_i)$, so $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$. The two estimators are deterministically proportional, and the mean-baseline estimator has smaller raw variance by a factor of $((n-1)/n)^2$. However, this scaling also shrinks the signal by $\frac{n-1}{n}$, so the variance reduction comes at the cost of a smaller effective step size. The practical advantage of the leave-one-out baseline lies in its independence structure (Parts~2--3), which simplifies variance analysis, enables clean factorization of second moments, and avoids the correlated baseline artifacts that complicate optimization with the mean baseline.
+The deterministic proportionality $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ implies that the mean-baseline estimator is a
+rescaled (and therefore biased) version of the leave-one-out estimator: its smaller raw variance is entirely due to the constant scaling
+factor. In practice, this shrinkage can be absorbed into the learning rate, but it breaks exact unbiasedness. The main advantage of the
+leave-one-out baseline is that $b_i$ is independent of sample $i$, which simplifies moment calculations and avoids self-correlation terms
+that arise when the baseline depends on $r_i$.
 \end{remark}
 
 \begin{remark}
 The leave-one-out baseline is equivalent to the leave-one-out control variate from the classical REINFORCE literature~\citep{williams1992simple}. In the LLM-RL setting with $n$ samples per prompt, each sample's baseline is independent of its own trajectory, making it particularly well-suited for group-based sampling strategies.
 \end{remark}
 
-\textbf{Proof of \Cref{prop:rloo-variance}.}
+\begin{proof}
+We give a self-contained proof under group sampling; taking the outer expectation over prompts $x \sim P(x)$ yields the statement for the
+full objective $J(\pitheta)$.
 
-Consider $n$ i.i.d.\ samples $\{o_1, \ldots, o_n\}$ from $\pitheta(\cdot|q)$ with rewards $\{r_1, \ldots, r_n\}$. Define $f_i = \nabla_\theta \log P^{\pitheta}(o_i|q)$ (the score function for sample $i$), $\mu = \E[r_i]$, and $\sigma^2 = \Var[r_i]$.
+\textbf{Unbiasedness.} Since $b_i$ depends only on $\{r_j\}_{j \neq i}$, it is independent of $(y^{(i)}, r_i, f_i)$. Therefore
+\[
+    \E[(r_i - b_i) f_i \mid x] = \E[r_i f_i \mid x] - \E[b_i \mid x]\E[f_i \mid x].
+\]
+By the score-function identity, $\E[f_i \mid x] = \nabla_\theta \E[1 \mid x] = 0$, and $\E[r_i f_i \mid x] = \nabla_\theta \E[r_i \mid x]$.
+Thus $\E[(r_i - b_i) f_i \mid x] = \nabla_\theta \E[r_i \mid x] = \nabla_\theta J_x(\pitheta)$, where $J_x(\pitheta)=\E[R(x,y)\mid x]$.
+Averaging over $i$ and then over $x$ yields $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
 
-\textbf{Leave-one-out estimator:}
-\begin{equation}
-    \hat{g} = \frac{1}{n}\sum_{i=1}^n (r_i - b_i) f_i, \qquad b_i = \frac{1}{n-1}\sum_{j \neq i} r_j.
-\end{equation}
+\textbf{Baseline independence.} The same independence implies $\E[b_i f_i \mid x] = \E[b_i \mid x]\E[f_i \mid x] = 0$, hence
+$\Cov(f_i,b_i)=0$.
 
-\textbf{Mean baseline estimator:}
-\begin{equation}
-    \hat{g}^{\mathrm{mean}} = \frac{1}{n}\sum_{i=1}^n (r_i - b^{\mathrm{mean}}) f_i, \qquad b^{\mathrm{mean}} = \frac{1}{n}\sum_{j=1}^n r_j.
-\end{equation}
-
-\textbf{Step 1: Deterministic scaling relationship.}
-
-Note that $b^{\mathrm{mean}} = \frac{r_i}{n} + \frac{n-1}{n}b_i$, so:
-\begin{equation}
+\textbf{Mean-baseline scaling.} Let $b^{\mathrm{mean}} = \frac{1}{n}\sum_{j=1}^{n} r_j$. For each $i$,
+\[
+    b^{\mathrm{mean}} = \frac{r_i}{n} + \frac{n-1}{n} b_i
+    \quad\Longrightarrow\quad
     r_i - b^{\mathrm{mean}} = \frac{n-1}{n}(r_i - b_i).
-\end{equation}
-Summing over $i$: $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$. Therefore $\Var[\hat{g}^{\mathrm{mean}}] = \big(\frac{n-1}{n}\big)^2 \Var[\hat{g}]$. The mean-baseline estimator has smaller raw variance, but this is entirely due to the $\frac{n-1}{n}$ signal shrinkage---it also shrinks the expected gradient by the same factor.
+\]
+Summing over $i$ gives $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ deterministically. Taking expectations yields
+$\E[\hat{g}^{\mathrm{mean}}] = \frac{n-1}{n}\nabla_\theta J(\pitheta)$.
 
-\textbf{Step 2: Independence and second-moment factorization.}
-
-Since $b_i$ is independent of $(r_i, f_i)$, the per-sample second moment factorizes:
-\begin{equation}
-    \E[(r_i - b_i)^2 f_i f_i^\top] = \E[(r_i - b_i)^2]\, \E[f_i f_i^\top].
-\end{equation}
-We have $\E[(r_i - b_i)^2] = \Var[r_i] + \Var[b_i] = \sigma^2 + \sigma^2/(n-1) = \sigma^2 n/(n-1)$, where the cross term vanishes by independence. This clean factorization is the key structural advantage of the leave-one-out baseline: it separates the reward variance from the score function variance, making the gradient variance analytically tractable.
-
-\textbf{Step 3: Non-factorization of the mean baseline.}
-
-For the mean baseline, $b^{\mathrm{mean}}$ depends on $r_i$, so:
-\begin{equation}
-    \E[(r_i - b^{\mathrm{mean}})^2 f_i f_i^\top] \neq \E[(r_i - b^{\mathrm{mean}})^2]\, \E[f_i f_i^\top]
-\end{equation}
-in general. The dependence between $b^{\mathrm{mean}}$ and $(r_i, f_i)$ creates cross terms involving $\Cov[f_i, r_i] = \E[r_i f_i] = \nabla_\theta J(\pitheta)$ (by the score function identity, since $\E[f_i] = 0$). This non-zero covariance complicates the variance analysis and means the mean baseline does not achieve the clean separation of reward and score function contributions.
-
-\textbf{Step 4: Practical implications.}
-
-The leave-one-out baseline's independence structure provides three practical advantages over the mean baseline:
-\begin{enumerate}
-    \item \textbf{Analytical tractability:} The factorization in Step~2 enables closed-form variance expressions, facilitating hyperparameter tuning (e.g., choosing $n$).
-    \item \textbf{No correlated baseline artifacts:} With the mean baseline, $\Cov[f_i, b^{\mathrm{mean}}] = \frac{1}{n}\nabla J \neq 0$, meaning the baseline itself correlates with the gradient direction. This correlation may interact with adaptive optimizers (e.g., Adam) in unpredictable ways, though the practical impact depends on the specific optimization dynamics. The leave-one-out baseline eliminates this correlation entirely.
-    \item \textbf{Equivalent signal-to-noise ratio:} Although $\hat{g}^{\mathrm{mean}}$ has smaller raw variance, its signal is also smaller by $\frac{n-1}{n}$. The signal-to-noise ratio $\|\E[\hat{g}]\|^2 / \mathrm{tr}(\Var[\hat{g}])$ is identical for both estimators, since both the signal and noise scale by the same factor.
-\end{enumerate}
+\textbf{Second-moment decomposition.} Conditional on $x$, the random variable $b_i$ is the average of $n-1$ i.i.d.\ rewards
+$\{r_j\}_{j\neq i}$, hence $\Var(b_i \mid x) = \sigma^2(x)/(n-1)$. For \eqref{eq:rloo-second-moment}, write
+\[
+    r_i - b_i = (r_i - \mu(x)) - (b_i - \mu(x)).
+\]
+Expanding the square and multiplying by $f_i f_i^\top$ gives
+\[
+    (r_i - b_i)^2 f_i f_i^\top
+    = (r_i - \mu(x))^2 f_i f_i^\top - 2(r_i - \mu(x))(b_i - \mu(x)) f_i f_i^\top + (b_i - \mu(x))^2 f_i f_i^\top.
+\]
+Taking conditional expectation and using independence of $b_i$ from $(r_i,f_i)$ (given $x$), the cross term vanishes:
+\[
+    \E[(r_i - \mu(x))(b_i - \mu(x)) f_i f_i^\top \mid x]
+    = \E[b_i - \mu(x) \mid x]\E[(r_i - \mu(x)) f_i f_i^\top \mid x] = 0.
+\]
+The last term factorizes as $\E[(b_i - \mu(x))^2 f_i f_i^\top \mid x] = \Var(b_i\mid x)\, \E[f_i f_i^\top\mid x]$, which yields
+\eqref{eq:rloo-second-moment}.
+\end{proof}
 
 
-\section{Optimality of $\gamma = 1.0$}
+\section{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
 \begin{proposition}[Optimality of $\gamma = 1.0$]
@@ -82,36 +102,92 @@ When the extrinsic reward is sparse (assigned only at the final token), $\gamma 
 \end{proposition}
 
 \begin{proof}
-With discount factor $\gamma < 1$, the gradient estimate becomes $\E\!\big[\sum_t \gamma^{T-t} \tilde{r}_i \nabla_\theta \log \pitheta(y_t|c_t)\big]$, which is a biased estimator of $\nabla J(\pitheta) = \E\!\big[\tilde{r}_i \sum_t \nabla_\theta \log \pitheta(y_t|c_t)\big]$ since $\gamma^{T-t} \neq 1$ for $t < T$. Only $\gamma = 1$ makes all coefficients equal to 1, recovering the unbiased estimator.
+For the undiscounted objective $J(\pitheta)=\E[R(x,y)]$, the REINFORCE identity gives
+\[
+    \nabla_\theta J(\pitheta)
+    = \E\!\Big[R(x,y)\sum_{t=1}^{T}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
+\]
+If one instead uses a discounted return with $\gamma<1$ in a sparse terminal-reward setting, the resulting estimator corresponds to
+\[
+    \E\!\Big[R(x,y)\sum_{t=1}^{T}\gamma^{T-t}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big],
+\]
+whose difference from $\nabla_\theta J(\pitheta)$ is
+\[
+    \E\!\Big[R(x,y)\sum_{t=1}^{T-1}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
+\]
+This term is not identically zero in general (e.g., when early-token probabilities affect the terminal reward), hence the estimator is
+biased for any $\gamma<1$. The unique choice that matches the undiscounted objective is $\gamma=1$.
 \end{proof}
 
 
-\section{Illustrative Examples for Theorem~\ref{thm:prefix-tighter}}
+\section{Proof of Theorem~\ref{thm:prefix-tighter}}
 \label{app:prefix-proof}
 
-The following examples illustrate the behavior of prefix IS under the specific deviation patterns analyzed in \Cref{thm:prefix-tighter}. They demonstrate the theorem's claims on concrete instances but do not constitute a general proof covering all possible deviation patterns.
+We provide a complete proof under the definitions in \Cref{sec:prefix-is}. For convenience, write the log-threshold interval as
+\[
+    [\log\lambda, \log\Lambda] = [-\tau_-, \tau_+], \qquad \tau_+ := \log\Lambda,\;\; \tau_- := -\log\lambda,
+\]
+so that $w_t \in [\lambda,\Lambda]$ is equivalent to $\ell_t \in [-\tau_-,\tau_+]$.
 
-\textbf{Detailed analysis of Part (a).}
+\paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
+\begin{itemize}
+    \item \textbf{Token-level (ICEPOP):} $M_t^{\mathrm{token}} = \mathbb{I}[w_t \in [\lambda,\Lambda]] = \mathbb{I}[\ell_t \in [-\tau_-,\tau_+]]$.
+    \item \textbf{Sequence-level (seq-mask-tis):} $M_t^{\mathrm{seq}} = \mathbb{I}[\bar{\ell} \in [-\tau_-,\tau_+]]$ for all $t$,
+    where $\bar{\ell} := \frac{1}{P_T}\sum_{s=1}^{T}\ell_s m_s$ is the sequence-level average log-ratio.
+    \item \textbf{Prefix cumulative:} $M_t^{\mathrm{prefix}} = \mathbb{I}[L_t/P_t \in [-\tau_-,\tau_+]]$, where
+    $L_t = \sum_{s\le t}\ell_s m_s$ and $P_t=\sum_{s\le t}m_s$.
+\end{itemize}
 
-Let $w_1 = e^{\ell_1}$ with $|\ell_1| > \log\Lambda$ (so $w_1 \notin [\lambda, \Lambda]$), and $w_t = 1$ (i.e., $\ell_t = 0$) for all $t > 1$.
+\begin{proof}[Proof of \Cref{thm:prefix-tighter}]
+\textbf{Part (a).} Assume $w_1 \notin [\lambda,\Lambda]$ and $|\ell_t| \le \epsilon$ for all $t>1$, with
+$0 \le \epsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
+\[
+    \ell_t \in [-\epsilon,\epsilon] \subseteq [-\tau_-,\tau_+],
+\]
+so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $w_1 \notin [\lambda,\Lambda]$). Hence token-level
+ICEPOP masks only position $t=1$.
 
-Under ICEPOP: $M_1^{\mathrm{token}} = 0$, $M_t^{\mathrm{token}} = 1$ for $t > 1$. Total masked: 1 token.
+For prefix IS, write (assuming $m_1=1$ for the first action token)
+\[
+    L_t = \ell_1 + \sum_{s=2}^{t}\ell_s m_s, \qquad P_t = 1 + \sum_{s=2}^{t}m_s.
+\]
+If $\ell_1>\tau_+$, then $\ell_s m_s \ge -\epsilon m_s$ for all $s\ge2$, so
+\[
+    L_t \ge \ell_1 - \epsilon(P_t-1).
+\]
+Therefore, if $P_t < (\ell_1+\epsilon)/(\tau_+ + \epsilon)$ (the condition in \Cref{eq:early-upper-sufficient}), then
+\[
+    \frac{L_t}{P_t} \ge \frac{\ell_1-\epsilon(P_t-1)}{P_t} > \tau_+,
+\]
+so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $\ell_1<-\tau_-$ is symmetric: since $\ell_s m_s \le \epsilon m_s$ for $s\ge2$,
+we have $L_t \le \ell_1 + \epsilon(P_t-1)$, and the condition in \Cref{eq:early-lower-sufficient} implies $L_t/P_t < -\tau_-$, hence
+$M_t^{\mathrm{prefix}}=0$. In particular, prefix IS always masks at least position $t=1$, and under the sufficient conditions masks a
+longer prefix.
 
-Under prefix IS: $\mathrm{prefix\_is}(t) = \exp(\ell_1 / t)$ for $t \ge 1$ (assuming all $m_t = 1$). The mask is:
-\begin{equation}
-    M_t^{\mathrm{prefix}} = \mathbb{I}\!\big[\exp(\ell_1/t) \in [\lambda, \Lambda]\big] = \mathbb{I}\!\big[\ell_1/t \in [\log\lambda, \log\Lambda]\big].
-\end{equation}
-For $\ell_1 > 0$: $M_t^{\mathrm{prefix}} = 0$ when $\ell_1/t > \log\Lambda$, i.e., $t < \ell_1/\log\Lambda$. So the first $\lfloor \ell_1/\log\Lambda \rfloor$ tokens are masked.
+\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|\ell_t|\le \epsilon$ for all $t\neq t^*$, with
+$0 \le \epsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\ell_s \in [-\tau_-,\tau_+]$.
+Since $L_t/P_t$ is a weighted average of these in-bound values (with weights $m_s/P_t$), it follows that $L_t/P_t \in [-\tau_-,\tau_+]$,
+and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
+\[
+    \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
+\]
+The seq-mask-tis mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
-For example, with $\ell_1 = 3$ and $\Lambda = 5$ ($\log\Lambda \approx 1.61$): prefix IS masks the first $\lfloor 3/1.61 \rfloor = 1$ token. With $\Lambda = 2$ ($\log\Lambda \approx 0.69$): prefix IS masks the first $\lfloor 3/0.69 \rfloor = 4$ tokens. In both cases, prefix IS masks at least as many tokens as ICEPOP.
+For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $\ell_{t^*}=L$ and $\ell_t=0$
+for $t\neq t^*$. Then $\bar{\ell} = L/P_T$ and $L_{t^*}/P_{t^*} = L/P_{t^*}$. Since $P_{t^*} \le P_T$, we have $L/P_{t^*} \ge L/P_T$.
+Thus whenever
+\[
+    \frac{L}{P_{t^*}} > \tau_+
+    \quad\text{and}\quad
+    \frac{L}{P_T} \le \tau_+,
+\]
+we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
-\textbf{Detailed analysis of Part (b).}
-
-Let $\ell_t = 0$ for $t < t^*$ and $\ell_{t^*} = L$ with $|L| > \log\Lambda$. For $t \ge t^*$:
-\begin{equation}
-    \mathrm{prefix\_is}(t) = \exp\!\Big(\frac{L}{t}\Big).
-\end{equation}
-This is masked when $|L|/t > \log\Lambda$, i.e., $t < |L|/\log\Lambda$. If $t^* > |L|/\log\Lambda$ (late deviation), then $\mathrm{prefix\_is}(t^*) = \exp(L/t^*)$ may already be within bounds, and no tokens are masked. In contrast, seq-mask-tis computes $\exp(L/T)$; if this crosses the threshold, all $T$ tokens are rejected.
+\textbf{Part (c).} If $\ell_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
+average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
+$\bar{\ell}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $\ell_s < -\tau_-$
+is symmetric.
+\end{proof}
 
 
 \section{Numerical Stability}
@@ -129,7 +205,9 @@ The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguard
     \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
 \end{enumerate}
 
-These safeguards may cause the normalized advantages to deviate slightly from the exact $\E[\hat{A}] = 0$, $\Var[\hat{A}] = 1$ constraints, but in practice the deviation is negligible ($|\text{mean}| < 0.001$, $|\text{var} - 1| < 0.01$). These thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
+These safeguards may cause the normalized advantages to deviate slightly from the exact empirical constraints in
+\Cref{def:adaptive-norm}, but in practice the deviation is negligible ($|\text{mean}| < 0.001$, $|\text{var} - 1| < 0.01$). These
+thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
 
 \textbf{Fallback conditions.} Normalization is skipped entirely when:
 \begin{itemize}

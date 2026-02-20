@@ -3,11 +3,38 @@
 
 \subsection{Autoregressive Generation and Objective}
 
-A policy $\pitheta$ generates a response $y = (y_1, \ldots, y_T)$ given prompt $x$, with trajectory probability $P^{\pitheta}(y \mid x) = \prod_{t=1}^T \pitheta(y_t \mid x, y_{<t})$. We define the context $c_t = (x, y_{<t})$ and the context visitation distribution (i.e., the marginal distribution over length-$t$ prefixes):
+A (stochastic) policy $\pi$ generates a response $y = (y_1, \ldots, y_T)$ given a prompt $x$, with trajectory probability
 \begin{equation}
-    d_t^{\pi}(c_t) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid c_s).
+    P^{\pi}(y \mid x) = \prod_{t=1}^T \pi(y_t \mid x, y_{<t}).
 \end{equation}
-Given a scalar reward $R(x, y)$, the objective is $J(\pitheta) = \E_{x \sim P(x),\, y \sim \pitheta(\cdot|x)}[R(x, y)]$.
+We define the context at position $t$ as $c_t = (x, y_{<t})$ and the induced context visitation distribution (the marginal distribution over length-$t$ prefixes):
+\begin{equation}
+    d_t^{\pi}(c_t) = P(x)\, P^{\pi}(y_{<t} \mid x) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid c_s).
+\end{equation}
+Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ is
+\begin{equation}
+    J(\pitheta) = \E_{x \sim P(x),\, y \sim \pitheta(\cdot|x)}[R(x, y)].
+\end{equation}
+
+\subsection{Notation}
+\label{sec:notation}
+
+\textbf{Three policies.} Modern LLM-RL pipelines involve three distinct policies:
+\begin{itemize}
+    \item $\piroll$: the rollout policy used by the inference engine to generate samples;
+    \item $\piold$: the actor policy at the start of each training step (the ``old'' policy in PPO);
+    \item $\pitheta$: the current actor policy being updated during gradient steps.
+\end{itemize}
+
+\textbf{Two importance ratios.} We distinguish two ratios that arise in practice:
+\begin{itemize}
+    \item \emph{PPO ratio} (carries gradients): $\rho_t^{\mathrm{PPO}} = \pitheta(y_t|c_t)/\piold(y_t|c_t)$;
+    \item \emph{rollout mismatch ratio} (detached coefficient): $w_t = \piold(y_t|c_t)/\piroll(y_t|c_t)$, with log-ratio $\ell_t = \log w_t$.
+\end{itemize}
+
+\textbf{Action mask.} We use an action mask $m_t \in \{0,1\}$ to select active action-token positions (excluding padding, and excluding
+prompt-only positions if a unified tokenization is used). When we index only over action tokens without padding, one can take $m_t \equiv 1$.
+Sums such as $\sum_t f_t m_t$ should be read as summing over active positions.
 
 \subsection{Assumptions}
 \label{sec:assumptions}
@@ -66,16 +93,6 @@ The Adaptive bound is particularly relevant to our work:
     \label{eq:adaptive-bound}
 \end{equation}
 where $\Dbar_t = \E_{c_t \sim d_t^{\piroll}}[\Dtvtok(c_t)]$ is the expected per-position TV divergence, $\epsilon = \Dtvtokmax$, and $\delta = \Dkltokmax$. This bound operates at per-position granularity and preserves the causal structure of the error accumulation---properties that motivate our prefix cumulative IS correction.
-
-\subsection{Three Policies in LLM-RL}
-
-Modern LLM-RL pipelines involve three distinct policies:
-\begin{itemize}
-    \item $\piroll$: the rollout policy used by vLLM to generate samples;
-    \item $\piold$: the actor policy at the start of each training step (the ``old'' policy in PPO);
-    \item $\pitheta$: the current actor policy being updated during gradient steps.
-\end{itemize}
-The standard PPO ratio $\rho_t^{\mathrm{PPO}} = \pitheta(y_t|c_t) / \piold(y_t|c_t)$ accounts for the drift between $\pitheta$ and $\piold$ during mini-batch updates. The IS correction ratio $w_t = \piold(y_t|c_t) / \piroll(y_t|c_t)$ accounts for the mismatch between the rollout engine and the training actor. In practice, $\rho_t^{\mathrm{PPO}}$ carries gradients while $w_t$ is treated as a fixed coefficient; see \Cref{sec:combined-loss} for implementation details.
 
 \subsection{Existing IS Correction Methods}
 \label{sec:existing-is}
