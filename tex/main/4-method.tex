@@ -53,9 +53,6 @@ and the summary statistics
     &
     Q^-
     &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t}^2,
-    \\
-    N_{\mathrm{nz}}
-    &:= |\mathcal{P}| + |\mathcal{N}|.
 \end{align}
 The normalized advantage is defined by a sign-dependent rescaling:
 \begin{equation}
@@ -72,26 +69,26 @@ The normalized advantage is defined by a sign-dependent rescaling:
 \end{equation}
 where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} constraints over non-zero tokens:
 \begin{align}
-    \frac{1}{N_{\mathrm{nz}}}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
+    \frac{1}{|\mathcal{P}| + |\mathcal{N}|}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
     \label{eq:adaptive-mean}
     \\
-    \frac{1}{N_{\mathrm{nz}}}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
+    \frac{1}{|\mathcal{P}| + |\mathcal{N}|}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
     \label{eq:adaptive-var}
 \end{align}
 Equivalently, these constraints can be written as
 \begin{equation}
     \alpha S^+ = \beta S^-,
     \qquad
-    \alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}.
+    \alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|.
 \end{equation}
 \end{definition}
 
 \begin{proposition}[Closed-Form Solution]
 \label{prop:alpha-beta}
 Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique solution satisfying $\alpha S^+ = \beta S^-$ and
-$\alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}$ is:
+$\alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|$ is:
 \begin{equation}
-    \alpha = \sqrt{\frac{N_{\mathrm{nz}}}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}},
+    \alpha = \sqrt{\frac{|\mathcal{P}| + |\mathcal{N}|}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}},
     \qquad
     \beta = \alpha \cdot \frac{S^+}{S^-}.
     \label{eq:alpha-beta}
@@ -109,19 +106,19 @@ We solve the two scalar constraints in \Cref{def:adaptive-norm} and then enforce
 Since $\mathcal{P}\neq\emptyset$ and $\mathcal{N}\neq\emptyset$, we have $S^+>0$ and $S^->0$, so $S^+/S^-$ is well-defined.
 
 \textbf{Step 2 (unit empirical second moment).} Substituting \eqref{eq:beta-from-mean} into
-$\alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}$ yields
+$\alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|$ yields
 \begin{align}
     \alpha^2 Q^+ + \beta^2 Q^-
-    &= N_{\mathrm{nz}},
+    &= |\mathcal{P}| + |\mathcal{N}|,
     \\
     \alpha^2 Q^+ + \alpha^2\Big(\frac{S^+}{S^-}\Big)^{\!2} Q^-
-    &= N_{\mathrm{nz}},
+    &= |\mathcal{P}| + |\mathcal{N}|,
     \\
     \alpha^2
-    &= \frac{N_{\mathrm{nz}}}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
+    &= \frac{|\mathcal{P}| + |\mathcal{N}|}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
 \end{align}
-The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $N_{\mathrm{nz}}>0$ under the same assumption. Taking the positive
-square root gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
+The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $|\mathcal{P}| + |\mathcal{N}|>0$ under the same assumption. Taking
+the positive square root gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
 
 \textbf{Uniqueness.} The mean constraint uniquely specifies the ratio $\beta/\alpha$, and the second-moment constraint uniquely
 specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a unique solution.
