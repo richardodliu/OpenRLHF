@@ -95,7 +95,7 @@ GSPO & $\exp\!\big(\sum_t \ell_t m_t / \sum_t m_t\big)$ & Sequence & No \\
 
 \begin{lemma}[Context Shift Propagation]
 \label{lem:coupling}
-If two policies $\pi$ and $\pi'$ differ at position $s$ with $\Dtvtok(c_s) > 0$ for some context $c_s$ satisfying $d_s^{\pi}(c_s) > 0$, and if for all subsequent positions $t > s$ the policies assign positive probability to all tokens reachable under either policy (i.e., $\pi(y_t|c_t) > 0 \iff \pi'(y_t|c_t) > 0$ for all reachable $c_t$), then for all $t > s$, the context visitation distributions satisfy $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. That is, a token-level divergence at a reachable context propagates to all future context distributions.
+Let $s$ be the \emph{first} position at which two policies $\pi$ and $\pi'$ differ: $\pi(\cdot|c_{s'}) = \pi'(\cdot|c_{s'})$ for all reachable $c_{s'}$ with $s' < s$, and $\Dtvtok(c_s) > 0$ for some context $c_s$ satisfying $d_s^{\pi}(c_s) > 0$. If for all subsequent positions $t > s$ the policies assign positive probability to all tokens reachable under either policy (i.e., $\pi(y_t|c_t) > 0 \iff \pi'(y_t|c_t) > 0$ for all reachable $c_t$), then for all $t > s$, the context visitation distributions satisfy $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. That is, a token-level divergence at the first point of disagreement propagates to all future context distributions.
 \end{lemma}
 
 \begin{proof}
@@ -105,11 +105,11 @@ By definition, $d_t^{\pi}(c_t) = P(x)\prod_{s'=1}^{t-1}\pi(y_{s'}|c_{s'})$. We p
 \begin{equation*}
     d_{s+1}^{\pi}(c_s, v^*) = d_s^{\pi}(c_s) \cdot \pi(v^*|c_s), \qquad d_{s+1}^{\pi'}(c_s, v^*) = d_s^{\pi}(c_s) \cdot \pi'(v^*|c_s),
 \end{equation*}
-where we use $d_s^{\pi}(c_s) = d_s^{\pi'}(c_s)$ since the two policies share the same prefix distribution up to position $s$ (the divergence occurs at position $s$, not before). Since $d_s^{\pi}(c_s) > 0$ and $\pi(v^*|c_s) \neq \pi'(v^*|c_s)$, we have $d_{s+1}^{\pi}(c_s, v^*) \neq d_{s+1}^{\pi'}(c_s, v^*)$, and therefore $\|d_{s+1}^{\pi} - d_{s+1}^{\pi'}\|_{\mathrm{TV}} > 0$.
+where $d_s^{\pi}(c_s) = d_s^{\pi'}(c_s)$ holds because $s$ is the first position of disagreement, so $\pi(\cdot|c_{s'}) = \pi'(\cdot|c_{s'})$ for all reachable $c_{s'}$ with $s' < s$, and hence the two policies induce identical prefix distributions up to position $s$. Since $d_s^{\pi}(c_s) > 0$ and $\pi(v^*|c_s) \neq \pi'(v^*|c_s)$, we have $d_{s+1}^{\pi}(c_s, v^*) \neq d_{s+1}^{\pi'}(c_s, v^*)$, and therefore $\|d_{s+1}^{\pi} - d_{s+1}^{\pi'}\|_{\mathrm{TV}} > 0$.
 
-\emph{Inductive step ($t > s+1$).} Fix any sequence of tokens $(y_{s+1}^*, \ldots, y_{t-1}^*)$ such that the prefix $c_t^* = (c_s, v^*, y_{s+1}^*, \ldots, y_{t-1}^*)$ is reachable under both policies. By the support overlap condition, all transition probabilities along this path are positive under both $\pi$ and $\pi'$. The visitation probability factorizes as:
+\emph{Inductive step ($t > s+1$).} We construct a path along which the two policies \emph{agree} at all positions after $s$, so that the visitation ratio is determined entirely by the base-case divergence. By the support overlap condition, for each position $s' > s$ there exist tokens reachable under both policies. Choose any sequence $(y_{s+1}^*, \ldots, y_{t-1}^*)$ such that $\pi(y_{s'}^*|c_{s'}^*) = \pi'(y_{s'}^*|c_{s'}^*)$ for all $s+1 \le s' \le t-1$ (such tokens exist: since both policies are distributions over the same vocabulary with overlapping support, and they can only differ on a strict subset of tokens, there must exist at least one token on which they agree at each position). Along this path, the visitation ratio satisfies:
 \begin{equation*}
-    d_t^{\pi}(c_t^*) = d_{s+1}^{\pi}(c_s, v^*) \cdot \prod_{s'=s+1}^{t-1} \pi(y_{s'}^*|c_{s'}^*).
+    \frac{d_t^{\pi}(c_t^*)}{d_t^{\pi'}(c_t^*)} = \frac{d_{s+1}^{\pi}(c_s, v^*)}{d_{s+1}^{\pi'}(c_s, v^*)} \cdot \prod_{s'=s+1}^{t-1} \frac{\pi(y_{s'}^*|c_{s'}^*)}{\pi'(y_{s'}^*|c_{s'}^*)} = \frac{d_{s+1}^{\pi}(c_s, v^*)}{d_{s+1}^{\pi'}(c_s, v^*)} \neq 1,
 \end{equation*}
-Since $d_{s+1}^{\pi}(c_s, v^*) \neq d_{s+1}^{\pi'}(c_s, v^*)$ (from the base case) and $\prod_{s'=s+1}^{t-1} \pi(y_{s'}^*|c_{s'}^*) > 0$, the product $d_t^{\pi}(c_t^*) \neq d_t^{\pi'}(c_t^*)$. This exhibits a specific context $c_t^*$ at which the two visitation distributions differ, so $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. The exact magnitude can be bounded via the KL chain rule and Pinsker's inequality (see \Cref{thm:prefix-adaptive}).
+where the product equals 1 by construction and the final inequality follows from the base case. This exhibits a specific context $c_t^*$ at which the two visitation distributions differ, so $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. The exact magnitude can be bounded via the KL chain rule and Pinsker's inequality (see \Cref{thm:prefix-adaptive}).
 \end{proof}
