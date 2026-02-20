@@ -26,7 +26,7 @@ distribution that generated the data, which we denote by $\piroll$. Accordingly,
 therefore involves only the policy pair $(\piroll,\pitheta)$, consistent with long-horizon trust-region analyses for LLM-RL (e.g.,
 \citet{li2025trm}).
 
-\paragraph{Notation mapping (PPO-style $\piold$).}
+\paragraph{PPO-style $\piold$ Mismatch.}
 In PPO-style implementations, the rollout snapshot used to generate data is often denoted by $\piold$; within a single policy update, this
 snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation). We use $\piold$ only for
 implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
