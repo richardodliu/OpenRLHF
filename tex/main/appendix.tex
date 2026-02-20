@@ -230,5 +230,10 @@ Under uniform scale mode, the gradient for uniform-reward groups is proportional
 \end{proposition}
 
 \begin{proof}
-With $\tilde{r}_i = r_i/n$ and no normalization, the gradient contribution of sample $i$ is $(r_i/n) \sum_t \nabla_\theta \log \pitheta(y_{i,t}|c_{i,t})$. The sign of $r_i$ determines the direction: positive $r_i$ increases the log-probability of all tokens, negative $r_i$ decreases it.
+With $\tilde{r}_i = r_i/n$ and no normalization, the sample-$i$ contribution to the REINFORCE gradient is proportional to
+\[
+    \frac{r_i}{n} \sum_t \nabla_\theta \log \pitheta(y_{i,t}\mid c_{i,t}).
+\]
+Hence $\sign(r_i)$ determines the update direction: when $r_i > 0$ the policy increases the log-probability of the sampled tokens, and
+when $r_i < 0$ it decreases them.
 \end{proof}

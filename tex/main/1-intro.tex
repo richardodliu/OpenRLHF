@@ -16,9 +16,9 @@ We present \textbf{REINFORCE Pro Max}, a unified framework that addresses both c
 \begin{enumerate}
     \item \textbf{Leave-one-out baseline:} We adopt the leave-one-out (RLOO) baseline for its statistical independence between each sample and its baseline, avoiding correlated baseline artifacts. See \Cref{app:rloo-proof} for a detailed analysis.
 
-    \item \textbf{Adaptive asymmetric normalization (\Cref{sec:adaptive-norm}):} We introduce a normalization scheme that applies
-    different scaling factors $\alpha, \beta$ to positive and negative advantages, provably preserving gradient direction while enforcing
-    zero empirical mean and unit empirical variance on non-zero tokens (the constraints in \Cref{def:adaptive-norm}).
+    \item \textbf{Adaptive asymmetric normalization} (\Cref{sec:adaptive-norm}): We introduce a normalization scheme that applies
+    different scaling factors $\alpha, \beta$ to positive and negative advantages. The scheme provably preserves gradient direction while
+    enforcing zero empirical mean and unit empirical variance on non-zero tokens (the constraints in \Cref{def:adaptive-norm}).
 
     \item \textbf{Prefix cumulative IS with causal structure (\Cref{sec:prefix-is}):} We propose a prefix cumulative importance sampling correction that respects the autoregressive causal structure. We show that, under the explicit sufficient conditions stated in Theorem~\ref{thm:prefix-tighter}, prefix cumulative IS can provide tighter masking (i.e., mask at least as many off-policy tokens) than token-level methods (which ignore causal dependencies) and sequence-level methods (which lose positional information) in three analyzed deviation patterns (early deviation, late deviation, and monotone drift).
 

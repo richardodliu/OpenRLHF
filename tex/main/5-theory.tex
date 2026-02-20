@@ -31,7 +31,7 @@ Intuitively, the two components of REINFORCE Pro Max reduce gradient variance th
 
 \subsection{Algorithm}
 
-Algorithm~\ref{alg:promax} presents the complete REINFORCE Pro Max training procedure, which unifies variance-reduced advantage estimation (REINFORCE Max, \Cref{sec:reinforce-max}) and causal off-policy correction (REINFORCE Pro, \Cref{sec:reinforce-pro}) into a single training loop. The algorithm processes one prompt at a time: it generates $n$ rollout samples, computes advantages with the RLOO baseline and adaptive normalization, then applies prefix cumulative IS masking during the loss computation. We highlight the key design choices below.
+Algorithm~\ref{alg:promax} presents the complete REINFORCE Pro Max training procedure. It unifies variance-reduced advantage estimation (REINFORCE Max, \Cref{sec:reinforce-max}) and causal off-policy correction (REINFORCE Pro, \Cref{sec:reinforce-pro}) into a single training loop. The algorithm processes one prompt at a time: it generates $n$ rollout samples, computes advantages with the RLOO baseline and adaptive normalization, then applies prefix cumulative IS masking during the loss computation. We highlight the key design choices below.
 
 \begin{algorithm}[t]
 \caption{REINFORCE Pro Max (minimizing $\mathcal{L} = -L_{\piroll}(\pitheta)$)}
