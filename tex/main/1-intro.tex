@@ -17,7 +17,7 @@ future context distribution, so token-independent ratio interventions may fail t
 These challenges are not independent: noisy advantage estimates amplify the effect of off-policy errors, and biased importance sampling weights distort the advantage signal, creating a compounding instability. Formally, the surrogate objective error decomposes into per-position terms involving both an advantage factor and a context distribution shift factor (see \Cref{eq:error-decomp}); high variance inflates the former while off-policy mismatch inflates the latter. Existing methods address each challenge in isolation---RLOO improves the baseline but ignores off-policy correction; TIS and ICEPOP correct for policy mismatch but ignore causal structure and use suboptimal advantage estimation.
 
 We present \textbf{REINFORCE Pro Max}, a unified framework that addresses both challenges simultaneously. By combining variance-reduced
-advantage estimation (\Cref{sec:reinforce-max}) with prefix-causal ratio masking (\Cref{sec:reinforce-pro}), both factors in the error
+advantage estimation (\Cref{sec:reinforce-max}) with prefix-level trust-region masking (\Cref{sec:reinforce-pro}), both factors in the error
 decomposition are targeted---the advantage magnitude via normalization and the context-shift factor via sample-level prefix filtering; the
 joint benefit is discussed in \Cref{sec:unified}. Our contributions are:
 
@@ -28,13 +28,15 @@ joint benefit is discussed in \Cref{sec:unified}. Our contributions are:
     different scaling factors $\alpha, \beta$ to positive and negative advantages. The scheme provably preserves gradient direction while
     enforcing zero empirical mean and unit empirical variance on non-zero tokens (the constraints in \Cref{def:adaptive-norm}).
 
-\item \textbf{Prefix-cumulative ratio masking with causal structure (\Cref{sec:prefix-is}):} We propose a prefix-cumulative masking
-    strategy constructed from the per-token importance ratio $\rho_t=\pitheta/\piroll$, which respects the autoregressive causal structure.
+    \item \textbf{Prefix TRM-style masking with causal structure (\Cref{sec:prefix-is}):} We propose a prefix-cumulative masking strategy
+    constructed from the per-token ratio $\rho_t=\pitheta/\piroll$. This can be viewed as a prefix-level refinement of the rejection
+    mechanism in Trust Region Masking (TRM)~\citep{li2025trm}: instead of discarding an entire trajectory with a single gate, we apply a
+    per-position prefix gate to the token-level loss, respecting the autoregressive causal structure.
     Under the explicit sufficient conditions in Theorem~\ref{thm:prefix-tighter}, prefix masking can provide tighter filtering (i.e., mask at
     least as many ratio-violating tokens) than token-level methods (which ignore causal dependencies) and sequence-level methods (which lose
     positional information) in three analyzed deviation patterns (early deviation, late deviation, and monotone drift).
 
-    \item \textbf{Connection to the Adaptive bound (\Cref{sec:adaptive-connection}):} We relate prefix cumulative IS to the per-position
+    \item \textbf{Connection to the Adaptive bound (\Cref{sec:adaptive-connection}):} We relate prefix masking to the per-position
     structure of the Adaptive bound from the trust-region framework~\citep{li2025trm}: the KL chain rule yields an expectation identity for
     cumulative log-ratios, and thresholding the sample-level prefix log-ratio provides a practical proxy for trust-region style filtering at
     each position.
@@ -42,6 +44,6 @@ joint benefit is discussed in \Cref{sec:unified}. Our contributions are:
 
 \textbf{Paper organization.} \Cref{sec:preliminaries} introduces notation, assumptions, and the surrogate objective error decomposition.
 \Cref{sec:reinforce-max} presents REINFORCE Max (leave-one-out baseline, token expansion, and adaptive normalization).
-\Cref{sec:reinforce-pro} develops REINFORCE Pro (prefix-cumulative ratio masking and its connection to the Adaptive bound).
+\Cref{sec:reinforce-pro} develops REINFORCE Pro (prefix-level trust-region masking and its connection to the Adaptive bound).
 \Cref{sec:unified} unifies both components and presents the full algorithm. \Cref{sec:related} discusses related work,
 \Cref{sec:experiments} describes experimental evaluation, and \Cref{sec:conclusion} concludes.

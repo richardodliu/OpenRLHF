@@ -169,7 +169,8 @@ removes the reweighting for all $t$ is $\gamma=1$.
 \section{Proof of Theorem~\ref{thm:prefix-tighter}}
 \label{app:prefix-proof}
 
-We provide a complete proof under the definitions in \Cref{sec:prefix-is}. For convenience, write the log-threshold interval as
+We provide a complete proof of \Cref{thm:prefix-tighter} under the definitions in \Cref{sec:prefix-is}. For convenience, write the
+log-threshold interval as
 \begin{equation}
     [\log\lambda, \log\Lambda] = [-\tau_-, \tau_+],
     \qquad
@@ -177,30 +178,50 @@ We provide a complete proof under the definitions in \Cref{sec:prefix-is}. For c
     \qquad
     \tau_- := -\log\lambda,
 \end{equation}
-so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
+so that $\IStoken{t} \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
-    \item \textbf{Token-level (ICEPOP):} $M_t^{\mathrm{token}} = \mathbb{I}[\rho_t \in [\lambda,\Lambda]] = \mathbb{I}[r_t \in [-\tau_-,\tau_+]]$.
-    \item \textbf{Sequence-level (seq-mask-tis):} $M_t^{\mathrm{seq}} = \mathbb{I}[\bar{r} \in [-\tau_-,\tau_+]]$ for all $t$,
-    where $\bar{r} := \frac{1}{P_T}\sum_{s=1}^{T}r_s m_s$ is the sequence-level average log-ratio.
-    \item \textbf{Prefix cumulative:} $M_t^{\mathrm{prefix}} = \mathbb{I}[L_t/P_t \in [-\tau_-,\tau_+]]$, where
-    $L_t = \sum_{s\le t}r_s m_s$ and $P_t=\sum_{s\le t}m_s$.
+    \item \textbf{Token-level (ICEPOP / token-level TRM-style mask):}
+    \begin{equation}
+        M_t^{\mathrm{token}}
+        := \mathbb{I}\!\big[\IStoken{t} \in [\lambda,\Lambda]\big]
+        = \mathbb{I}\!\big[r_t \in [-\tau_-,\tau_+]\big].
+    \end{equation}
+    \item \textbf{Sequence-level (GSPO-style / sequence-level TRM-style mask):}
+    \begin{equation}
+        M_t^{\mathrm{seq}}
+        := \mathbb{I}\!\big[\bar{r} \in [-\tau_-,\tau_+]\big],
+        \qquad
+        \bar{r} := \frac{1}{P_T}\sum_{s=1}^{T}r_s m_s,
+    \end{equation}
+    for all $t$ (equivalently, $\ISseq=\exp(\bar{r})$).
+    \item \textbf{Prefix-level (TRM-style proxy):}
+    \begin{equation}
+        M_t^{\mathrm{prefix}}
+        := \mathbb{I}\!\big[L_t/P_t \in [-\tau_-,\tau_+]\big],
+    \end{equation}
+    where $L_t = \sum_{s\le t}r_s m_s$ and $P_t=\sum_{s\le t}m_s$.
 \end{itemize}
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
-\textbf{Action-token indexing.} By \Cref{rem:action-indexing}, we may index only over active action-token positions and assume the
-trajectory is unpadded. Equivalently, we take $m_t\equiv 1$, so $P_t=t$ and $L_t=\sum_{s=1}^{t}r_s$.
+\noindent\textbf{Action-token indexing.}
+By \Cref{rem:action-indexing}, we may index only over active action-token positions and assume the trajectory is unpadded. Equivalently,
+we take $m_t\equiv 1$, so $P_t=t$ and $L_t=\sum_{s=1}^{t}r_s$.
 
-\textbf{Part (a).} Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
+\par
+\noindent\textbf{Part (a): Early deviation.}
+Assume $\IStoken{1} \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
 \begin{equation}
     r_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \end{equation}
-so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\rho_1 \notin [\lambda,\Lambda]$). Hence token-level
+so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\IStoken{1} \notin [\lambda,\Lambda]$). Hence token-level
 ICEPOP masks only position $t=1$.
 
-For prefix IS, write
+\smallskip
+For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because the prefix average at $t=1$ is $\bar{r}_1=r_1 \notin
+[-\tau_-,\tau_+]$. To quantify how long the rejection can persist, write
 \begin{equation}
     L_t = r_1 + \sum_{s=2}^{t}r_s,
     \qquad
@@ -228,7 +249,9 @@ $L_t \le r_1 + \varepsilon(P_t-1)$. If $P_t < (-r_1+\varepsilon)/(\tau_-+\vareps
 \end{align}
 and hence $M_t^{\mathrm{prefix}}=0$. This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
-\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
+\par
+\noindent\textbf{Part (b): Late deviation.}
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\IStoken{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
 Since $L_t/P_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $L_t/P_t \in [-\tau_-,\tau_+]$, and hence
@@ -236,7 +259,7 @@ $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occ
 \begin{equation}
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
 \end{equation}
-The seq-mask-tis mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
+The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
 For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $r_{t^*}=L$ and $r_t=0$
 for $t\neq t^*$. Then $\bar{r} = L/P_T$ and $L_{t^*}/P_{t^*} = L/P_{t^*}$. Since $P_{t^*} \le P_T$, we have $L/P_{t^*} \ge L/P_T$.
@@ -248,7 +271,9 @@ Thus whenever
 \end{equation}
 we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
-\textbf{Part (c).} If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
+\par
+\noindent\textbf{Part (c): Monotone violation.}
+If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
 average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
 $\bar{r}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $r_s < -\tau_-$
 is symmetric.

@@ -20,16 +20,15 @@ off-policy mismatch between inference engines and training frameworks. We presen
 challenges with theoretical analysis. The first component, REINFORCE Max, combines a leave-one-out (RLOO) baseline---which provides
 statistical independence between each sample and its baseline, enabling clean second-moment analysis---with an adaptive asymmetric
 normalization that preserves gradient direction while enforcing zero empirical mean and unit empirical variance on non-zero tokens. The
-second component, REINFORCE Pro, introduces prefix cumulative importance sampling correction that preserves the causal structure of
+second component, REINFORCE Pro, introduces prefix-level trust-region masking (a TRM-style proxy) that preserves the causal structure of
 autoregressive generation. We show that, under explicit sufficient conditions on the per-token log-ratios stated in
-Theorem~\ref{thm:prefix-tighter}, prefix cumulative IS can provide tighter masking (i.e., mask at least as many off-policy tokens) than
-both token-level methods (which ignore causal dependencies) and sequence-level methods (which lose positional information) in three
-analyzed deviation patterns (early deviation, late deviation, and monotone drift). We relate prefix cumulative IS to the per-position
-structure of the Adaptive bound in trust region analyses: the KL chain rule yields an expectation identity for the cumulative log-ratio,
-and thresholding the sample-level prefix log-ratio provides a practical, per-position proxy for trust-region style filtering. Together,
-	the two components target the two factors in the surrogate objective error decomposition: normalization stabilizes the advantage magnitude,
-	while prefix masking filters out tokens with large prefix cumulative log-ratios between the rollout policy $\piroll$ and the training
-	policy $\pitheta$.
+Theorem~\ref{thm:prefix-tighter}, the resulting prefix mask can provide tighter filtering than both token-level methods (which ignore causal
+dependencies) and sequence-level methods (which lose positional information) in three analyzed deviation patterns (early deviation, late
+deviation, and monotone drift). We relate prefix masking to the per-position structure of the Adaptive bound in trust-region analyses: the
+KL chain rule yields an expectation identity for the cumulative log-ratio, and thresholding the sample-level prefix log-ratio provides a
+practical, per-position proxy for trust-region style filtering. Together, the two components target the two factors in the surrogate
+objective error decomposition: normalization stabilizes the advantage magnitude, while prefix masking filters out tokens with large prefix
+cumulative log-ratios between the behavior policy $\piroll$ and the training policy $\pitheta$.
 \end{abstract}
 
 

@@ -14,13 +14,21 @@ identical parameters~\citep{qi2026rethinkingtrustregionllm}.
 
 Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. ICEPOP~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
 
-At the sequence level, seq-mask-tis~\citep{yao2025offpolicy} computes a single geometric mean importance ratio over the entire sequence and rejects or accepts the sequence as a whole. GSPO~\citep{gspo2025} operates similarly, using the average log-ratio to compute a single correction factor.
+At the sequence level, Trust Region Masking (TRM)~\citep{li2025trm} discards entire trajectories that violate a trust region criterion defined
+by the maximum token-level divergence (e.g., $\max_t \Dkltok(c_t;\piroll,\pitheta)$). GSPO~\citep{gspo2025} instead computes a single
+sequence-level IS coefficient (the geometric-mean ratio $\ISseq$) and applies it uniformly across the sequence.
+\par
+\noindent\textbf{Prefix-level refinement.} Our REINFORCE Pro component can be viewed as a prefix-level refinement of TRM's rejection
+mechanism: instead of a single sequence gate $M(x,y)$, we compute a per-position mask $M_t^{\mathrm{prefix}}$ from a ratio-based prefix
+statistic and multiply it into the token-level loss, masking only the positions whose prefixes violate a proxy trust region. This retains
+per-position granularity while preserving the causal order of autoregressive generation.
 
-These methods share a common limitation: token-level methods ignore that an early deviation affects the entire future trajectory, while sequence-level methods lose the ability to distinguish where within a sequence the divergence occurs.
+These methods share a common limitation: token-level methods ignore that an early deviation affects the entire future trajectory, while
+sequence-level methods either reject the entire sequence or lose the ability to distinguish where within a sequence the divergence occurs.
 
 \subsection{Trust Region Methods}
 
-Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-cumulative ratio masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
+Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-level trust-region masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
 
 \subsection{Summary of Differences}
 

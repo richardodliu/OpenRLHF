@@ -1,7 +1,7 @@
 \section{Experiments}
 \label{sec:experiments}
 
-This section provides controlled simulations that validate two core design claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization stabilize advantage statistics without flipping advantage sign; and (ii)~prefix cumulative masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. Large-scale LLM benchmark results (e.g., AIME/MATH with a specific backbone) are orthogonal to these structural properties and are left as future work.
+This section provides controlled simulations that validate two core design claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization stabilize advantage statistics without flipping advantage sign; and (ii)~prefix-level masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. Large-scale LLM benchmark results (e.g., AIME/MATH with a specific backbone) are orthogonal to these structural properties and are left as future work.
 
 \subsection{Setup}
 \label{sec:exp-setup}
@@ -22,7 +22,8 @@ For IS masking, we use thresholds $[\lambda,\Lambda]=[0.5,5.0]$ unless otherwise
 
 \textbf{Baselines and normalization.} We compare the mean baseline (REINFORCE++/GRPO-style) to the leave-one-out (RLOO) baseline (\Cref{def:rloo}), and we compare global normalization $(A-\mu)/\sigma$ to adaptive asymmetric normalization (\Cref{def:adaptive-norm}).
 
-\textbf{IS masking.} We compare token-level masking (ICEPOP), sequence-level masking (seq-mask-tis), and prefix cumulative masking (\Cref{def:prefix-is}).
+\textbf{IS masking.} We compare token-level masking (ICEPOP), sequence-level masking (GSPO-style, based on $\ISseq$), and prefix-level
+masking based on the prefix proxy in \Cref{def:prefix-is}.
 
 \subsection{Metrics}
 \label{sec:exp-metrics}
@@ -33,7 +34,8 @@ correlated baseline can couple a sample with its own control variate, complicati
 
 \textbf{Sign flip rate under normalization.} After token expansion, we compute the token-weighted fraction of non-zero tokens whose normalized advantage changes sign, i.e., $\mathbb{I}[\mathrm{sign}(\hat{A}_{i,t}) \neq \mathrm{sign}(A_{i,t})]$. Sign flips are undesirable because they can turn punishment into reinforcement (or vice versa).
 
-\textbf{Masked-token coverage.} For each synthetic log-ratio pattern, we report the number of masked tokens and the first/last masked positions for ICEPOP, seq-mask-tis, and prefix masking.
+\textbf{Masked-token coverage.} For each synthetic log-ratio pattern, we report the number of masked tokens and the first/last masked
+positions for ICEPOP, sequence-level IS masking, and prefix masking.
 
 \subsection{Main Results}
 \label{sec:exp-main}
@@ -62,11 +64,11 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{seq-mask-tis (seq)} & \textbf{Prefix (ours)} \\
+\textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{Seq (GSPO-style)} & \textbf{Prefix (ours)} \\
 \midrule
-Early deviation ($r_1{=}10$, else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
-Late deviation ($r_{24}{=}50$, else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
-Monotone drift ($r_t{=}2$ for all $t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
+Early ($r_1{=}10$; else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
+Late ($r_{24}{=}50$; else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
+Drift ($r_t{=}2,\ \forall t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -86,7 +88,9 @@ masking, and masking more prefix-drifted tokens than token-level masking in the 
 \subsection{Sensitivity to Thresholds}
 \label{sec:exp-sensitivity}
 
-Masking behavior depends on $[\lambda,\Lambda]$. Stricter thresholds can cause sequence-level masking to reject an entire trajectory, while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[\lambda,\Lambda]=[0.8,2.0]$ causes seq-mask-tis to reject all $32$ tokens, while prefix masking rejects only the suffix positions $t \in [24,32]$.
+Masking behavior depends on $[\lambda,\Lambda]$. Stricter thresholds can cause sequence-level IS masking to reject an entire trajectory,
+while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[\lambda,\Lambda]=[0.8,2.0]$
+causes the sequence-level mask to reject all $32$ tokens, while prefix masking rejects only the suffix positions $t \in [24,32]$.
 
 \subsection{Reproducibility Checklist}
 \label{sec:exp-repro}

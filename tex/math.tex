@@ -25,10 +25,26 @@
 %==============================================================================
 \newcommand{\piroll}{\pi_{\mathrm{roll}}}
 \newcommand{\pitheta}{\pi_{\theta}}
+% PPO-style implementations often denote the rollout snapshot as \piold. In this
+% paper, the theoretical behavior/data-generating policy is always \piroll; we
+% only mention \piold when mapping to implementation terminology.
 \newcommand{\piold}{\pi_{\mathrm{old}}}
 \newcommand{\piref}{\pi_{\mathrm{ref}}}
 \newcommand{\ylt}{y_{<t}}
 \newcommand{\yle}{y_{\le t}}
+
+%==============================================================================
+% IMPORTANCE SAMPLING (IS) RATIOS
+%------------------------------------------------------------------------------
+% We use a unified naming scheme that makes the granularity explicit:
+% - token-level:  \IStoken{t}
+% - sequence-level geometric mean: \ISseq
+% - prefix-level geometric mean up to position t: \ISprefix{t}
+%==============================================================================
+\newcommand{\IS}{\mathrm{IS}}
+\newcommand{\IStoken}[1]{\IS_{\mathrm{token},#1}}
+\newcommand{\ISseq}{\IS_{\mathrm{seq}}}
+\newcommand{\ISprefix}[1]{\IS_{\mathrm{prefix},#1}}
 
 %==============================================================================
 % DIVERGENCE MEASURES (following TRM paper convention)
