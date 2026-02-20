@@ -89,9 +89,10 @@ on positions $s\le t$, respecting the autoregressive order (\Cref{def:prefix-is}
 $M_t^{\mathrm{prefix}}$ in \eqref{eq:prefix-mask} filters out positions where the prefix average log-ratio leaves
 $[\log\lambda,\log\Lambda]$, enforcing a per-position, sample-level constraint (\Cref{cor:per-position-trust}).
 
-\emph{Loss Computation (Line~12).} The loss \eqref{eq:promax-loss} multiplies the PPO-style clipped surrogate by a detached prefix gate.
-Concretely, $M_t^{\mathrm{prefix}}$ is a binary mask (detached) and $\mathrm{PPOClip}(\rho_t,\hat{A}_t)$ in \eqref{eq:ppo-clip} is the
-only term carrying gradients through $\rho_t$. The negative sign ensures that minimizing $\mathcal{L}$ maximizes the surrogate objective.
+\emph{Loss Computation (Line~12).} The loss \eqref{eq:promax-loss} multiplies the per-token importance-weighted surrogate term
+$\rho_t \hat{A}_t$ by a detached prefix gate. Concretely, $M_t^{\mathrm{prefix}}$ is a binary mask (detached) and the normalized
+advantage $\hat{A}_t$ is detached, so gradients propagate only through $\rho_t$. The negative sign ensures that minimizing
+$\mathcal{L}$ maximizes the surrogate objective.
 
 \emph{Computational overhead.} Compared to standard PPO, REINFORCE Pro Max adds negligible overhead. The RLOO baseline requires $O(n)$ arithmetic operations per prompt group. Adaptive normalization computes four partial sums ($S^+, S^-, Q^+, Q^-$) in a single pass. The prefix-level mask requires one cumulative sum over the sequence, which is $O(T)$ per sample. No additional forward passes or model evaluations are needed beyond what standard PPO already requires.
 

@@ -490,19 +490,11 @@ directly from \eqref{eq:prefix-is}.
 \label{sec:combined-loss}
 
 We define the loss as the negative surrogate objective, $\mathcal{L} = -L_{\piroll}(\pitheta)$, so that gradient descent on
-$\mathcal{L}$ corresponds to maximizing the surrogate. We write the per-token PPO clipped surrogate as
-\begin{equation}
-    \mathrm{PPOClip}(\rho_t, \hat{A}_t)
-    := \min\!\Big(
-        \rho_t \hat{A}_t,\;
-        \mathrm{clip}(\rho_t, 1-\epsilon_c, 1+\epsilon_c)\,\hat{A}_t
-    \Big),
-    \label{eq:ppo-clip}
-\end{equation}
-where $\epsilon_c$ is the PPO clipping threshold. The REINFORCE Pro Max loss combines both components as
+$\mathcal{L}$ corresponds to maximizing the surrogate. The REINFORCE Pro Max loss applies the prefix mask to the standard per-token
+importance-weighted surrogate:
 \begin{equation}
     \mathcal{L}^{\mathrm{ProMax}}
-    = -\sum_t M_t^{\mathrm{prefix}} \cdot \mathrm{PPOClip}(\rho_t, \hat{A}_t).
+    := -\sum_{t=1}^{T} M_t^{\mathrm{prefix}}\,\rho_t\,\hat{A}_t.
     \label{eq:promax-loss}
 \end{equation}
 Here $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-norm}, $M_t^{\mathrm{prefix}}$ is the prefix-level

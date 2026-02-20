@@ -38,6 +38,55 @@ In PPO-style implementations, the rollout snapshot used to generate data is ofte
 snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation). We use $\piold$ only for
 implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
 
+\section{Why PPO Clipping Can Leak Gradients Under Mismatch}
+\label{app:ppo-clip-leak}
+
+\paragraph{PPO clipped surrogate.}
+PPO~\citep{schulman2017proximal} constrains policy updates by clipping the per-token importance ratio. In the notation of this paper, the
+ratio is
+\begin{equation}
+    \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}.
+\end{equation}
+The clipped surrogate takes the form
+\begin{equation}
+    L^{\mathrm{CLIP}}(\pitheta)
+    = \E_{\piroll}\!\left[\sum_{t=1}^{T}\min\!\Big(
+        \rho_t \hat{A}_t,\;
+        \mathrm{clip}(\rho_t, 1-\epsilon_{\mathrm{clip}}, 1+\epsilon_{\mathrm{clip}})\,\hat{A}_t
+    \Big)\right],
+\end{equation}
+where $\hat{A}_t$ is an advantage estimator and $\epsilon_{\mathrm{clip}}>0$ is the clipping threshold.
+
+\paragraph{Asymmetry and gradient leakage.}
+The clipping operator is asymmetric in the sign of $\hat{A}_t$. When $\hat{A}_t<0$ and $\rho_t \gg 1+\epsilon_{\mathrm{clip}}$, the
+unclipped term can still be selected:
+\begin{equation}
+    \rho_t > 1+\epsilon_{\mathrm{clip}},\ \hat{A}_t<0
+    \quad\Longrightarrow\quad
+    \rho_t\hat{A}_t < (1+\epsilon_{\mathrm{clip}})\hat{A}_t
+    = \mathrm{clip}(\rho_t, 1-\epsilon_{\mathrm{clip}}, 1+\epsilon_{\mathrm{clip}})\,\hat{A}_t,
+\end{equation}
+hence $\min(\cdot)$ returns $\rho_t\hat{A}_t$. In this regime, the gradient magnitude still scales with $\rho_t$, so extremely large ratios
+can produce large updates even though they lie far outside the nominal trust region.
+
+\paragraph{Why this is benign in standard RL.}
+In classical on-policy settings, large ratios typically reflect genuine policy changes that over-emphasize low-quality actions; keeping the
+unclipped penalty for $\hat{A}_t<0$ can be desirable as it discourages such actions.
+
+\paragraph{Failure mode under implementation divergence.}
+In LLM-RL pipelines with inference--training mismatch, large ratios can arise from numerical or backend discrepancies rather than meaningful
+policy improvements. For example, a routing discontinuity in a Mixture-of-Experts model can yield a token $v$ such that
+\begin{equation}
+    \piroll(v\mid c_t) \approx 0.001,
+    \qquad
+    \pitheta(v\mid c_t) \approx 0.9,
+    \qquad
+    \rho_t \approx 900.
+\end{equation}
+Such spikes reflect implementation-level divergence and can induce a massive, erroneous gradient contribution under the unclipped branch
+when $\hat{A}_t<0$. This motivates using a detached trust-region mask to discard mismatched tokens or trajectories rather than relying on a
+token-level clipping heuristic.
+
 \section{Proof of Leave-One-Out Baseline Properties}
 \label{app:rloo-proof}
 
