@@ -123,12 +123,16 @@ $\beta>0$ on $\mathcal{N}$ (\Cref{prop:alpha-beta}), and multiplication by a pos
 \paragraph{Connection to asymmetric clipping.}
 Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage
 sign; adaptive normalization scales the advantage magnitude differently. Both control the effective step size asymmetrically, but
-normalization acts through the advantage rather than the ratio, avoiding the gradient leakage problem identified by~\citet{li2025trm}.
+normalization acts through the advantage rather than the ratio, avoiding the gradient-leakage failure mode of ratio clipping under mismatch
+(see \Cref{app:ppo-clip-leak}).
 
 \paragraph{Uniform scale mode.}
 When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
 \emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
 See \Cref{app:uniform-scale} for details.
+\par
+\noindent\textbf{Numerical safeguards.} In implementation, we include simple numerical checks and clamping to prevent extreme or unstable
+scales; see \Cref{app:numerical}.
 
 
 \section{REINFORCE Pro: Prefix Causal Trust Region Masking}
@@ -150,16 +154,16 @@ intermediate policies.
 
 \paragraph{A Causal Trust Region viewpoint.}
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
-$M(x,y)$, yielding a masked surrogate objective of the form
+$M^{\mathrm{TRM}}(x,y)$, yielding a masked surrogate objective of the form
 \begin{equation}
     \mathcal{L}_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
     := \E_{\piroll}\!\left[
-        M(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
+        M^{\mathrm{TRM}}(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
 \end{equation}
 Motivated by the same trust-region perspective for long-horizon generation, we introduce a prefix-level, per-position gate
 $M_t^{\mathrm{prefix}}$ computed from a ratio-based \emph{prefix} statistic and multiply it into the token-level loss. Unlike TRM, which
-accepts or rejects an entire trajectory via a single gate $M(x,y)$, the prefix gate can mask only the positions whose prefixes violate the
+accepts or rejects an entire trajectory via a single gate $M^{\mathrm{TRM}}(x,y)$, the prefix gate can mask only the positions whose prefixes violate the
 threshold, thereby retaining positional granularity while respecting the autoregressive order. For comparison, a prefix-level masked
 surrogate can be written as
 \begin{equation}
@@ -177,16 +181,20 @@ $\max_t \DKL(c_t)$).
 
 \begin{proposition}[Token-Level IS Ignores Causal Structure]
 \label{prop:token-is-fails}
-Fix thresholds $0<\lambda\le 1\le \Lambda$. Consider a length-$T$ trajectory such that
+Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$ and define the acceptance interval
+\[
+    [1-\epslow,\,1+\epshigh].
+\]
+Consider a length-$T$ trajectory such that
 \begin{equation}
-    \rho_1 \notin [\lambda,\Lambda],
+    \rho_1 \notin [1-\epslow,1+\epshigh],
     \qquad
-    \rho_t \in [\lambda,\Lambda]\ \text{ for all }\ t\in\{2,\ldots,T\}.
+    \rho_t \in [1-\epslow,1+\epshigh]\ \text{ for all }\ t\in\{2,\ldots,T\}.
     \label{eq:token-early-deviation}
 \end{equation}
 Then the token-level ICEPOP mask,
 \begin{equation}
-    M_t^{\mathrm{token}} := \mathbb{I}\!\big[\rho_t \in [\lambda,\Lambda]\big],
+    M_t^{\mathrm{tok}} := \mathbb{I}\!\big[\rho_t \in [1-\epslow,1+\epshigh]\big],
 \end{equation}
 masks only the first position. In particular, it does not prevent later positions $t\ge 2$ from contributing gradients even though the
 contexts $(c_t)_{t\ge2}$ are sampled under the behavior distribution induced by $\piroll$, which differs from the context distribution that
@@ -194,7 +202,7 @@ would be induced by the updated policy $\pitheta$ when $\rho_1 \neq 1$.
 \end{proposition}
 
 \begin{proof}
-By definition, \eqref{eq:token-early-deviation} implies $M_1^{\mathrm{token}}=0$ and $M_t^{\mathrm{token}}=1$ for all $t\ge2$.
+By definition, \eqref{eq:token-early-deviation} implies $M_1^{\mathrm{tok}}=0$ and $M_t^{\mathrm{tok}}=1$ for all $t\ge2$.
 
 On the other hand, since $\rho_1 \neq 1$, we have $\pitheta(y_1\mid c_1) \neq \piroll(y_1\mid c_1)$, hence the conditional token
 distributions $\pitheta(\cdot\mid c_1)$ and $\piroll(\cdot\mid c_1)$ are not equal. Therefore $\Dtvtok(c_1;\piroll,\pitheta)>0$.
@@ -244,7 +252,7 @@ Consider the pure single-spike case with $T=4096$, $\log\rho_{t^*}=3$, and $\log
 \begin{equation}
     \rhoseq = \exp(3/4096) \approx 1.00073,
 \end{equation}
-which can easily fall inside practical acceptance intervals $[\lambda,\Lambda]$ even though the local deviation at $t^*$ is large in
+which can easily fall inside practical acceptance intervals $[1-\epslow,1+\epshigh]$ even though the local deviation at $t^*$ is large in
 log-ratio magnitude.
 \end{example}
 
@@ -268,12 +276,15 @@ The statistic $\rhoprefix{t}$ is the geometric mean of per-token importance rati
 
 \begin{definition}[Prefix Causal Trust Region Mask]
 \label{def:prefix-trm-proxy}
-Given thresholds $[\lambda, \Lambda]$, define the per-position prefix mask
+Given thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the per-position prefix mask
 \begin{equation}
-    M_t^{\mathrm{prefix}} := \mathbb{I}\!\big[\rhoprefix{t} \in [\lambda, \Lambda]\big].
+    M_t^{\mathrm{prefix}} := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow, 1+\epshigh]\big].
     \label{eq:prefix-mask}
 \end{equation}
 \end{definition}
+
+Appendix~\ref{app:mask-variants} collects several compatible variants (Variants~B--E) that modify the prefix gate while retaining the same
+ratio setup based on $(\piroll,\pitheta)$.
 
 Three structural properties distinguish the prefix-level mask from existing methods:
 
@@ -283,13 +294,13 @@ Three structural properties distinguish the prefix-level mask from existing meth
 
 \begin{lemma}[Stability of prefix geometric means]
 \label{lem:prefix-stability}
-Fix thresholds $0<\lambda\le 1\le \Lambda$, and define $\rhoprefix{t}$ as in \eqref{eq:prefix-is}. If
+Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$, and define $\rhoprefix{t}$ as in \eqref{eq:prefix-is}. If
 \begin{equation}
-    \rhoprefix{t}\in[\lambda,\Lambda]
+    \rhoprefix{t}\in[1-\epslow,1+\epshigh]
     \qquad\text{and}\qquad
-    \rho_{t+1}\in[\lambda,\Lambda],
+    \rho_{t+1}\in[1-\epslow,1+\epshigh],
 \end{equation}
-then $\rhoprefix{t+1}\in[\lambda,\Lambda]$.
+then $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{lemma}
 
 \begin{proof}
@@ -307,52 +318,62 @@ Therefore,
     \nonumber\\
     &= \frac{t}{t+1}\log\rhoprefix{t} + \frac{1}{t+1}\log\rho_{t+1}.
 \end{align}
-Since $\rhoprefix{t}\in[\lambda,\Lambda]$ and $\rho_{t+1}\in[\lambda,\Lambda]$, both
-$\log\rhoprefix{t}$ and $\log\rho_{t+1}$ lie in $[\log\lambda,\log\Lambda]$. The last display is a convex combination, hence
-$\log\rhoprefix{t+1}\in[\log\lambda,\log\Lambda]$, which implies $\rhoprefix{t+1}\in[\lambda,\Lambda]$.
+Since $\rhoprefix{t}\in[1-\epslow,1+\epshigh]$ and $\rho_{t+1}\in[1-\epslow,1+\epshigh]$, both
+$\log\rhoprefix{t}$ and $\log\rho_{t+1}$ lie in $[\log(1-\epslow),\log(1+\epshigh)]$. The last display is a convex combination, hence
+$\log\rhoprefix{t+1}\in[\log(1-\epslow),\log(1+\epshigh)]$, which implies $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{proof}
 
 \textbf{Granularity.} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
 positions while being masked at others. This can be viewed as a prefix-level refinement of the sequence-level rejection mechanism in TRM.
 
 \noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in
-\Cref{sec:preliminaries}. In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token
-log-ratios $\log\rho_t$.
+\Cref{sec:preliminaries}. The ratio-truncation thresholds are denoted by $(\epslow,\epshigh)$, defining the acceptance interval
+\[
+    [1-\epslow,\,1+\epshigh].
+\]
+For convenience, we also use the equivalent log-thresholds
+\[
+    \tau_+ := \log(1+\epshigh),
+    \qquad
+    \tau_- := -\log(1-\epslow),
+\]
+so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
+In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token log-ratios $\log\rho_t$.
 
 \begin{theorem}[Causality-Aware Masking with Conditional Dominance]
 \label{thm:prefix-tighter}
-Let $M^{\mathrm{prefix}}_t$, $M^{\mathrm{token}}_t$, and $M^{\mathrm{seq}}_t$ denote the prefix-level mask
+Let $M^{\mathrm{prefix}}_t$, $M^{\mathrm{tok}}_t$, and $M^{\mathrm{seq}}_t$ denote the prefix-level mask
 (\Cref{def:prefix-trm-proxy}), the token-level ICEPOP mask, and a sequence-level (GSPO-style) mask respectively, all with the same
-threshold $[\lambda, \Lambda]$ where
-$0 < \lambda \le 1 \le \Lambda$. Concretely, the sequence-level mask is defined by a single statistic
+acceptance interval $[1-\epslow, 1+\epshigh]$ for some $\epslow\in(0,1)$ and $\epshigh>0$.
+Concretely, the sequence-level mask is defined by a single statistic
 \begin{equation}
     \rhoseq
     := \exp\!\left(\frac{1}{T}\sum_{s=1}^{T}\log\rho_s\right)
     = \left(\prod_{s=1}^{T}\rho_s\right)^{\frac{1}{T}},
 \end{equation}
-and $M_t^{\mathrm{seq}} := \mathbb{I}[\rhoseq \in [\lambda,\Lambda]]$ for all $t$.
+and $M_t^{\mathrm{seq}} := \mathbb{I}[\rhoseq \in [1-\epslow,1+\epshigh]]$ for all $t$.
 Assume policy support overlap (\Cref{asm:support}). Then:
 
 \begin{enumerate}
-    \item[(a)] \textbf{Early deviation: the prefix mask rejects a (possibly longer) prefix.} Assume $\rho_1 \notin [\lambda, \Lambda]$ and
-    $|\log\rho_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
-    only position $t=1$, while the prefix mask rejects at least position $t=1$. Moreover, if $\log\rho_1>\log\Lambda$ then for every position $t$
+    \item[(a)] \textbf{Early deviation: the prefix mask rejects a (possibly longer) prefix.} Assume $\rho_1 \notin [1-\epslow,1+\epshigh]$ and
+    $|\log\rho_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then token-level ICEPOP masks
+    only position $t=1$, while the prefix mask rejects at least position $t=1$. Moreover, if $\log\rho_1>\tau_+$ then for every position $t$
     satisfying
     \begin{equation}
-        t < \frac{\log\rho_1+\varepsilon}{\log\Lambda+\varepsilon},
+        t < \frac{\log\rho_1+\varepsilon}{\tau_+ + \varepsilon},
         \label{eq:early-upper-sufficient}
     \end{equation}
-    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $\log\rho_1<\log\lambda$ then for every position $t$ satisfying
+    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $\log\rho_1<-\tau_-$ then for every position $t$ satisfying
     \begin{equation}
-        t < \frac{-\log\rho_1+\varepsilon}{|\log\lambda|+\varepsilon},
+        t < \frac{-\log\rho_1+\varepsilon}{\tau_- + \varepsilon},
         \label{eq:early-lower-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{prefix}}=0$. In particular, in the early-deviation regime the prefix mask rejects at least as many tokens as
     token-level ICEPOP.
 
     \item[(b)] \textbf{Late deviation: the prefix mask is more local than sequence masking.} Suppose there exists $t^*\in\{1,\ldots,T\}$ such that
-    $|\log\rho_t| \le \varepsilon$ for all $t\neq t^*$ and $\rho_{t^*}\notin[\lambda,\Lambda]$, where $0 \le \varepsilon \le \min(\log\Lambda,
-    |\log\lambda|)$. Then prefix masking can only occur at positions $t \ge t^*$, so
+    $|\log\rho_t| \le \varepsilon$ for all $t\neq t^*$ and $\rho_{t^*}\notin[1-\epslow,1+\epshigh]$, where $0 \le \varepsilon \le \min(\tau_+,
+    \tau_-)$. Then prefix masking can only occur at positions $t \ge t^*$, so
     \begin{equation}
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
     \end{equation}
@@ -364,8 +385,8 @@ Assume policy support overlap (\Cref{asm:support}). Then:
     so there exist regimes where $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by
     large $T$). The lower-spike case $\rho_{t^*}<1$ is analogous with the lower threshold.
 
-    \item[(c)] \textbf{Monotone violation: all methods reject.} If $\log\rho_s > \log\Lambda$ for all $s$ (upper violation), or
-    $\log\rho_s < \log\lambda$ for all $s$ (lower violation), then $M_t^{\mathrm{prefix}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
+    \item[(c)] \textbf{Monotone violation: all methods reject.} If $\log\rho_s > \tau_+$ for all $s$ (upper violation), or
+    $\log\rho_s < -\tau_-$ for all $s$ (lower violation), then $M_t^{\mathrm{prefix}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
     so both methods reject all $T$ tokens.
 \end{enumerate}
 \end{theorem}
@@ -373,7 +394,7 @@ Assume policy support overlap (\Cref{asm:support}). Then:
 \begin{proof}[Proof sketch]
 The full proof is in \Cref{app:prefix-proof}. We highlight the key steps.
 
-\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\log\rho_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
+\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\log\rho_t \in [-\tau_-, \tau_+]$ for all $t>1$, hence ICEPOP masks
 only $t=1$. For the prefix statistic, note that
 \begin{equation}
     \log\rhoprefix{t}
@@ -388,9 +409,9 @@ Using the bounds
 \end{align}
 which yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
-\textbf{Part (b).} For $t<t^*$, all active log-ratios in the prefix satisfy $\log\rho_s\in[\log\lambda,\log\Lambda]$, so repeated
-application of \Cref{lem:prefix-stability} implies $\rhoprefix{t}\in[\lambda,\Lambda]$ (equivalently,
-$\log\rhoprefix{t}\in[\log\lambda,\log\Lambda]$) and hence
+\textbf{Part (b).} For $t<t^*$, all active log-ratios in the prefix satisfy $\log\rho_s\in[-\tau_-,\tau_+]$, so repeated
+application of \Cref{lem:prefix-stability} implies $\rhoprefix{t}\in[1-\epslow,1+\epshigh]$ (equivalently,
+$\log\rhoprefix{t}\in[-\tau_-,\tau_+]$) and hence
 $M_t^{\mathrm{prefix}}=1$. Therefore masking can only occur at positions $t\ge t^*$, yielding the stated bound. The single-spike
 comparison follows by specializing to $\rho_t=1$ for $t\neq t^*$ and $\rho_{t^*}>1$, which gives $\log\rhoseq=\log\rho_{t^*}/T$ and
 $\log\rhoprefix{t^*}=\log\rho_{t^*}/t^*$, so $\log\rhoprefix{t^*}\ge \log\rhoseq$ since $t^*\le T$.
@@ -448,11 +469,12 @@ Combining the two displays yields \eqref{eq:cumsum-kl}.
 \begin{remark}[Prefix filtering as a sample-level proxy]
 \label{rem:prefix-proxy}
 Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level constraint on the prefix average log-ratio:
-\begin{equation}
-    \rhoprefix{t} \in [\lambda, \Lambda]
-    \iff \log\rhoprefix{t} \in [\log\lambda, \log\Lambda]
-    \iff \frac{1}{t}\sum_{s=1}^{t}\log\rho_s \in [\log\lambda, \log\Lambda].
-\end{equation}
+\begin{align}
+    \rhoprefix{t} \in [1-\epslow, 1+\epshigh]
+    &\iff \log\rhoprefix{t} \in [\log(1-\epslow), \log(1+\epshigh)]
+    \nonumber\\
+    &\iff \frac{1}{t}\sum_{s=1}^{t}\log\rho_s \in [\log(1-\epslow), \log(1+\epshigh)].
+\end{align}
 In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for Causal Trust Region filtering rather than a population-level guarantee
 without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in \eqref{eq:cumsum-kl} to a TV bound:
@@ -464,18 +486,18 @@ without additional assumptions. Separately, Pinsker's inequality relates the pop
 
 \begin{corollary}[Per-Position Sample-Level Causal Trust Region Constraint]
 \label{cor:per-position-trust}
-Under prefix Causal Trust Region masking with threshold $[\lambda, \Lambda]$, for all accepted tokens ($M_t^{\mathrm{prefix}} = 1$), the sample-level cumulative log-ratio satisfies:
+Under prefix Causal Trust Region masking with threshold $[1-\epslow, 1+\epshigh]$, for all accepted tokens ($M_t^{\mathrm{prefix}} = 1$), the sample-level cumulative log-ratio satisfies:
 \begin{equation}
     \log\rhoprefix{t}
     = \frac{1}{t}\sum_{s=1}^{t} \log\rho_s
-    \in [\log\lambda, \log\Lambda].
+    \in [\log(1-\epslow), \log(1+\epshigh)].
 \end{equation}
 This provides a per-position, sample-level trust region constraint analogous to the per-position structure in the Adaptive bound. The constraint operates on individual trajectories; its connection to the population-level KL is through the expectation identity in Eq.~\eqref{eq:cumsum-kl}.
 \end{corollary}
 
 \begin{proof}
-By \Cref{def:prefix-trm-proxy}, $M_t^{\mathrm{prefix}} = 1$ implies $\rhoprefix{t}\in[\lambda,\Lambda]$. Taking logarithms yields
-$\log\rhoprefix{t}\in[\log\lambda,\log\Lambda]$. The identity $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ follows
+By \Cref{def:prefix-trm-proxy}, $M_t^{\mathrm{prefix}} = 1$ implies $\rhoprefix{t}\in[1-\epslow,1+\epshigh]$. Taking logarithms yields
+$\log\rhoprefix{t}\in[\log(1-\epslow),\log(1+\epshigh)]$. The identity $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ follows
 directly from \eqref{eq:prefix-is}.
 \end{proof}
 

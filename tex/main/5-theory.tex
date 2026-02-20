@@ -46,7 +46,7 @@ highlight the key design choices below.
 \caption{REINFORCE Pro Max (minimizing $\mathcal{L}^{\mathrm{ProMax}}$ in \eqref{eq:promax-loss})}
 \label{alg:promax}
 \begin{algorithmic}[1]
-    \REQUIRE Prompt $x$; $n$ samples; thresholds $[\lambda, \Lambda]$
+    \REQUIRE Prompt $x$; $n$ samples; thresholds $[1-\epslow, 1+\epshigh]$
     \STATE \textbf{Rollout:} Generate $\{y^{(1)}, \ldots, y^{(n)}\} \sim \piroll(\cdot|x)$; store $\log \piroll(y_t|c_t)$
     \STATE \textbf{Reward:} Compute rewards $\{r_1, \ldots, r_n\}$
     \STATE \textbf{Baseline:} $\tilde{r}_i \leftarrow r_i - \frac{1}{n-1}\sum_{j \neq i} r_j$ \hfill \COMMENT{leave-one-out}
@@ -85,7 +85,7 @@ log-probabilities $\log\piroll(y_t|c_t)$ are reused from the rollout cache, as i
 $\piroll$. The prefix cumulative statistic $\rhoprefix{t}$ in \eqref{eq:prefix-is} aggregates this drift causally: it depends only
 on positions $s\le t$, respecting the autoregressive order (\Cref{def:prefix-is}). The corresponding binary mask
 $M_t^{\mathrm{prefix}}$ in \eqref{eq:prefix-mask} filters out positions where the prefix average log-ratio leaves
-$[\log\lambda,\log\Lambda]$, enforcing a per-position, sample-level constraint (\Cref{cor:per-position-trust}).
+$[\log(1-\epslow),\log(1+\epshigh)]$, enforcing a per-position, sample-level constraint (\Cref{cor:per-position-trust}).
 
 \emph{Loss Computation (Line~12).} The loss \eqref{eq:promax-loss} multiplies the per-token importance-weighted surrogate term
 $\rho_t \hat{A}_t$ by a detached prefix gate. Concretely, $M_t^{\mathrm{prefix}}$ is a binary mask (detached) and the normalized
@@ -123,7 +123,7 @@ GRPO + TRM & Mean & Global $\mu/\sigma$ & Seq mask (max-KL) & No \\
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
 
 \textbf{IS correction methods.} Token-level corrections (TIS, ICEPOP) operate directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$
-to a fixed interval $[\lambda, \Lambda]$, retaining a biased but bounded weight at every position. ICEPOP instead masks out tokens whose
+to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded weight at every position. ICEPOP instead masks out tokens whose
 ratio falls outside the interval, eliminating extreme-weight bias at the cost of discarding gradient signal. Both treat positions
 independently and therefore cannot correct the downstream context shift caused by an early deviation (\Cref{prop:token-is-fails}).
 

@@ -14,10 +14,10 @@ discontinuities (Top-$K$ routing can flip under small perturbations), and distri
 consumption). These effects can compound autoregressively over long horizons and lead to volatile per-token ratios.
 
 \paragraph{Action-token indexing in implementations.}
-In practical training code, a batch element often concatenates prompt and response tokens and may include padding or packing. Frameworks
-therefore use an \emph{action mask} $m_t\in\{0,1\}$ to select the response (action) positions that contribute to the policy-gradient
-objective. In this paper's theoretical development, we index the response as $y=(y_1,\ldots,y_T)$ and write sums as $\sum_{t=1}^{T}(\cdot)$,
-which corresponds to the special case $m_t\equiv 1$ after restricting to action-token positions.
+In practical training code, each sample typically concatenates prompt and response tokens and may include padding or packing. Our theory
+therefore adopts the convention that $y=(y_1,\ldots,y_T)$ indexes only the response (action) tokens, and sums such as
+$\sum_{t=1}^{T}(\cdot)$ are understood to range over these action positions. This matches the standard implementation behavior of
+selecting response-token positions (e.g., via an action mask) while omitting prompt tokens from the policy-gradient objective.
 
 \paragraph{Anchoring and the apparent three-distribution structure.}
 Practical pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
@@ -123,7 +123,6 @@ satisfies:
 \end{proposition}
 
 \begin{remark}[Relationship between the two estimators]
-\label{rem:rloo-mean-scaling}
 The deterministic proportionality $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ implies that the mean-baseline estimator is a
 rescaled (and therefore biased) version of the leave-one-out estimator: its smaller raw variance is entirely due to the constant scaling
 factor. In practice, this shrinkage can be absorbed into the learning rate, but it breaks exact unbiasedness. The main advantage of the
@@ -221,7 +220,6 @@ which yields \eqref{eq:rloo-second-moment}.
 \label{app:gamma-one}
 
 \begin{proposition}[Optimality of $\gamma = 1.0$]
-\label{prop:gamma-one}
 When the extrinsic reward is sparse (assigned only at the final token), $\gamma = 1.0$ is the unique discount factor that preserves unbiasedness of the REINFORCE gradient estimator for the undiscounted objective $J(\pitheta) = \E[R(x,y)]$.
 \end{proposition}
 
@@ -258,20 +256,20 @@ removes the reweighting for all $t$ is $\gamma=1$.
 We provide a complete proof of \Cref{thm:prefix-tighter} under the definitions in \Cref{sec:prefix-is}. For convenience, write the
 log-threshold interval as
 \begin{equation}
-    [\log\lambda, \log\Lambda] = [-\tau_-, \tau_+],
+    [\log(1-\epslow), \log(1+\epshigh)] = [-\tau_-, \tau_+],
     \qquad
-    \tau_+ := \log\Lambda,
+    \tau_+ := \log(1+\epshigh),
     \qquad
-    \tau_- := -\log\lambda,
+    \tau_- := -\log(1-\epslow),
 \end{equation}
-so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
+so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
     \item \textbf{Token-level (ICEPOP / token-level ratio mask):}
     \begin{equation}
-        M_t^{\mathrm{token}}
-        := \mathbb{I}\!\big[\rho_t \in [\lambda,\Lambda]\big]
+        M_t^{\mathrm{tok}}
+        := \mathbb{I}\!\big[\rho_t \in [1-\epslow,1+\epshigh]\big]
         = \mathbb{I}\!\big[\log\rho_t \in [-\tau_-,\tau_+]\big].
     \end{equation}
     \item \textbf{Sequence-level (GSPO / sequence-level ratio gate):}
@@ -285,7 +283,7 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $\log\rho_t \in [-\tau_-
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
         M_t^{\mathrm{prefix}}
-        := \mathbb{I}\!\big[\rhoprefix{t} \in [\lambda,\Lambda]\big]
+        := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big]
         = \mathbb{I}\!\big[\log\rhoprefix{t} \in [-\tau_-,\tau_+]\big],
     \end{equation}
     where $\rhoprefix{t}$ is defined in \eqref{eq:prefix-is}.
@@ -293,16 +291,16 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $\log\rho_t \in [-\tau_-
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
 \noindent\textbf{Part (a): Early deviation.}
-Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|\log\rho_t| \le \varepsilon$ for all $t>1$, with
+Assume $\rho_1 \notin [1-\epslow,1+\epshigh]$ and $|\log\rho_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
 \begin{equation}
     \log\rho_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \end{equation}
-so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\rho_1 \notin [\lambda,\Lambda]$). Hence token-level
+so $M_t^{\mathrm{tok}}=1$ for all $t>1$, while $M_1^{\mathrm{tok}}=0$ (since $\rho_1 \notin [1-\epslow,1+\epshigh]$). Hence token-level
 ICEPOP masks only position $t=1$.
 
 \smallskip
-For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because $\rhoprefix{1}=\rho_1\notin[\lambda,\Lambda]$. To quantify how
+For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because $\rhoprefix{1}=\rho_1\notin[1-\epslow,1+\epshigh]$. To quantify how
 long the rejection can persist, use \eqref{eq:prefix-is}:
 \begin{equation}
     \log\rhoprefix{t}
@@ -328,7 +326,7 @@ This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:earl
 
 \par
 \noindent\textbf{Part (b): Late deviation.}
-Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|\log\rho_t|\le \varepsilon$
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[1-\epslow,1+\epshigh]$ and $|\log\rho_t|\le \varepsilon$
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\log\rho_s \in [-\tau_-,\tau_+]$.
 Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
@@ -372,31 +370,29 @@ training policy $\pitheta$. We write the per-token importance ratio as
     \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}.
 \end{equation}
 We also reuse the prefix statistic $\rhoprefix{t}$ from \Cref{def:prefix-is}.
-For thresholds $0<\lambda\le 1 \le \Lambda$, define the log-threshold interval
+For thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the log-threshold interval
 \begin{equation}
-    [\log\lambda,\log\Lambda] = [-\tau_-,\tau_+],
+    [\log(1-\epslow),\log(1+\epshigh)] = [-\tau_-,\tau_+],
     \qquad
-    \tau_+ := \log\Lambda,
+    \tau_+ := \log(1+\epshigh),
     \qquad
-    \tau_- := -\log\lambda.
+    \tau_- := -\log(1-\epslow).
 \end{equation}
 
-\paragraph{Variant I (absorbing prefix-average mask).}
-\label{app:variant-b}
+\paragraph{Variant B (absorbing prefix-average mask).}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
 once a prefix violates the threshold, all subsequent positions are rejected.
 
 \begin{equation}
     \widetilde{M}_t^{\mathrm{prefix}}
-    := \mathbb{I}\!\big[\rhoprefix{t} \in [\lambda,\Lambda]\big],
+    := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big],
     \qquad
     M_t^{\mathrm{abs\text{-}prefix}}
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{prefix}}.
 \end{equation}
 
-\paragraph{Variant II (prefix-max mask / max-filtering).}
-\label{app:variant-c}
+\paragraph{Variant C (prefix-max mask / max-filtering).}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
 \begin{equation}
@@ -410,8 +406,7 @@ The corresponding prefix-max statistic and mask are
 \end{equation}
 Equivalently, $M_t^{\mathrm{prefix\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
-\paragraph{Variant III (prefix-score mask / bound-driven).}
-\label{app:variant-d}
+\paragraph{Variant D (prefix-score mask / bound-driven).}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
 \begin{equation}
@@ -428,6 +423,23 @@ and the corresponding mask is
 \end{equation}
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
+
+\paragraph{Variant E (prefix average $k_3$ / KL-proxy).}
+
+TRM~\citep{li2025trm} advocates the sample-based proxy
+\begin{equation}
+    k_3(\rho) := \rho - 1 - \log\rho,
+\end{equation}
+which satisfies $\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition
+$\rho_t=\pitheta/\piroll$ and support overlap. This motivates a prefix-average KL-proxy mask:
+\begin{equation}
+    \overline{k}_{3,t}
+    := \frac{1}{t}\sum_{s=1}^{t} k_3(\rho_s),
+    \qquad
+    M_t^{\mathrm{prefix\text{-}k3}} := \mathbb{I}\!\big[\overline{k}_{3,t} \le \delta_{k3}\big].
+\end{equation}
+Unlike ratio-interval thresholding, this variant targets a prefix-level \emph{average} KL proxy and can be interpreted as a causal
+refinement of average-based trust-region criteria.
 
 
 \section{Numerical Stability}

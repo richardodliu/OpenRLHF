@@ -184,21 +184,23 @@ prefix-level (causal) filtering (our method in \Cref{sec:prefix-is}).
 and TRM apply sequence-level decisions (a single ratio statistic or a binary rejection gate) shared across all positions.
 \par
 \noindent\textbf{Prefix-level Causal Trust Region masking.} Our prefix mask $M_t^{\mathrm{prefix}}$ implements a causal, per-position gate
-constructed from prefix ratio statistics. Compared with TRM's sequence-level gate $M(x,y)$, it preserves positional granularity by masking
+constructed from prefix ratio statistics. Compared with TRM's sequence-level gate $M^{\mathrm{TRM}}(x,y)$, it preserves positional granularity by masking
 only the token-level loss terms whose prefixes violate the threshold.
 
+\noindent Table~\ref{tab:is-methods} summarizes these stabilization mechanisms under a unified notation.
 \begin{table}[ht]
 \centering
 \caption{Existing trust-region and IS stabilization methods in critic-free LLM-RL.}
+\label{tab:is-methods}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lllll}
 \toprule
-\textbf{Method} & \textbf{IS Ratio} & \textbf{Mask / Clip} & \textbf{Granularity} & \textbf{Causal} \\
+\textbf{Method} & \textbf{IS Statistic} & \textbf{Gate / Truncation} & \textbf{Granularity} & \textbf{Causal} \\
 \midrule
-TIS & $\rho_t$ & $\mathrm{clip}(\rho_t,\lambda,\Lambda)$ & Token & No \\
-ICEPOP & $\rho_t$ & $\mathbb{I}[\rho_t \in [\lambda, \Lambda]]$ & Token & No \\
-TRM & $\rho_t$ & $M(x,y)$ (max-KL) & Sequence & No \\
-GSPO & $\rhoseq$ & $\mathrm{clip}(\rhoseq,\lambda,\Lambda)$ & Sequence & No \\
+TIS & $\rho_t$ & $w_t^{\mathrm{tok}}=\mathrm{clip}(\rho_t,1-\epslow,1+\epshigh)$ & Token & No \\
+ICEPOP & $\rho_t$ & $M_t^{\mathrm{tok}}=\mathbb{I}[\rho_t \in [1-\epslow,1+\epshigh]]$ & Token & No \\
+TRM & $\rho_t$ & $M^{\mathrm{TRM}}(x,y)$ (max-KL gate) & Sequence & No \\
+GSPO & $\rhoseq$ & $w^{\mathrm{seq}}=\mathrm{clip}(\rhoseq,1-\epslow,1+\epshigh)$ & Sequence & No \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -216,10 +218,10 @@ GSPO & $\rhoseq$ & $\mathrm{clip}(\rhoseq,\lambda,\Lambda)$ & Sequence & No \\
 where $T=|y|$ is the response length. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$
 in the GSPO paper) up to notation.
 
-TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask $M(x,y)$ to discard trajectories that violate the
+TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask $M^{\mathrm{TRM}}(x,y)$ to discard trajectories that violate the
 trust region. A standard (max-based) criterion is
 \begin{equation}
-    M(x,y)
+    M^{\mathrm{TRM}}(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
 \end{equation}
 Most existing methods in the critic-free LLM-RL setting share a common limitation: they either operate at token granularity (treating each

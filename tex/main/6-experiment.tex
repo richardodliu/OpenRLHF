@@ -14,7 +14,7 @@ We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mi
     \qquad u_i \sim \mathrm{Unif}\{-32,\ldots,32\}.
 \]
 
-For IS masking, we use thresholds $[\lambda,\Lambda]=[0.5,5.0]$ unless otherwise stated, and synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
+For IS masking, we use the acceptance interval $[1-\epslow,1+\epshigh]=[0.5,5.0]$ unless otherwise stated (i.e., $\epslow=0.5$ and $\epshigh=4.0$), and synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
 
 \subsection{Baselines}
 
@@ -54,7 +54,7 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 
 \begin{table}[ht]
 \centering
-\caption{Masking behavior under synthetic deviation patterns ($T=32$, $[\lambda,\Lambda]=[0.5,5.0]$). We report the number of masked tokens and the masked position range.}
+\caption{Masking behavior under synthetic deviation patterns ($T=32$, $[1-\epslow,1+\epshigh]=[0.5,5.0]$). We report the number of masked tokens and the masked position range.}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lccc}
 \toprule
@@ -80,8 +80,8 @@ masking, and masking more prefix-drifted tokens than token-level masking in the 
 
 \subsection{Sensitivity to Thresholds}
 
-Masking behavior depends on $[\lambda,\Lambda]$. Stricter thresholds can cause sequence-level IS masking to reject an entire trajectory,
-while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[\lambda,\Lambda]=[0.8,2.0]$
+Masking behavior depends on $[1-\epslow,1+\epshigh]$. Stricter thresholds can cause sequence-level IS masking to reject an entire trajectory,
+while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[1-\epslow,1+\epshigh]=[0.8,2.0]$
 causes the sequence-level mask to reject all $32$ tokens, while prefix masking rejects only the suffix positions $t \in [24,32]$.
 
 \subsection{Reproducibility Checklist}
@@ -91,6 +91,6 @@ causes the sequence-level mask to reject all $32$ tokens, while prefix masking r
     \item Monte Carlo trials: $20{,}000$ prompt groups; $n=8$ samples per group.
     \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma_{\mathrm{rew}}=0.10$.
     \item Token lengths: success $T_i = 256 + u_i$, failure $T_i = 512 + u_i$, $u_i \sim \mathrm{Unif}\{-32,\ldots,32\}$.
-    \item Thresholds: default $[\lambda,\Lambda]=[0.5,5.0]$; sensitivity example $[0.8,2.0]$.
+    \item Thresholds: default $[1-\epslow,1+\epshigh]=[0.5,5.0]$; sensitivity example $[0.8,2.0]$.
     \item Code version: git commit \texttt{9a3879e}.
 \end{itemize}

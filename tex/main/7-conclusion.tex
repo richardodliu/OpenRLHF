@@ -14,7 +14,7 @@ framework highlights that prefix masking acts as a sample-level proxy for per-po
 expectation identity for the cumulative log-ratio (\Cref{lem:cumsum-kl}), while the prefix thresholding rule enforces a per-position
 sample constraint (\Cref{rem:prefix-proxy}).
 
-\textbf{Limitations and future work.} The prefix-mask thresholds $[\lambda, \Lambda]$ are hyperparameters that require tuning. The
+\textbf{Limitations and future work.} The prefix-mask thresholds $[1-\epslow, 1+\epshigh]$ are hyperparameters that require tuning. The
 sample-level prefix constraint is only a proxy for a population-level trust-region condition, and the gap between the two is not formally
 characterized. The theoretical analysis assumes bounded rewards and overlapping policy supports (\Cref{sec:assumptions}), which may not
 hold in all practical settings. Empirical validation on large-scale benchmarks is ongoing; we plan to evaluate on mathematical reasoning
