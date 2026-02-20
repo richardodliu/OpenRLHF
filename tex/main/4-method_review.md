@@ -1,7 +1,7 @@
 # `4-method.tex` 审稿意见
 
 ## 总评
-本章已修复多处历史问题（包括 seq-mask 计数分情况、loss 方向、显式补充部分阈值条件）。当前剩余问题集中在两类：`thm:prefix-tighter` 的陈述-证明一致性，以及 `thm:prefix-adaptive` 中 sample-level 公式与阈值界限处理不一致。
+本章已修复多处历史问题（包括 seq-mask 计数分情况、loss 方向、显式补充部分阈值条件）。当前剩余问题集中在三类：`thm:prefix-tighter` 的陈述-证明一致性、`thm:prefix-adaptive` 中 sample-level 公式与阈值界限处理不一致、以及 `\pi_{old}` 到 `\pi_\theta` 的理论桥接缺失。
 
 ## 结构不完整
 - 当前未发现未修复问题。
@@ -25,6 +25,18 @@
   影响: theorem statement 与 proof 存在公式级不匹配。
   建议: 统一 statement/proof 使用同一可证上界，或将长度结论改为条件不等式而非闭式计数。
 
+- [P1] 类型: 证明
+  位置: `tex/main/4-method.tex:159`
+  问题: Part (b) 未声明 `\epsilon` 与阈值区间关系；若 `\epsilon` 超出阈值边界，`t<t^*` 的早期 token 也可能被 mask，与“最多从 `t^*` 开始受影响”的叙述不一致。
+  影响: Part (b) 结论适用域不清晰，可能被误用于不满足条件的场景。
+  建议: 增加显式条件（如 `\epsilon \le \min(\log\Lambda, |\log\lambda|)`）或改写为条件化结论。
+
+- [P1] 类型: 证明
+  位置: `tex/main/4-method.tex:196`
+  问题: `thm:prefix-adaptive` 讨论的 context shift 项是 `\|d_t^{\pi_\theta}-d_t^{\pi_{roll}}\|_{TV}`，但 prefix IS 约束直接作用于 `\log(\pi_{old}/\pi_{roll})`。当前未给出从 `\pi_{old}` 到 `\pi_\theta` 的桥接假设与不等式链。
+  影响: theorem 对目标误差分解项“可控性”的论证缺关键中间步骤。
+  建议: 增加 `\pi_\theta` 与 `\pi_{old}` 的小步约束（如 trust-region / PPO clip 条件）并给出传递界，或将结论限定为对 `\pi_{old}` 的控制。
+
 ## 逻辑问题
 - [P1] 类型: 逻辑
   位置: `tex/main/4-method.tex:230`
@@ -44,4 +56,4 @@
 ## 高优先级修改清单（P0/P1/P2）
 1. P0: 修复 `thm:prefix-tighter` Part (c) 中错误的“non-decreasing”断言。
 2. P0: 修复 Eq.~\eqref{eq:threshold-kl} / Corollary 与 `L_t` 定义不一致（补上 `m_s`）。
-3. P1: 对齐 Part (a) 的 statement 与 proof，并修正非对称阈值下的界限表达。
+3. P1: 补齐 `\pi_{old}` 到 `\pi_\theta` 的理论桥接，并对齐 Part (a)/(b) 的适用条件。

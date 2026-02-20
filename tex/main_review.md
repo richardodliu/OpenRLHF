@@ -9,7 +9,7 @@
 ## 证明不严谨
 - [P1] 类型: 证明
   位置: `tex/main.tex:66`
-  问题: 摘要中“在 analyzed deviation patterns 下可提供更紧 masking”依赖 `thm:prefix-tighter` 的完整成立；但该定理仍有关键证明缺口（Part (c) 的单调性断言、以及 prefix 等价式与 `m_s` 定义不一致）。
+  问题: 摘要中“在 analyzed deviation patterns 下可提供更紧 masking”依赖 `thm:prefix-tighter` 的完整成立；该定理当前仍有关键证明缺口（Part (c) 单调性断言、Part (a)/(b) 条件不完备、以及与 `\pi_\theta` 目标项的桥接不足）。
   影响: 摘要结论的可证范围受上游定理缺口限制。
   建议: 在 `4-method` 完整补证前，进一步限定为“conditional on currently proved theorem cases”。
 

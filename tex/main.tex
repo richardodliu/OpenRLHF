@@ -1,57 +1,7 @@
 \documentclass[11pt]{article}
 
-%==============================================================================
-% PACKAGES
-%==============================================================================
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{amsmath,amssymb,amsthm}
-\usepackage{mathtools}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{algorithm}
-\usepackage{algorithmic}
-\usepackage{hyperref}
-\usepackage{cleveref}
-\usepackage[margin=1in]{geometry}
-\usepackage{natbib}
-\usepackage{thmtools}
-\usepackage{listings}
-
-% Listing style for Python code
-\lstset{
-  language=Python,
-  basicstyle=\ttfamily\small,
-  keywordstyle=\color{blue},
-  commentstyle=\color{gray},
-  frame=single,
-  breaklines=true
-}
-
-% Theorem environments
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{assumption}[theorem]{Assumption}
-
-% Custom commands (consistent with reference paper)
-\newcommand{\E}{\mathbb{E}}
-\newcommand{\Var}{\mathrm{Var}}
-\newcommand{\Cov}{\mathrm{Cov}}
-\newcommand{\piroll}{\pi_{\mathrm{roll}}}
-\newcommand{\pitheta}{\pi_{\theta}}
-\newcommand{\piold}{\pi_{\mathrm{old}}}
-\newcommand{\piref}{\pi_{\mathrm{ref}}}
-\newcommand{\DKL}{D_{\mathrm{KL}}}
-\newcommand{\Dkltokmax}{D_{\mathrm{KL}}^{\mathrm{tok,max}}}
-\newcommand{\Dtvtok}{D_{\mathrm{TV}}^{\mathrm{tok}}}
-\newcommand{\Dtvtokmax}{D_{\mathrm{TV}}^{\mathrm{tok,max}}}
-\newcommand{\Dbar}{\bar{D}}
+\input{env}
+\input{math}
 
 \title{REINFORCE Pro Max: Variance-Reduced Advantage Estimation\\
 with Causal Off-Policy Correction for LLM-RL}
@@ -63,7 +13,7 @@ with Causal Off-Policy Correction for LLM-RL}
 \maketitle
 
 \begin{abstract}
-Critic-free reinforcement learning methods for Large Language Models---such as REINFORCE++, GRPO, and RLOO---eliminate the need for a value network, saving significant GPU memory. However, they face two intertwined challenges: high-variance advantage estimation and off-policy mismatch between inference engines and training frameworks. We present REINFORCE Pro Max, a unified framework addressing both challenges with theoretical analysis. The first component, REINFORCE Max, combines a leave-one-out (RLOO) baseline---which provides statistical independence between each sample and its baseline, enabling clean second-moment factorization---with an adaptive asymmetric normalization that preserves gradient direction while ensuring zero mean and unit variance. The second component, REINFORCE Pro, introduces prefix cumulative importance sampling correction that preserves the causal structure of autoregressive generation. We show that, in analyzed deviation patterns (early deviation, late deviation, and monotone drift), prefix cumulative IS can provide tighter masking than both token-level methods (which ignore causal dependencies) and sequence-level methods (which lose positional information). We establish a connection between prefix cumulative IS and the Adaptive bound from the trust region literature, showing that our method acts as a practical, sample-level approximation of the per-position error bound in that framework. Together, the two components address both factors in the surrogate objective error decomposition: the advantage magnitude is controlled via normalization, and the context distribution shift is controlled via sample-level filtering on retained trajectories.
+Critic-free reinforcement learning methods for Large Language Models---such as REINFORCE++, GRPO, and RLOO---eliminate the need for a value network, saving significant GPU memory. However, they face two intertwined challenges: high-variance advantage estimation and off-policy mismatch between inference engines and training frameworks. We present REINFORCE Pro Max, a unified framework addressing both challenges with theoretical analysis. The first component, REINFORCE Max, combines a leave-one-out (RLOO) baseline---which provides statistical independence between each sample and its baseline, enabling clean second-moment factorization---with an adaptive asymmetric normalization that preserves gradient direction while ensuring zero mean and unit variance. The second component, REINFORCE Pro, introduces prefix cumulative importance sampling correction that preserves the causal structure of autoregressive generation. We show that, under explicit sufficient conditions on the per-token log-ratios (Theorem~\ref{thm:prefix-tighter}), prefix cumulative IS can provide tighter masking than both token-level methods (which ignore causal dependencies) and sequence-level methods (which lose positional information) in three analyzed deviation patterns (early deviation, late deviation, and monotone drift). We establish a connection between prefix cumulative IS and the Adaptive bound from the trust region literature, showing that our method acts as a practical, sample-level approximation of the per-position error bound in that framework. Together, the two components address both factors in the surrogate objective error decomposition: the advantage magnitude is controlled via normalization, and the context distribution shift is controlled via sample-level filtering on retained trajectories.
 \end{abstract}
 
 

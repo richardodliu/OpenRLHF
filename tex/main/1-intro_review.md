@@ -9,7 +9,7 @@
 ## 证明不严谨
 - [P1] 类型: 证明
   位置: `tex/main/1-intro.tex:21`
-  问题: 贡献 3 虽已改为 “can provide tighter masking in analyzed patterns”，但仍直接依赖 `thm:prefix-tighter`。该定理当前仍有关键证明缺口（Part (c) 单调性断言、以及 `threshold-kl` 与 `L_t` 定义不一致）。
+  问题: 贡献 3 虽已改为 “can provide tighter masking in analyzed patterns”，但仍直接依赖 `thm:prefix-tighter`。该定理当前仍有关键证明缺口（Part (c) 单调性断言、Part (a)/(b) 条件不完备、以及与 `\pi_\theta` 误差项的桥接不足）。
   影响: 引言贡献陈述与当前可严格证明范围仍存在耦合风险。
   建议: 增加更明确限定语（如 “under currently proved sufficient conditions in Theorem 4.x”）或在方法章补齐证明后再维持当前表述。
 

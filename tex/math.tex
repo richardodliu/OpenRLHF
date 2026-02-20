@@ -1,0 +1,63 @@
+% tex/math.tex — Theorem environments, math symbols, and operators
+
+%==============================================================================
+% THEOREM ENVIRONMENTS (shared counter, grouped by style)
+%==============================================================================
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+%==============================================================================
+% MATH OPERATORS
+%==============================================================================
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\Tr}{Tr}
+
+%==============================================================================
+% PROBABILITY AND STATISTICS
+%==============================================================================
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\R}{\mathbb{R}}
+
+%==============================================================================
+% POLICY NOTATION
+%==============================================================================
+\newcommand{\piroll}{\pi_{\mathrm{roll}}}
+\newcommand{\pitheta}{\pi_{\theta}}
+\newcommand{\piold}{\pi_{\mathrm{old}}}
+\newcommand{\piref}{\pi_{\mathrm{ref}}}
+
+%==============================================================================
+% DIVERGENCE MEASURES (following TRM paper convention)
+%==============================================================================
+\newcommand{\DKL}{D_{\mathrm{KL}}}
+\newcommand{\DTV}{D_{\mathrm{TV}}}
+\newcommand{\Dkltok}{D_{\mathrm{KL}}^{\mathrm{tok}}}
+\newcommand{\Dtvtok}{D_{\mathrm{TV}}^{\mathrm{tok}}}
+\newcommand{\Dkltokmax}{D_{\mathrm{KL}}^{\mathrm{tok,max}}}
+\newcommand{\Dtvtokmax}{D_{\mathrm{TV}}^{\mathrm{tok,max}}}
+\newcommand{\Dklseq}{D_{\mathrm{KL}}^{\mathrm{seq}}}
+\newcommand{\Dtvseq}{D_{\mathrm{TV}}^{\mathrm{seq}}}
+\newcommand{\Dbar}{\bar{D}}
+
+%==============================================================================
+% COMMON MATH SHORTCUTS
+%==============================================================================
+\newcommand{\Ls}{\mathcal{L}}
+\def\eps{{\epsilon}}
+\def\ceil#1{\lceil #1 \rceil}
+\def\floor#1{\lfloor #1 \rfloor}
