@@ -111,7 +111,7 @@ Under ICEPOP, $\mathrm{mask}_t = \mathbb{I}[w_t \in [\lambda, \Lambda]]$. Since 
 
 \begin{proposition}[Sequence-Level IS Loses Positional Information]
 \label{prop:seq-is-fails}
-For a sequence of length $T$ where $|\ell_t| \le \delta$ for all $t \neq t^*$ and $|\ell_{t^*}| = L$, the sequence-level geometric mean satisfies:
+For a sequence of length $T$ where $|\ell_t| \le \varepsilon$ for all $t \neq t^*$ and $|\ell_{t^*}| = L$, the sequence-level geometric mean satisfies:
 \begin{equation}
     \exp\!\Big(\frac{1}{T}\sum_{t=1}^T \ell_t\Big) \approx \exp\!\Big(\frac{L}{T}\Big).
 \end{equation}
@@ -119,7 +119,7 @@ For $T = 4096$ and $L = 3$, this gives $\approx 1.0007$, well within any reasona
 \end{proposition}
 
 \begin{proof}
-Under the stated conditions, $|\sum_{t \neq t^*} \ell_t| \le (T-1)\delta$. Thus $\frac{1}{T}\sum_t \ell_t = \frac{L + O((T-1)\delta)}{T} = \frac{L}{T} + O(\delta)$. For $\delta \to 0$, the geometric mean converges to $\exp(L/T)$, which approaches $1$ as $T \to \infty$ regardless of $L$.
+Under the stated conditions, $|\sum_{t \neq t^*} \ell_t| \le (T-1)\varepsilon$. Thus $\frac{1}{T}\sum_t \ell_t = \frac{L + O((T-1)\varepsilon)}{T} = \frac{L}{T} + O(\varepsilon)$. For $\varepsilon \to 0$, the geometric mean converges to $\exp(L/T)$, which approaches $1$ as $T \to \infty$ regardless of $L$.
 \end{proof}
 
 \subsection{Prefix Cumulative IS: Definition and Properties}
@@ -154,29 +154,31 @@ re-enters the threshold interval, it cannot leave it unless a subsequent per-tok
 
 \textbf{Granularity.} Different tokens in the same sequence are independently masked based on cumulative divergence up to that point.
 
+\noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in \Cref{sec:preliminaries}. In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token log-ratios $\ell_t$.
+
 \begin{theorem}[Causality-Aware Masking with Conditional Dominance]
 \label{thm:prefix-tighter}
 Let $M^{\mathrm{prefix}}_t$, $M^{\mathrm{token}}_t$, and $M^{\mathrm{seq}}_t$ denote the masks produced by prefix cumulative IS, token-level IS (ICEPOP), and sequence-level IS (seq-mask-tis) respectively, all with the same threshold $[\lambda, \Lambda]$ where $0 < \lambda \le 1 \le \Lambda$. Assume policy support overlap (\Cref{asm:support}). Then:
 
 \begin{enumerate}
     \item[(a)] \textbf{Early deviation: prefix masks a (possibly longer) prefix.} Assume $w_1 \notin [\lambda, \Lambda]$ and
-    $|\ell_t| \le \epsilon$ for all $t>1$, where $0 \le \epsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
+    $|\ell_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
     only position $t=1$, while prefix IS masks at least position $t=1$. Moreover, if $\ell_1>\log\Lambda$ then for every position $t$
     with $P_t \ge 1$ satisfying
     \begin{equation}
-        P_t < \frac{\ell_1+\epsilon}{\log\Lambda+\epsilon},
+        P_t < \frac{\ell_1+\varepsilon}{\log\Lambda+\varepsilon},
         \label{eq:early-upper-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $\ell_1<\log\lambda$ then for every position $t$ with $P_t \ge 1$ satisfying
     \begin{equation}
-        P_t < \frac{-\ell_1+\epsilon}{|\log\lambda|+\epsilon},
+        P_t < \frac{-\ell_1+\varepsilon}{|\log\lambda|+\varepsilon},
         \label{eq:early-lower-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{prefix}}=0$. In particular, in the early-deviation regime prefix IS masks at least as many tokens as
     token-level ICEPOP.
 
     \item[(b)] \textbf{Late deviation: prefix is more local than sequence masking.} Suppose there exists $t^*\in\{1,\ldots,T\}$ such that
-    $|\ell_t| \le \epsilon$ for all $t\neq t^*$ and $w_{t^*}\notin[\lambda,\Lambda]$, where $0 \le \epsilon \le \min(\log\Lambda,
+    $|\ell_t| \le \varepsilon$ for all $t\neq t^*$ and $w_{t^*}\notin[\lambda,\Lambda]$, where $0 \le \varepsilon \le \min(\log\Lambda,
     |\log\lambda|)$. Then prefix IS can only mask tokens at positions $t \ge t^*$, so
     \begin{equation}
         \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
@@ -194,8 +196,8 @@ Let $M^{\mathrm{prefix}}_t$, $M^{\mathrm{token}}_t$, and $M^{\mathrm{seq}}_t$ de
 \begin{proof}
 The full proof is in \Cref{app:prefix-proof}. We highlight the main steps.
 
-\textbf{Part (a).} The $\epsilon$-bounded condition implies $\ell_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
-only $t=1$. For prefix IS, the bounds $\sum_{s=2}^{t}\ell_s m_s \ge -(P_t-1)\epsilon$ and $\sum_{s=2}^{t}\ell_s m_s \le (P_t-1)\epsilon$
+\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\ell_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
+only $t=1$. For prefix IS, the bounds $\sum_{s=2}^{t}\ell_s m_s \ge -(P_t-1)\varepsilon$ and $\sum_{s=2}^{t}\ell_s m_s \le (P_t-1)\varepsilon$
 yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
 \textbf{Part (b).} For $t<t^*$, the prefix statistic averages only in-bound log-ratios and stays in-bound, so masking can only occur at

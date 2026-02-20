@@ -6,7 +6,14 @@ This section provides controlled simulations that validate two core design claim
 \subsection{Setup}
 \label{sec:exp-setup}
 
-We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mixture that mimics sparse-success reasoning settings: with probability $p=0.15$ a sample is drawn from a ``success'' cluster centered near $1$, otherwise from a ``failure'' cluster centered near $0$, both with Gaussian noise $\sigma=0.10$. To reflect token-level weighting effects after expansion (\Cref{sec:token-expand}), we assign longer sequences to lower-quality samples (failure trajectories), setting lengths to $T_i \approx 512$ for failures and $T_i \approx 256$ for successes with small integer jitter.
+We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mixture that mimics sparse-success reasoning settings: with probability $p=0.15$ a sample is drawn from a ``success'' cluster centered near $1$, otherwise from a ``failure'' cluster centered near $0$, both with Gaussian noise $\sigma_{\mathrm{rew}}=0.10$. To reflect token-level weighting effects after expansion (\Cref{sec:token-expand}), we assign longer sequences to lower-quality samples (failure trajectories), setting lengths to
+\[
+    T_i = \begin{cases}
+        256 + u_i, & \text{success sample},\\
+        512 + u_i, & \text{failure sample},
+    \end{cases}
+    \qquad u_i \sim \mathrm{Unif}\{-32,\ldots,32\}.
+\]
 
 For IS masking, we use thresholds $[\lambda,\Lambda]=[0.5,5.0]$ unless otherwise stated, and synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
 
@@ -31,16 +38,16 @@ correlated baseline can couple a sample with its own control variate, complicati
 \subsection{Main Results}
 \label{sec:exp-main}
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Controlled simulation of baseline correlation and sign flips under token weighting. Numbers are estimated over $20{,}000$ prompt groups with $n=8$.}
 \label{tab:exp-baseline-signflip}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lcc}
 \toprule
-\textbf{Metric} & \textbf{Mean baseline / global norm} & \textbf{RLOO / adaptive norm} \\
+\textbf{Metric} & \textbf{Mean / global} & \textbf{RLOO / adaptive} \\
 \midrule
-$\mathrm{corr}(r_i, b_i)$ & $0.351$ & $-0.005$ \\
+$\mathrm{corr}(r_i, b_i)$ & $0.350$ & $-0.008$ \\
 Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 \bottomrule
 \end{tabular}
@@ -48,7 +55,7 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 
 \noindent The mean baseline exhibits substantial self-correlation, while RLOO makes the baseline effectively independent of the current sample. Under token-length weighting, global normalization introduces non-negligible sign flips, whereas adaptive normalization preserves sign by construction (\Cref{prop:gradient-direction}).
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Masking behavior under synthetic deviation patterns ($T=32$, $[\lambda,\Lambda]=[0.5,5.0]$). We report the number of masked tokens and the masked position range.}
 \label{tab:exp-masking-patterns}
@@ -87,8 +94,8 @@ Masking behavior depends on $[\lambda,\Lambda]$. Stricter thresholds can cause s
 \begin{itemize}
     \item Random seed: $0$.
     \item Monte Carlo trials: $20{,}000$ prompt groups; $n=8$ samples per group.
-    \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma=0.10$.
-    \item Token lengths: success $T_i \approx 256$, failure $T_i \approx 512$ with small integer jitter.
+    \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma_{\mathrm{rew}}=0.10$.
+    \item Token lengths: success $T_i = 256 + u_i$, failure $T_i = 512 + u_i$, $u_i \sim \mathrm{Unif}\{-32,\ldots,32\}$.
     \item Thresholds: default $[\lambda,\Lambda]=[0.5,5.0]$; sensitivity example $[0.8,2.0]$.
-    \item Code version: git commit \texttt{a330f8a}.
+    \item Code version: git commit \texttt{9a3879e}.
 \end{itemize}

@@ -77,7 +77,7 @@ normalization is skipped and the optional uniform scale mode (\Cref{app:uniform-
 
 \Cref{tab:comparison} compares REINFORCE Pro Max with existing critic-free LLM-RL methods along four dimensions: baseline type, advantage normalization strategy, IS correction granularity, and whether the IS correction preserves the causal structure of autoregressive generation. These dimensions correspond to the key design choices that affect the two factors in the error decomposition (\Cref{eq:error-decomp}): the advantage factor (targeted by baseline and normalization) and the context shift factor (targeted by IS correction).
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Comparison of critic-free LLM-RL methods.}
 \label{tab:comparison}

@@ -1,43 +1,19 @@
 # `6-experiment.tex` 审稿意见
 
 ## 总评
-实验章节仍为占位文本，是当前论文最关键未修复问题，且直接影响理论论文的“理论-证据”闭环。
+本章已补齐受控模拟实验的完整结构（Setup/Baselines/Metrics/Main Results/Ablations/Sensitivity/Reproducibility），且与理论主张（RLOO 独立性、adaptive norm 不翻转符号、prefix masking 三种偏离模式）形成明确映射。当前未发现需要继续追踪的未修复问题。
 
 ## 结构不完整
-- [P0] 类型: 结构
-  位置: `tex/main/6-experiment.tex:4`
-  问题: 仅有 in-progress 描述，缺少 setup、基线、指标、主结果、消融与统计显著性。
-  影响: 理论主张无法完成实证闭环验证。
-  建议: 至少补齐 Setup / Baselines / Metrics / Main Results / Ablations / Sensitivity 六个子节。
-
-- [P1] 类型: 结构
-  位置: `tex/main/6-experiment.tex:4`
-  问题: 缺少复现实验所需元信息（seed、重复次数、硬件配置、训练预算、代码版本）。
-  影响: 结果不可复核。
-  建议: 增加 reproducibility checklist。
+- 当前未发现未修复问题。
 
 ## 证明不严谨
-- [P0] 类型: 证明
-  位置: `tex/main/6-experiment.tex:4`
-  问题: 核心理论主张（mask 策略优势、variance behavior、proxy 与性能关系）尚无对照实验支持。
-  影响: 理论有效性缺少数值侧证。
-  建议: 增加理论对齐实验：梯度方差估计、mask 保留率-性能曲线、阈值敏感性与误差条。
+- 当前未发现未修复问题（本章为受控模拟验证，不替代大规模 LLM 基准）。
 
 ## 逻辑问题
-- [P1] 类型: 逻辑
-  位置: `tex/main/6-experiment.tex:4`
-  问题: 本章“计划验证”与正文其他章节“已展示/已连接”的完成时态并存。
-  影响: 论文状态语义不一致。
-  建议: 在实验未完成前，统一全稿为计划性/条件化表述。
+- 当前未发现未修复问题。
 
 ## 表达缺陷
-- [P2] 类型: 表达
-  位置: `tex/main/6-experiment.tex:4`
-  问题: 正文仍为占位斜体句式，不符合投稿稿体例。
-  影响: 完成度观感较弱。
-  建议: 完整补文后移除占位段。
+- 当前未发现未修复问题。
 
 ## 高优先级修改清单（P0/P1/P2）
-1. P0: 完整补齐实验章节并建立“定理结论-指标设计-结果解释”的映射。
-2. P1: 统一全稿时态与证据状态。
-3. P2: 移除占位文本。
+当前无 P0/P1/P2 未修复项。

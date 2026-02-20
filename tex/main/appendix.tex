@@ -139,10 +139,10 @@ so that $w_t \in [\lambda,\Lambda]$ is equivalent to $\ell_t \in [-\tau_-,\tau_+
 \end{itemize}
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
-\textbf{Part (a).} Assume $w_1 \notin [\lambda,\Lambda]$ and $|\ell_t| \le \epsilon$ for all $t>1$, with
-$0 \le \epsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
+\textbf{Part (a).} Assume $w_1 \notin [\lambda,\Lambda]$ and $|\ell_t| \le \varepsilon$ for all $t>1$, with
+$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
 \[
-    \ell_t \in [-\epsilon,\epsilon] \subseteq [-\tau_-,\tau_+],
+    \ell_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \]
 so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $w_1 \notin [\lambda,\Lambda]$). Hence token-level
 ICEPOP masks only position $t=1$.
@@ -151,21 +151,21 @@ For prefix IS, write (assuming $m_1=1$ for the first action token)
 \[
     L_t = \ell_1 + \sum_{s=2}^{t}\ell_s m_s, \qquad P_t = 1 + \sum_{s=2}^{t}m_s.
 \]
-If $\ell_1>\tau_+$, then $\ell_s m_s \ge -\epsilon m_s$ for all $s\ge2$, so
+If $\ell_1>\tau_+$, then $\ell_s m_s \ge -\varepsilon m_s$ for all $s\ge2$, so
 \[
-    L_t \ge \ell_1 - \epsilon(P_t-1).
+    L_t \ge \ell_1 - \varepsilon(P_t-1).
 \]
-Therefore, if $P_t < (\ell_1+\epsilon)/(\tau_+ + \epsilon)$ (the condition in \Cref{eq:early-upper-sufficient}), then
+Therefore, if $P_t < (\ell_1+\varepsilon)/(\tau_+ + \varepsilon)$ (the condition in \Cref{eq:early-upper-sufficient}), then
 \[
-    \frac{L_t}{P_t} \ge \frac{\ell_1-\epsilon(P_t-1)}{P_t} > \tau_+,
+    \frac{L_t}{P_t} \ge \frac{\ell_1-\varepsilon(P_t-1)}{P_t} > \tau_+,
 \]
-so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $\ell_1<-\tau_-$ is symmetric: since $\ell_s m_s \le \epsilon m_s$ for $s\ge2$,
-we have $L_t \le \ell_1 + \epsilon(P_t-1)$, and the condition in \Cref{eq:early-lower-sufficient} implies $L_t/P_t < -\tau_-$, hence
+so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $\ell_1<-\tau_-$ is symmetric: since $\ell_s m_s \le \varepsilon m_s$ for $s\ge2$,
+we have $L_t \le \ell_1 + \varepsilon(P_t-1)$, and the condition in \Cref{eq:early-lower-sufficient} implies $L_t/P_t < -\tau_-$, hence
 $M_t^{\mathrm{prefix}}=0$. In particular, prefix IS always masks at least position $t=1$, and under the sufficient conditions masks a
 longer prefix.
 
-\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|\ell_t|\le \epsilon$ for all $t\neq t^*$, with
-$0 \le \epsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\ell_s \in [-\tau_-,\tau_+]$.
+\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|\ell_t|\le \varepsilon$ for all $t\neq t^*$, with
+$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\ell_s \in [-\tau_-,\tau_+]$.
 Since $L_t/P_t$ is a weighted average of these in-bound values (with weights $m_s/P_t$), it follows that $L_t/P_t \in [-\tau_-,\tau_+]$,
 and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
 \[

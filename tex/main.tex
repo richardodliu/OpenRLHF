@@ -14,8 +14,8 @@ with Causal Off-Policy Correction for LLM-RL}
 \maketitle
 
 \begin{abstract}
-Critic-free reinforcement learning methods for Large Language Models---such as REINFORCE++, GRPO, and RLOO---eliminate the need for a
-value network, saving significant GPU memory. However, they face two intertwined challenges: high-variance advantage estimation and
+Critic-free reinforcement learning methods for Large Language Models (LLMs), including REINFORCE++, GRPO, and RLOO, eliminate the need for
+a value network and save significant GPU memory. However, they face two intertwined challenges: high-variance advantage estimation and
 off-policy mismatch between inference engines and training frameworks. We present REINFORCE Pro Max, a unified framework addressing both
 challenges with theoretical analysis. The first component, REINFORCE Max, combines a leave-one-out (RLOO) baseline---which provides
 statistical independence between each sample and its baseline, enabling clean second-moment analysis---with an adaptive asymmetric
