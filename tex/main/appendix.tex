@@ -290,13 +290,18 @@ for positions $t\ge t^*$, which implies
 \end{equation}
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
-For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $\log\rho_{t^*}=L$ and
-$\log\rho_t=0$ for $t\neq t^*$. Then $\log\rhoseq = L/T$ and $\log\rhoprefix{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
-Thus whenever
+For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case where $\rho_t=1$ for
+$t\neq t^*$ and $\rho_{t^*}>1$. Then
+\[
+    \log\rhoseq = \frac{1}{T}\log\rho_{t^*},
+    \qquad
+    \log\rhoprefix{t^*} = \frac{1}{t^*}\log\rho_{t^*}.
+\]
+Since $t^* \le T$ and $\log\rho_{t^*}>0$, we have $\log\rhoprefix{t^*} \ge \log\rhoseq$. Thus whenever
 \begin{equation}
-    \frac{L}{t^*} > \tau_+
+    \frac{1}{t^*}\log\rho_{t^*} > \tau_+
     \quad\text{and}\quad
-    \frac{L}{T} \le \tau_+,
+    \frac{1}{T}\log\rho_{t^*} \le \tau_+,
 \end{equation}
 we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 

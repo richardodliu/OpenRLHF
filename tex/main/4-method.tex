@@ -220,13 +220,13 @@ log-ratio,
 \begin{equation}
     \log\rhoseq = \frac{1}{T}\sum_{t=1}^T \log\rho_t.
 \end{equation}
-Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\log\rho_{t^*} = L$ and $|\log\rho_t|\le \varepsilon$ for all $t\neq t^*$. Then
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|\log\rho_t|\le \varepsilon$ for all $t\neq t^*$. Then
 \begin{equation}
-    \big|\log\rhoseq - L/T\big| \le \frac{T-1}{T}\,\varepsilon \le \varepsilon.
+    \Big|\log\rhoseq - \frac{1}{T}\log\rho_{t^*}\Big| \le \frac{T-1}{T}\,\varepsilon \le \varepsilon.
     \label{eq:seq-mean-dilution}
 \end{equation}
-In particular, in the pure single-spike case $\log\rho_{t^*}=L$ and $\log\rho_t=0$ for $t\neq t^*$, one has $\log\rhoseq=L/T$, so
-$\rhoseq=\exp(L/T)\to 1$ as $T\to\infty$ for any fixed $L$.
+In particular, in the pure single-spike case $\log\rho_t=0$ for $t\neq t^*$, one has $\log\rhoseq=\log\rho_{t^*}/T$, so
+$\rhoseq = (\rho_{t^*})^{1/T}\to 1$ as $T\to\infty$ for any fixed $\rho_{t^*}>0$.
 \end{proposition}
 
 \begin{proof}
@@ -362,8 +362,12 @@ Assume policy support overlap (\Cref{asm:support}). Then:
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
     \end{equation}
     In contrast, sequence-level masking is all-or-nothing: $|\{t : M_t^{\mathrm{seq}} = 0\}| \in \{0, T\}$. Moreover, in the pure
-    single-spike case $\log\rho_{t^*}=L$ and $\log\rho_t=0$ for $t\neq t^*$, one has $\frac{L}{t^*} \ge \frac{L}{T}$, so there exist regimes
-    where $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by large $T$).
+    single-spike case where $\rho_t=1$ for $t\neq t^*$ and $\rho_{t^*}>1$, one has
+    \[
+        \log\rhoprefix{t^*} = \frac{1}{t^*}\log\rho_{t^*} \ge \frac{1}{T}\log\rho_{t^*} = \log\rhoseq,
+    \]
+    so there exist regimes where $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by
+    large $T$). The lower-spike case $\rho_{t^*}<1$ is analogous with the lower threshold.
 
     \item[(c)] \textbf{Monotone violation: all methods reject.} If $\log\rho_s > \log\Lambda$ for all $s$ (upper violation), or
     $\log\rho_s < \log\lambda$ for all $s$ (lower violation), then $M_t^{\mathrm{prefix}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
@@ -393,7 +397,8 @@ which yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-l
 application of \Cref{lem:prefix-stability} implies $\rhoprefix{t}\in[\lambda,\Lambda]$ (equivalently,
 $\log\rhoprefix{t}\in[\log\lambda,\log\Lambda]$) and hence
 $M_t^{\mathrm{prefix}}=1$. Therefore masking can only occur at positions $t\ge t^*$, yielding the stated bound. The single-spike
-comparison follows from $t^*\le T$.
+comparison follows by specializing to $\rho_t=1$ for $t\neq t^*$ and $\rho_{t^*}>1$, which gives $\log\rhoseq=\log\rho_{t^*}/T$ and
+$\log\rhoprefix{t^*}=\log\rho_{t^*}/t^*$, so $\log\rhoprefix{t^*}\ge \log\rhoseq$ since $t^*\le T$.
 
 \textbf{Part (c).} If each $\log\rho_s$ is strictly beyond the same threshold, then their running average is also strictly beyond the
 threshold, so both prefix and sequence masks reject all tokens.
