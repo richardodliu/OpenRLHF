@@ -114,16 +114,12 @@ gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the state
 specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a unique solution.
 \end{proof}
 
-\begin{proposition}[Advantage Sign Preservation]
+\paragraph{Advantage sign preservation.}
 \label{prop:gradient-direction}
 The adaptive normalization preserves the sign of the advantage at every token: $\sign(\hat{A}_{i,t}) = \sign(A_{i,t})$ for all $(i,t)$
-with $A_{i,t} \neq 0$. The relative ordering of magnitudes within $\mathcal{P}$ and within $\mathcal{N}$ is also preserved.
-Consequently, the policy gradient update reinforces (or penalizes) the same tokens as the unnormalized advantage.
-\end{proposition}
-
-\begin{proof}
-Since $\alpha > 0$ and $\beta > 0$ (\Cref{prop:alpha-beta}), multiplication by a positive constant preserves both sign and relative ordering.
-\end{proof}
+with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserved within the positive group $\mathcal{P}$ and within the
+negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
+$\beta>0$ on $\mathcal{N}$ (\Cref{prop:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
 \begin{remark}[Connection to asymmetric clipping]
 Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage sign; adaptive normalization scales the advantage magnitude differently. Both control the effective step size asymmetrically, but normalization acts through the advantage rather than the ratio, avoiding the gradient leakage problem identified by~\citet{li2025trm}.
