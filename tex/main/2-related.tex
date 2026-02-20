@@ -16,7 +16,7 @@ Several importance sampling correction methods have been proposed to address thi
 
 At the sequence level, Trust Region Masking (TRM)~\citep{li2025trm} discards entire trajectories that violate a trust region criterion defined
 by the maximum token-level divergence (e.g., $\max_t \Dkltok(c_t;\piroll,\pitheta)$). GSPO~\citep{gspo2025} instead computes a single
-sequence-level IS coefficient (the geometric-mean ratio $\ISseq$) and applies it uniformly across the sequence.
+sequence-level importance ratio coefficient (the geometric-mean ratio $\rhoseq$) and applies it uniformly across the sequence.
 \par
 \noindent\textbf{Prefix-level refinement.} Our REINFORCE Pro component can be viewed as a prefix-level refinement of TRM's rejection
 mechanism: instead of a single sequence gate $M(x,y)$, we compute a per-position mask $M_t^{\mathrm{prefix}}$ from a ratio-based prefix
@@ -28,7 +28,7 @@ sequence-level methods either reject the entire sequence or lose the ability to 
 
 \subsection{Trust Region Methods}
 
-Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-level trust-region masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
+Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-level Causal Trust Region masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
 
 \subsection{Summary of Differences}
 

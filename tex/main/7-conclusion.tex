@@ -7,10 +7,10 @@ high-variance advantage estimation and causal off-policy mismatch between behavi
 The first component, REINFORCE Max, combines a leave-one-out baseline (statistically independent of each sample, enabling clean
 second-moment analysis, \Cref{prop:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while enforcing the
 empirical constraints in \Cref{def:adaptive-norm}, \Cref{prop:alpha-beta}). The second component, REINFORCE Pro, introduces
-prefix-level trust-region masking (a TRM-style proxy) that preserves the causal structure of autoregressive generation. We showed that the
+prefix-level Causal Trust Region masking (a ratio-based prefix proxy) that preserves the causal structure of autoregressive generation. We showed that the
 resulting prefix mask can provide tighter filtering than both token-level and sequence-level alternatives in the analyzed deviation
 patterns (\Cref{thm:prefix-tighter}), subject to the conditions stated therein. The connection to the Adaptive bound from the trust region
-framework highlights that prefix masking acts as a sample-level proxy for per-position trust-region filtering: the KL chain rule yields an
+framework highlights that prefix masking acts as a sample-level proxy for per-position Causal Trust Region filtering: the KL chain rule yields an
 expectation identity for the cumulative log-ratio (\Cref{lem:cumsum-kl}), while the prefix thresholding rule enforces a per-position
 sample constraint (\Cref{rem:prefix-proxy}).
 

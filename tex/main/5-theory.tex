@@ -17,7 +17,7 @@ mitigating the impact of outlier advantages on gradient magnitude.
 behavior policy $\piroll$ and the training policy $\pitheta$. The prefix-level mask rejects tokens whose prefix average log-ratio leaves the threshold
 interval (\Cref{cor:per-position-trust}). The KL chain rule yields an expectation identity relating cumulative log-ratios to a joint KL
 divergence between prefix distributions (\Cref{lem:cumsum-kl}); together with the threshold equivalence (\Cref{rem:prefix-proxy}), this
-motivates viewing prefix masking as a sample-level proxy for trust-region style filtering on the same policy pair $(\piroll,\pitheta)$ that
+motivates viewing prefix masking as a sample-level proxy for Causal Trust Region filtering on the same policy pair $(\piroll,\pitheta)$ that
 appears in the error decomposition.
 
 \begin{remark}[Heuristic complementarity]
@@ -39,7 +39,7 @@ baseline + adaptive normalization) reduces the variance of the advantage estimat
 \subsection{Algorithm}
 
 Algorithm~\ref{alg:promax} presents the complete REINFORCE Pro Max training procedure. It unifies variance-reduced advantage estimation
-(REINFORCE Max, \Cref{sec:reinforce-max}) and prefix-level trust-region masking (REINFORCE Pro, \Cref{sec:reinforce-pro}) into a single
+(REINFORCE Max, \Cref{sec:reinforce-max}) and prefix-level Causal Trust Region masking (REINFORCE Pro, \Cref{sec:reinforce-pro}) into a single
 training loop. The algorithm processes one prompt at a time: it generates $n$ rollout samples from the behavior policy, computes
 advantages with the RLOO baseline and adaptive normalization, then applies the prefix-level mask during the loss computation. We
 highlight the key design choices below.
@@ -58,7 +58,7 @@ highlight the key design choices below.
     \STATE \textbf{Forward Pass:} Compute $\log \pitheta(y_t|c_t)$; use cached $\log \piroll(y_t|c_t)$ from rollout
     \STATE \textbf{Ratio:} $\rho_t \leftarrow \exp\!\big(\log \pitheta(y_t|c_t) - \log \piroll(y_t|c_t)\big)$
     \STATE \textbf{Prefix Proxy:} $r_t \leftarrow \log \rho_t$
-    \STATE \hspace{2.6em} Compute $\ISprefix{t}$ as in Eq.~\eqref{eq:prefix-is}
+    \STATE \hspace{2.6em} Compute $\rhoprefix{t}$ as in Eq.~\eqref{eq:prefix-is}
     \STATE \hspace{2.6em} Compute $M_t^{\mathrm{prefix}}$ as in Eq.~\eqref{eq:prefix-mask}
     \STATE \textbf{Loss:} $\mathcal{L} \leftarrow \mathcal{L}^{\mathrm{ProMax}}$ (Eq.~\eqref{eq:promax-loss}) \hfill \COMMENT{negative surrogate}
     \STATE \textbf{Update:} $\theta \leftarrow \theta - \alpha_{\mathrm{lr}} \nabla_\theta \mathcal{L}$
@@ -84,7 +84,7 @@ normalization is skipped and the optional uniform scale mode (\Cref{app:uniform-
 log-probabilities $\log\piroll(y_t|c_t)$ are reused from the rollout cache, as in standard PPO implementations.
 
 \emph{Prefix TRM-Style Masking (Lines~9--11).} The per-token log-ratio $r_t=\log\rho_t$ captures local policy drift between $\pitheta$ and
-$\piroll$. The prefix cumulative statistic $\ISprefix{t}$ in \eqref{eq:prefix-is} aggregates this drift causally: it depends only
+$\piroll$. The prefix cumulative statistic $\rhoprefix{t}$ in \eqref{eq:prefix-is} aggregates this drift causally: it depends only
 on positions $s\le t$, respecting the autoregressive order (\Cref{def:prefix-is}). The corresponding binary mask
 $M_t^{\mathrm{prefix}}$ in \eqref{eq:prefix-mask} filters out positions where the prefix average log-ratio leaves
 $[\log\lambda,\log\Lambda]$, enforcing a per-position, sample-level constraint (\Cref{cor:per-position-trust}).
@@ -121,11 +121,11 @@ DAPO + ICEPOP & Mean & Global $(\mu,\sigma)$ & Token mask & No \\
 
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
 
-\textbf{IS correction methods.} DAPO~\citep{yu2025dapo} combined with TIS clamps the per-token IS ratio $\IStoken{t}$ to a fixed interval
+\textbf{IS correction methods.} DAPO~\citep{yu2025dapo} combined with TIS clamps the per-token importance ratio $\rho_t$ to a fixed interval
 $[\lambda, \Lambda]$, retaining a biased but bounded correction at every position. DAPO combined with ICEPOP takes a harder approach:
 tokens whose ratio falls outside the interval are zeroed out entirely, which eliminates bias from extreme weights but discards potentially
 useful gradient signal. Both methods operate at the token level and treat each position independently. As shown in \Cref{prop:token-is-fails},
-an early deviation with $\IStoken{1}\notin[\lambda,\Lambda]$ is corrected only at position~1, while all subsequent positions---whose contexts
+an early deviation with $\rho_1\notin[\lambda,\Lambda]$ is corrected only at position~1, while all subsequent positions---whose contexts
 are sampled from a mismatched distribution---remain uncorrected.
 
 \textbf{REINFORCE Pro Max.} Our method is the only one in this comparison that simultaneously addresses all four dimensions. The RLOO

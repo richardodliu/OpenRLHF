@@ -178,25 +178,25 @@ log-threshold interval as
     \qquad
     \tau_- := -\log\lambda,
 \end{equation}
-so that $\IStoken{t} \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
+so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
-    \item \textbf{Token-level (ICEPOP / token-level TRM-style mask):}
+    \item \textbf{Token-level (ICEPOP / token-level ratio mask):}
     \begin{equation}
         M_t^{\mathrm{token}}
-        := \mathbb{I}\!\big[\IStoken{t} \in [\lambda,\Lambda]\big]
+        := \mathbb{I}\!\big[\rho_t \in [\lambda,\Lambda]\big]
         = \mathbb{I}\!\big[r_t \in [-\tau_-,\tau_+]\big].
     \end{equation}
-    \item \textbf{Sequence-level (GSPO-style / sequence-level TRM-style mask):}
+    \item \textbf{Sequence-level (GSPO / sequence-level ratio gate):}
     \begin{equation}
         M_t^{\mathrm{seq}}
         := \mathbb{I}\!\big[\bar{r} \in [-\tau_-,\tau_+]\big],
         \qquad
         \bar{r} := \frac{1}{P_T}\sum_{s=1}^{T}r_s m_s,
     \end{equation}
-    for all $t$ (equivalently, $\ISseq=\exp(\bar{r})$).
-    \item \textbf{Prefix-level (TRM-style proxy):}
+    for all $t$ (equivalently, $\rhoseq=\exp(\bar{r})$).
+    \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
         M_t^{\mathrm{prefix}}
         := \mathbb{I}\!\big[L_t/P_t \in [-\tau_-,\tau_+]\big],
@@ -211,12 +211,12 @@ we take $m_t\equiv 1$, so $P_t=t$ and $L_t=\sum_{s=1}^{t}r_s$.
 
 \par
 \noindent\textbf{Part (a): Early deviation.}
-Assume $\IStoken{1} \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
+Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
 \begin{equation}
     r_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \end{equation}
-so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\IStoken{1} \notin [\lambda,\Lambda]$). Hence token-level
+so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\rho_1 \notin [\lambda,\Lambda]$). Hence token-level
 ICEPOP masks only position $t=1$.
 
 \smallskip
@@ -251,7 +251,7 @@ and hence $M_t^{\mathrm{prefix}}=0$. This proves the sufficient conditions in \C
 
 \par
 \noindent\textbf{Part (b): Late deviation.}
-Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\IStoken{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
 Since $L_t/P_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $L_t/P_t \in [-\tau_-,\tau_+]$, and hence
@@ -321,10 +321,10 @@ once a prefix violates the threshold, all subsequent positions are rejected.
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{prefix}}.
 \end{equation}
 
-\subsection{Variant C: Prefix-Max Mask (TRM-Max Style)}
+\subsection{Variant C: Prefix-Max Mask (Max-Filtering)}
 \label{app:variant-c}
 
-TRM-style max criteria can be expressed via a sample-based proxy $k_2(\rho)$:
+Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
 \begin{equation}
     k_2(\rho) := \tfrac{1}{2}(\log\rho)^2.
 \end{equation}
