@@ -1,0 +1,24 @@
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Critic-Free RL for LLMs}
+
+The high memory cost of maintaining a critic network has motivated a family of critic-free reinforcement learning methods for large language models. REINFORCE++ Baseline~\citep{hu2025reinforce} uses the batch mean reward as a baseline and normalizes advantages globally, providing a simple and memory-efficient alternative to PPO. GRPO~\citep{shao2024deepseekmath} extends this idea by normalizing advantages with both the mean and standard deviation within each prompt group, achieving strong results on mathematical reasoning tasks. RLOO~\citep{ahmadian2024back} revisits the classical leave-one-out control variate, computing each sample's baseline from the remaining samples in the group, which eliminates the correlation between a sample and its own baseline. All three methods avoid the need for a value network, saving approximately a quarter of GPU memory compared to standard PPO~\citep{schulman2017proximal} in comparable settings\footnote{The 25\% memory saving is reported for single-model-size configurations where the critic has the same architecture as the actor; the actual saving depends on model size, parallel strategy, and batch configuration.}.
+
+\subsection{Off-Policy Correction in LLM-RL}
+
+Modern LLM-RL pipelines decouple inference from training: high-throughput engines such as vLLM~\citep{kwon2023efficient} generate rollouts, while gradient updates are performed in separate training frameworks. This architectural separation introduces a policy mismatch between the rollout engine and the training actor~\citep{yao2025offpolicy}.
+
+Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. ICEPOP~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
+
+At the sequence level, seq-mask-tis~\citep{yao2025offpolicy} computes a single geometric mean importance ratio over the entire sequence and rejects or accepts the sequence as a whole. GSPO~\citep{gspo2025} operates similarly, using the average log-ratio to compute a single correction factor.
+
+These methods share a common limitation: token-level methods ignore that an early deviation affects the entire future trajectory, while sequence-level methods lose the ability to distinguish where within a sequence the divergence occurs.
+
+\subsection{Trust Region Methods}
+
+Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix cumulative importance sampling correction. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
+
+\subsection{Summary of Differences}
+
+Compared with existing critic-free methods, REINFORCE Pro Max differs along four dimensions: (1)~\emph{baseline}: RLOO (independent of each sample) vs.\ mean (correlated); (2)~\emph{normalization}: adaptive asymmetric $\alpha/\beta$ vs.\ global $\mu/\sigma$; (3)~\emph{IS granularity}: prefix cumulative (per-position) vs.\ token-level or sequence-level; (4)~\emph{causal structure}: prefix IS respects autoregressive ordering, while the IS correction methods considered in this paper do not. See \Cref{tab:comparison} for a detailed comparison.

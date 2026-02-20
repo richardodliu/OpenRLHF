@@ -1,0 +1,156 @@
+\newpage
+\appendix
+
+\section{Proof of Leave-One-Out Baseline Properties}
+\label{app:rloo-proof}
+
+We provide a detailed property analysis of the leave-one-out and mean-baseline gradient estimators.
+
+\begin{proposition}[Properties of the Leave-One-Out Baseline]
+\label{prop:rloo-variance}
+Let $f_i = \nabla_\theta \log P^{\pitheta}(o_i | q)$ denote the score function for sample $i$, and let $g_i(b) = (r_i - b) f_i$ denote the per-sample policy gradient contribution with baseline $b$. The leave-one-out gradient estimator $\hat{g} = \frac{1}{n}\sum_i g_i(b_i)$ satisfies:
+\begin{enumerate}
+    \item \textbf{Unbiasedness:} $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
+    \item \textbf{Zero cross-covariance:} For each $i$, $\Cov\!\big(f_i,\; b_i\big) = 0$.
+    \item \textbf{Second-moment factorization:} The independence between $b_i$ and $(r_i, f_i)$ yields the factorization $\E[(r_i - b_i)^2 f_i f_i^\top] = \E[(r_i - b_i)^2]\,\E[f_i f_i^\top]$, which does not hold for the mean baseline $b^{\mathrm{mean}}$ due to its dependence on $r_i$.
+\end{enumerate}
+\end{proposition}
+
+\begin{remark}[Relationship between the two estimators]
+\label{rem:rloo-mean-scaling}
+Note that $r_i - b^{\mathrm{mean}} = \frac{n-1}{n}(r_i - b_i)$, so $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$. The two estimators are deterministically proportional, and the mean-baseline estimator has smaller raw variance by a factor of $((n-1)/n)^2$. However, this scaling also shrinks the signal by $\frac{n-1}{n}$, so the variance reduction comes at the cost of a smaller effective step size. The practical advantage of the leave-one-out baseline lies in its independence structure (Parts~2--3), which simplifies variance analysis, enables clean factorization of second moments, and avoids the correlated baseline artifacts that complicate optimization with the mean baseline.
+\end{remark}
+
+\begin{remark}
+The leave-one-out baseline is equivalent to the leave-one-out control variate from the classical REINFORCE literature~\citep{williams1992simple}. In the LLM-RL setting with $n$ samples per prompt, each sample's baseline is independent of its own trajectory, making it particularly well-suited for group-based sampling strategies.
+\end{remark}
+
+\textbf{Proof of \Cref{prop:rloo-variance}.}
+
+Consider $n$ i.i.d.\ samples $\{o_1, \ldots, o_n\}$ from $\pitheta(\cdot|q)$ with rewards $\{r_1, \ldots, r_n\}$. Define $f_i = \nabla_\theta \log P^{\pitheta}(o_i|q)$ (the score function for sample $i$), $\mu = \E[r_i]$, and $\sigma^2 = \Var[r_i]$.
+
+\textbf{Leave-one-out estimator:}
+\begin{equation}
+    \hat{g} = \frac{1}{n}\sum_{i=1}^n (r_i - b_i) f_i, \qquad b_i = \frac{1}{n-1}\sum_{j \neq i} r_j.
+\end{equation}
+
+\textbf{Mean baseline estimator:}
+\begin{equation}
+    \hat{g}^{\mathrm{mean}} = \frac{1}{n}\sum_{i=1}^n (r_i - b^{\mathrm{mean}}) f_i, \qquad b^{\mathrm{mean}} = \frac{1}{n}\sum_{j=1}^n r_j.
+\end{equation}
+
+\textbf{Step 1: Deterministic scaling relationship.}
+
+Note that $b^{\mathrm{mean}} = \frac{r_i}{n} + \frac{n-1}{n}b_i$, so:
+\begin{equation}
+    r_i - b^{\mathrm{mean}} = \frac{n-1}{n}(r_i - b_i).
+\end{equation}
+Summing over $i$: $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$. Therefore $\Var[\hat{g}^{\mathrm{mean}}] = \big(\frac{n-1}{n}\big)^2 \Var[\hat{g}]$. The mean-baseline estimator has smaller raw variance, but this is entirely due to the $\frac{n-1}{n}$ signal shrinkage---it also shrinks the expected gradient by the same factor.
+
+\textbf{Step 2: Independence and second-moment factorization.}
+
+Since $b_i$ is independent of $(r_i, f_i)$, the per-sample second moment factorizes:
+\begin{equation}
+    \E[(r_i - b_i)^2 f_i f_i^\top] = \E[(r_i - b_i)^2]\, \E[f_i f_i^\top].
+\end{equation}
+We have $\E[(r_i - b_i)^2] = \Var[r_i] + \Var[b_i] = \sigma^2 + \sigma^2/(n-1) = \sigma^2 n/(n-1)$, where the cross term vanishes by independence. This clean factorization is the key structural advantage of the leave-one-out baseline: it separates the reward variance from the score function variance, making the gradient variance analytically tractable.
+
+\textbf{Step 3: Non-factorization of the mean baseline.}
+
+For the mean baseline, $b^{\mathrm{mean}}$ depends on $r_i$, so:
+\begin{equation}
+    \E[(r_i - b^{\mathrm{mean}})^2 f_i f_i^\top] \neq \E[(r_i - b^{\mathrm{mean}})^2]\, \E[f_i f_i^\top]
+\end{equation}
+in general. The dependence between $b^{\mathrm{mean}}$ and $(r_i, f_i)$ creates cross terms involving $\Cov[f_i, r_i] = \E[r_i f_i] = \nabla_\theta J(\pitheta)$ (by the score function identity, since $\E[f_i] = 0$). This non-zero covariance complicates the variance analysis and means the mean baseline does not achieve the clean separation of reward and score function contributions.
+
+\textbf{Step 4: Practical implications.}
+
+The leave-one-out baseline's independence structure provides three practical advantages over the mean baseline:
+\begin{enumerate}
+    \item \textbf{Analytical tractability:} The factorization in Step~2 enables closed-form variance expressions, facilitating hyperparameter tuning (e.g., choosing $n$).
+    \item \textbf{No correlated baseline artifacts:} With the mean baseline, $\Cov[f_i, b^{\mathrm{mean}}] = \frac{1}{n}\nabla J \neq 0$, meaning the baseline itself correlates with the gradient direction. This correlation may interact with adaptive optimizers (e.g., Adam) in unpredictable ways, though the practical impact depends on the specific optimization dynamics. The leave-one-out baseline eliminates this correlation entirely.
+    \item \textbf{Equivalent signal-to-noise ratio:} Although $\hat{g}^{\mathrm{mean}}$ has smaller raw variance, its signal is also smaller by $\frac{n-1}{n}$. The signal-to-noise ratio $\|\E[\hat{g}]\|^2 / \mathrm{tr}(\Var[\hat{g}])$ is identical for both estimators, since both the signal and noise scale by the same factor.
+\end{enumerate}
+
+
+\section{Optimality of $\gamma = 1.0$}
+\label{app:gamma-one}
+
+\begin{proposition}[Optimality of $\gamma = 1.0$]
+\label{prop:gamma-one}
+When the extrinsic reward is sparse (assigned only at the final token), $\gamma = 1.0$ is the unique discount factor that preserves unbiasedness of the REINFORCE gradient estimator for the undiscounted objective $J(\pitheta) = \E[R(x,y)]$.
+\end{proposition}
+
+\begin{proof}
+With discount factor $\gamma < 1$, the gradient estimate becomes $\E\!\big[\sum_t \gamma^{T-t} \tilde{r}_i \nabla_\theta \log \pitheta(y_t|c_t)\big]$, which is a biased estimator of $\nabla J(\pitheta) = \E\!\big[\tilde{r}_i \sum_t \nabla_\theta \log \pitheta(y_t|c_t)\big]$ since $\gamma^{T-t} \neq 1$ for $t < T$. Only $\gamma = 1$ makes all coefficients equal to 1, recovering the unbiased estimator.
+\end{proof}
+
+
+\section{Illustrative Examples for Theorem~\ref{thm:prefix-tighter}}
+\label{app:prefix-proof}
+
+The following examples illustrate the behavior of prefix IS under the specific deviation patterns analyzed in \Cref{thm:prefix-tighter}. They demonstrate the theorem's claims on concrete instances but do not constitute a general proof covering all possible deviation patterns.
+
+\textbf{Detailed analysis of Part (a).}
+
+Let $w_1 = e^{\ell_1}$ with $|\ell_1| > \log\Lambda$ (so $w_1 \notin [\lambda, \Lambda]$), and $w_t = 1$ (i.e., $\ell_t = 0$) for all $t > 1$.
+
+Under ICEPOP: $M_1^{\mathrm{token}} = 0$, $M_t^{\mathrm{token}} = 1$ for $t > 1$. Total masked: 1 token.
+
+Under prefix IS: $\mathrm{prefix\_is}(t) = \exp(\ell_1 / t)$ for $t \ge 1$ (assuming all $m_t = 1$). The mask is:
+\begin{equation}
+    M_t^{\mathrm{prefix}} = \mathbb{I}\!\big[\exp(\ell_1/t) \in [\lambda, \Lambda]\big] = \mathbb{I}\!\big[\ell_1/t \in [\log\lambda, \log\Lambda]\big].
+\end{equation}
+For $\ell_1 > 0$: $M_t^{\mathrm{prefix}} = 0$ when $\ell_1/t > \log\Lambda$, i.e., $t < \ell_1/\log\Lambda$. So the first $\lfloor \ell_1/\log\Lambda \rfloor$ tokens are masked.
+
+For example, with $\ell_1 = 3$ and $\Lambda = 5$ ($\log\Lambda \approx 1.61$): prefix IS masks the first $\lfloor 3/1.61 \rfloor = 1$ token. With $\Lambda = 2$ ($\log\Lambda \approx 0.69$): prefix IS masks the first $\lfloor 3/0.69 \rfloor = 4$ tokens. In both cases, prefix IS masks at least as many tokens as ICEPOP.
+
+\textbf{Detailed analysis of Part (b).}
+
+Let $\ell_t = 0$ for $t < t^*$ and $\ell_{t^*} = L$ with $|L| > \log\Lambda$. For $t \ge t^*$:
+\begin{equation}
+    \mathrm{prefix\_is}(t) = \exp\!\Big(\frac{L}{t}\Big).
+\end{equation}
+This is masked when $|L|/t > \log\Lambda$, i.e., $t < |L|/\log\Lambda$. If $t^* > |L|/\log\Lambda$ (late deviation), then $\mathrm{prefix\_is}(t^*) = \exp(L/t^*)$ may already be within bounds, and no tokens are masked. In contrast, seq-mask-tis computes $\exp(L/T)$; if this crosses the threshold, all $T$ tokens are rejected.
+
+
+\section{Numerical Stability}
+\label{app:numerical}
+
+The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguards:
+
+\begin{enumerate}
+    \item \textbf{Sum threshold:} If $|S^+| < \epsilon_{\mathrm{num}}$ or $|S^-| < \epsilon_{\mathrm{num}}$ (default $\epsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
+
+    \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\epsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
+
+    \item \textbf{Intermediate overflow protection:} The quantity $(S^+/S^-)^2 Q^-$ is clamped to $10^8$ before computing $\alpha$.
+
+    \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
+\end{enumerate}
+
+These safeguards may cause the normalized advantages to deviate slightly from the exact $\E[\hat{A}] = 0$, $\Var[\hat{A}] = 1$ constraints, but in practice the deviation is negligible ($|\text{mean}| < 0.001$, $|\text{var} - 1| < 0.01$). These thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
+
+\textbf{Fallback conditions.} Normalization is skipped entirely when:
+\begin{itemize}
+    \item All advantages have the same sign ($\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), indicating the group has uniform quality and the leave-one-out-shaped advantages are already meaningful.
+    \item The uniform scale mode (\Cref{app:uniform-scale}) is active and the group has uniform rewards.
+\end{itemize}
+
+
+\section{Uniform Scale Mode}
+\label{app:uniform-scale}
+
+The uniform scale mode is an optional technique to improve sample utilization. When all $n$ samples for a prompt have identical rewards (all correct or all incorrect), the leave-one-out baseline yields $\tilde{r}_i = 0$ for all $i$, eliminating the gradient signal. Uniform scale mode recovers this signal.
+
+\begin{definition}[Uniform Scale]
+For prompt groups where $\mathrm{std}(\{r_1, \ldots, r_n\}) < \epsilon_{\mathrm{tol}}$ (uniform-reward groups), the shaped reward is set to $\tilde{r}_i = r_i / n$, and the adaptive normalization (\Cref{sec:adaptive-norm}) is skipped.
+\end{definition}
+
+\begin{proposition}
+Under uniform scale mode, the gradient for uniform-reward groups is proportional to $r_i \sum_t \nabla_\theta \log \pitheta(y_{i,t}|c_{i,t})$, which pushes the policy toward all sampled responses when $r_i > 0$ (all correct) and away from them when $r_i < 0$ (all incorrect), preserving gradient signal that the leave-one-out baseline would otherwise eliminate.
+\end{proposition}
+
+\begin{proof}
+With $\tilde{r}_i = r_i/n$ and no normalization, the gradient contribution of sample $i$ is $(r_i/n) \sum_t \nabla_\theta \log \pitheta(y_{i,t}|c_{i,t})$. The sign of $r_i$ determines the direction: positive $r_i$ increases the log-probability of all tokens, negative $r_i$ decreases it.
+\end{proof}

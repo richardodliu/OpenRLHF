@@ -1,0 +1,64 @@
+\section{The Unified Framework}
+\label{sec:unified}
+
+\subsection{Why the Two Components Are Complementary}
+
+The error decomposition (\Cref{eq:error-decomp}) has two factors at each position $t$:
+\begin{equation}
+    |\mathrm{Error}| \le \sum_{t=1}^T \underbrace{2\|g_t\|_\infty}_{\text{advantage factor}} \cdot \underbrace{\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}}_{\text{context shift factor}}.
+\end{equation}
+
+\textbf{Component 1 (REINFORCE Max)} controls the advantage factor. The leave-one-out baseline provides statistical independence between each sample and its baseline (\Cref{prop:rloo-variance}), and the adaptive normalization ensures $\Var[\hat{A}] = 1$, bounding the effective advantage magnitude and preventing gradient explosion from outlier advantages.
+
+\textbf{Component 2 (REINFORCE Pro)} controls the context shift factor. By masking tokens where the prefix cumulative IS exceeds the threshold, we enforce that the cumulative divergence up to each position is bounded on retained samples. By \Cref{thm:prefix-adaptive}, this helps control the context distribution shift $\|d_t^{\piold} - d_t^{\piroll}\|_{\mathrm{TV}}$ via the KL chain rule and Pinsker's inequality, acting as a sample-level proxy for the population-level constraint.
+
+Together, both factors are addressed simultaneously, intuitively yielding a tighter effective bound than addressing either factor alone. This is an intuitive summary rather than a formal inequality: the joint benefit arises because both terms in the error decomposition (\Cref{eq:error-decomp}) are simultaneously reduced---the advantage magnitude by normalization, and the context shift by sample-level filtering.
+
+\begin{remark}[Variance Reduction]
+\label{rem:variance-decomp}
+Intuitively, the two components of REINFORCE Pro Max reduce gradient variance through complementary mechanisms. Component~1 (leave-one-out baseline + adaptive normalization) reduces the variance of the advantage estimates themselves (\Cref{prop:rloo-variance}, \Cref{prop:alpha-beta}). Component~2 (prefix IS masking) attenuates high-variance gradient contributions from off-policy tokens (\Cref{thm:prefix-tighter}), where the importance weights would otherwise amplify noise.
+\end{remark}
+
+\subsection{Algorithm}
+
+\begin{algorithm}[t]
+\caption{REINFORCE Pro Max (minimizing $\mathcal{L} = -L_{\piroll}(\pitheta)$)}
+\label{alg:promax}
+\begin{algorithmic}[1]
+    \REQUIRE Prompt $q$; $n$ samples; thresholds $[\lambda, \Lambda]$
+    \STATE \textbf{Rollout:} Generate $\{o_1, \ldots, o_n\} \sim \piroll(\cdot|q)$ using vLLM; store $\log \piroll(y_t|c_t)$
+    \STATE \textbf{Reward:} Compute rewards $\{r_1, \ldots, r_n\}$
+    \STATE \textbf{Baseline:} $\tilde{r}_i \leftarrow r_i - \frac{1}{n-1}\sum_{j \neq i} r_j$ \hfill \COMMENT{leave-one-out}
+    \STATE \textbf{Token Expansion:} $A_{i,t} \leftarrow \tilde{r}_i$ \hfill \COMMENT{sparse reward, $\gamma\!=\!1$}
+    \STATE \textbf{Adaptive Normalization:} Compute $\alpha, \beta$ via Eq.~\eqref{eq:alpha-beta}; $\hat{A}_{i,t} \leftarrow \alpha A_{i,t}$ or $\beta A_{i,t}$
+    \STATE \hspace{2.6em} (If $\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$: skip normalization)
+    \STATE \textbf{Forward Pass:} Compute $\log \pitheta(y_t|c_t)$ and $\log \piold(y_t|c_t)$
+    \STATE \textbf{Prefix IS:} $\ell_t \leftarrow \log \piold(y_t|c_t) - \log \piroll(y_t|c_t)$
+    \STATE \hspace{2.6em} $\mathrm{prefix\_is}(t) \leftarrow \exp\!\big(\sum_{s \le t} \ell_s m_s \,/\, \sum_{s \le t} m_s\big)$
+    \STATE \hspace{2.6em} $M_t \leftarrow \mathbb{I}[\mathrm{prefix\_is}(t) \in [\lambda, \Lambda]]$
+    \STATE \textbf{Loss:} $\mathcal{L} \leftarrow -\sum_t M_t \cdot \exp(\ell_t) \cdot \mathrm{PPOClip}(\rho_t^{\mathrm{PPO}}, \hat{A}_t)$ \hfill \COMMENT{negative surrogate}
+    \STATE \textbf{Update:} $\theta \leftarrow \theta - \alpha_{\mathrm{lr}} \nabla_\theta \mathcal{L}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Comparison with Existing Methods}
+
+\begin{table}[h]
+\centering
+\caption{Comparison of critic-free LLM-RL methods.}
+\label{tab:comparison}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Baseline} & \textbf{Normalization} & \textbf{IS Correction} & \textbf{Causal IS} \\
+\midrule
+REINFORCE++ & Mean & Global $\mu/\sigma$ & None & --- \\
+GRPO & Mean & Global $\mu/\sigma$ & None & --- \\
+RLOO & Leave-one-out & None & None & --- \\
+DAPO\footnote{DAPO: Decoupled Alignment via Policy Optimization~\citep{yu2025dapo}.} + TIS & Mean & Global $(\mu,\sigma)$ & Token clamp & No \\
+DAPO + ICEPOP & Mean & Global $(\mu,\sigma)$ & Token mask & No \\
+\midrule
+\textbf{Pro Max} & \textbf{RLOO} & \textbf{Adaptive $\alpha/\beta$} & \textbf{Prefix cumulative} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}

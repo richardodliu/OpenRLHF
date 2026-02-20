@@ -1,0 +1,50 @@
+
+\begin{figure}[h]
+    \centering  
+    \includegraphics[width=\linewidth]{figs/moe_prob_ratio_tv_1.png}
+    \caption{The plots show numerical differences between a training and an inference engine for Qwen3-30B-A3B-Base with identical parameters. \textbf{(Left)} The probability ratio (used in PPO) is highly volatile for low-probability tokens. \textbf{(Right)} In contrast, the TV divergence (used in DPPO) is more stable. 
+    % This highlights a key flaw in PPO's clipping: it over-penalizes low-probability tokens, slowing learning, while under-penalizing high-probability ones, risking instability.
+    This highlights a key flaw of PPO's clipping mechanism: it over-penalizes low-probability tokens, which can slow down learning; and under-penalizes high-probability tokens, which can permit large, destabilizing updates.
+    }  
+    \vspace{-0.4cm}
+\label{fig:moe_prob_ratio_tv}  
+\end{figure}
+
+\vspace{-0.6cm}
+\section{Introduction}  
+\label{sec:introduction}  
+
+
+Reinforcement learning (RL) is a foundational paradigm for fine-tuning Large Language Models (LLMs), enabling alignment with human preferences \citep{ouyang2022training, rafailov2023direct} and complex reasoning tasks \citep{guo2025deepseekr1, qi2025optimizing}. Proximal Policy Optimization (PPO\footnote{We denote PPO by its ratio-clipping loss, regardless of advantage estimation. Under this definition, GRPO is a PPO variant.}) \citep{schulman2017proximal} has established itself as the de facto standard in this domain, favored for its simplicity and empirical scalability. Central to PPO is a heuristic clipping mechanism designed to prevent destructive policy updates. By constraining the probability ratio between new and old policies, the algorithm aims to confine learning to a \textit{trust region} where monotonic improvement is theoretically guaranteed \citep{schulman2015trust}.
+
+Despite its widespread adoption, we argue that PPO’s core mechanism, ratio clipping, is structurally ill-suited for the expansive, long-tailed vocabularies inherent to LLMs. Unlike Trust Region Policy Optimization (TRPO) \citep{schulman2015trust}, which constrains the KL or Total Variation (TV) divergence of the policy distribution, PPO constrains updates based on the probability ratio of the sampled token. As we demonstrate later, this approach functions as a noisy, single-sample Monte Carlo estimate of the true policy divergence. While this approximation suffices for classical RL environments with limited action spaces, it fails in the LLM regime due to the ratio's hypersensitivity to the probability magnitude. For example, increasing a rare token’s probability from $10^{-5}$ to $10^{-3}$ generates a massive ratio of $100$ that triggers clipping, even though the actual divergence is negligible. Conversely, small ratio changes on high-probability tokens can make catastrophic shifts in probability mass (e.g., a drop from $0.99$ to $0.8$), yet it often remains unpenalized by the clipping mechanism.
+
+This implicit bias is exacerbated by the \textit{training-inference mismatch}~\citep{yao2025offpolicy, qi2025defeating, zheng2025stabilizing}, where numerical discrepancies arise between training and inference engines even under identical parameters. As illustrated in \Cref{fig:moe_prob_ratio_tv}, the probability ratio becomes highly volatile for low-probability tokens, while TV divergence remains stable. Consequently, PPO creates a sub-optimal learning dynamic: updates to low-probability tokens are aggressively over-penalized, slowing learning, while updates to high-probability tokens are under-penalized, risking instability. These limitations necessitate a fundamental rethinking of the trust region approach in LLM fine-tuning to ensure both efficiency and stability.
+
+
+To address these fundamental limitations, we propose Divergence Proximal Policy Optimization (DPPO), a framework that substitutes PPO’s heuristic clipping with a more principled constraint grounded in trust region theory. Rather than relying on noisy single-sample ratios, DPPO directly estimates policy divergence (e.g., TV or KL divergence). To ensure memory feasibility for LLMs, we introduce two efficient approximations, Binary and Top-K divergence, which capture essential distributional shifts with negligible overhead. This allows DPPO to rigorously distinguish between safe and unsafe updates, effectively resolving the problems of over- and under-constraining inherent in standard PPO.
+
+
+In this work, we provide a comprehensive rethinking of the trust region in the context of LLM fine-tuning. Our contributions are threefold. \textbf{Theoretical Formulation}: We derive policy improvement bounds specifically tailored to the finite-horizon, undiscounted setting of LLM generation, establishing a rigorous theoretical foundation for trust-region methods in this domain. \textbf{Stability and Efficiency Analysis}: We isolate the primary sources of training instability to provide practical stabilization guidelines, while further highlighting the significant role that low-probability tokens play in driving exploration. \textbf{Algorithmic Performance}: We demonstrate that DPPO achieves superior stability and final performance compared to existing methods like GRPO, providing a robust new framework for RL-based fine-tuning.
+
+% In this work, we provide a comprehensive rethinking of the trust region in the context of LLM fine-tuning. Our contributions are threefold:
+% \begin{itemize} 
+%     \item \textbf{Theoretical Formulation:} We derive policy improvement bounds specifically tailored to the finite-horizon, undiscounted setting of LLM generation, establishing a rigorous theoretical foundation for trust-region methods in this domain. 
+%     \item \textbf{Stability and Efficiency Analysis:} Through extensive empirical study, we isolate the primary sources of training instability, providing a practical guideline to stabilize the training. Furthermore, we highlight the significant role that low-probability tokens play in driving exploration and training efficiency. 
+%     \item \textbf{Algorithmic Performance:} We demonstrate that DPPO achieves superior stability and final performance compared to existing methods, such as GRPO and its variants, providing a robust new framework for RL-based LLM fine-tuning. 
+% \end{itemize}
+
+
+
+% \begin{figure}[t]
+%     \centering  
+%     \includegraphics[width=\linewidth]{figs/moe_prob_ratio_tv_1.png}
+%     \caption{The plots show numerical differences between a training and an inference engine for Qwen3-30B-A3B-Base with identical parameters. \textbf{(Left)} The probability ratio (used in PPO) is highly volatile for low-probability tokens. \textbf{(Right)} In contrast, the TV divergence is more stable. 
+%     This highlights a key flaw in PPO's clipping: it over-penalizes low-probability tokens, slowing learning, while under-penalizing high-probability ones, risking instability.
+%     % This highlights a fundamental weakness of PPO's clipping mechanism: it over-penalizes low-probability tokens, which can slow down learning, while under-penalizing high-probability tokens, which can permit large, destabilizing updates.
+%     }  
+%     % \vspace{-0.6cm}
+% \label{fig:moe_prob_ratio_tv}  
+% \end{figure}
+
+% % \vspace{-0.6cm}

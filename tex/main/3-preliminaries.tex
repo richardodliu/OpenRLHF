@@ -1,0 +1,99 @@
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+\subsection{Autoregressive Generation and Objective}
+
+A policy $\pitheta$ generates a response $y = (y_1, \ldots, y_T)$ given prompt $x$, with trajectory probability $P^{\pitheta}(y \mid x) = \prod_{t=1}^T \pitheta(y_t \mid x, y_{<t})$. We define the context $c_t = (x, y_{<t})$ and the context visitation distribution (i.e., the marginal distribution over length-$t$ prefixes):
+\begin{equation}
+    d_t^{\pi}(c_t) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid c_s).
+\end{equation}
+Given a scalar reward $R(x, y)$, the objective is $J(\pitheta) = \E_{x \sim P(x),\, y \sim \pitheta(\cdot|x)}[R(x, y)]$.
+
+\subsection{Assumptions}
+\label{sec:assumptions}
+
+The following assumptions are used throughout the paper:
+
+\begin{assumption}[Policy Support Overlap]
+\label{asm:support}
+For all contexts $c_t$ and tokens $y_t$ in the vocabulary, $\piroll(y_t|c_t) > 0 \implies \piold(y_t|c_t) > 0$. This ensures that the importance sampling ratio $w_t = \piold(y_t|c_t)/\piroll(y_t|c_t)$ is well-defined.
+\end{assumption}
+
+\begin{assumption}[Bounded Rewards]
+\label{asm:bounded-reward}
+There exists $R_{\max} < \infty$ such that $|R(x, y)| \le R_{\max}$ for all prompt-response pairs $(x, y)$.
+\end{assumption}
+
+\begin{assumption}[Finite Sequence Length]
+\label{asm:finite-length}
+The response length satisfies $T < \infty$ for all generated sequences.
+\end{assumption}
+
+\subsection{The Surrogate Objective and Error Decomposition}
+
+Samples are generated from a rollout policy $\piroll$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately}, the standard surrogate objective uses per-step advantages $A_t^{\piroll}(c_t, y_t) := \E_{\piroll}[R \mid c_t, y_t] - \E_{\piroll}[R \mid c_t]$:
+\begin{equation}
+    L_{\piroll}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\!\Big[\E_{y_t \sim \piroll(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piroll}(c_t, y_t)\big]\Big],
+    \label{eq:surrogate}
+\end{equation}
+where $\rho_t = \pitheta(y_t \mid c_t) / \piroll(y_t \mid c_t)$ is the per-token importance ratio. In the REINFORCE setting with sparse rewards (reward assigned only at the final token) and a prompt-level baseline $b$ that is independent of the current trajectory, the per-step advantage $A_t^{\piroll}(c_t, y_t) = \E_{\piroll}[R \mid c_t, y_t] - \E_{\piroll}[R \mid c_t]$ depends on the full future trajectory and is generally intractable. The REINFORCE estimator instead uses the trajectory-level advantage $A = R(x,y) - b$, which is constant across positions within a trajectory. Substituting this constant advantage into Eq.~\eqref{eq:surrogate}, the surrogate reduces to $\E_{\piroll}[A \cdot \sum_t \rho_t]$, which is the form used in our algorithm (\Cref{alg:promax}). Note that this substitution replaces the per-step advantage with a trajectory-level quantity; the resulting estimator remains unbiased for the policy gradient $\nabla J(\pitheta)$ by the REINFORCE identity, though it may have higher variance than the per-step form. The approximation error is:
+\begin{equation}
+    \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - L_{\piroll}(\pitheta).
+    \label{eq:error-def}
+\end{equation}
+Via the Performance Difference Identity~\citep{kakade2002approximately}, this error decomposes as:
+\begin{equation}
+    |\mathrm{Error}| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}},
+    \label{eq:error-decomp}
+\end{equation}
+where $g_t(c_t) = \E_{y_t \sim \pitheta}[A_t^{\piroll}(c_t, y_t)]$ is the expected advantage shift, with the per-step advantage defined as $A_t^{\piroll}(c_t, y_t) := \E_{\piroll}[R \mid c_t, y_t] - \E_{\piroll}[R \mid c_t]$. Classical bounds on this error scale as $O(T^2)$~\citep{kakade2002approximately, achiam2017constrained}, which is vacuous for long-horizon LLM tasks ($T > 4000$). Recent work~\citep{li2025trm} derives tighter bounds: the Pinsker-Marginal bound scales as $O(T^{3/2})$ using a global TV divergence; the Mixed bound achieves $O(T)$ by combining TV and KL terms; and the Adaptive bound is data-dependent, operating at per-position granularity. All three depend on the maximum token-level divergence $\Dkltokmax$, but their dependency forms differ: the Pinsker-Marginal bound uses a global aggregation, the Mixed bound combines TV and KL terms with different weighting, and the Adaptive bound uses per-position $\Dbar_t$ with a position-dependent minimum over three terms.
+
+The Adaptive bound is particularly relevant to our work:
+\begin{equation}
+    B_{\mathrm{Adap}}^{*} = 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big),
+    \label{eq:adaptive-bound}
+\end{equation}
+where $\Dbar_t = \E_{c_t \sim d_t^{\piroll}}[\Dtvtok(c_t)]$ is the expected per-position TV divergence, $\epsilon = \Dtvtokmax$, and $\delta = \Dkltokmax$. This bound operates at per-position granularity and preserves the causal structure of the error accumulation---properties that motivate our prefix cumulative IS correction.
+
+\subsection{Three Policies in LLM-RL}
+
+Modern LLM-RL pipelines involve three distinct policies:
+\begin{itemize}
+    \item $\piroll$: the rollout policy used by vLLM to generate samples;
+    \item $\piold$: the actor policy at the start of each training step (the ``old'' policy in PPO);
+    \item $\pitheta$: the current actor policy being updated during gradient steps.
+\end{itemize}
+The standard PPO ratio $\rho_t^{\mathrm{PPO}} = \pitheta(y_t|c_t) / \piold(y_t|c_t)$ accounts for the drift between $\pitheta$ and $\piold$ during mini-batch updates. The IS correction ratio $w_t = \piold(y_t|c_t) / \piroll(y_t|c_t)$ accounts for the mismatch between the rollout engine and the training actor. In practice, $\rho_t^{\mathrm{PPO}}$ carries gradients while $w_t$ is treated as a fixed coefficient; see \Cref{sec:combined-loss} for implementation details.
+
+\subsection{Existing IS Correction Methods}
+\label{sec:existing-is}
+
+Several methods have been proposed to correct the $\piroll \neq \piold$ mismatch. Let $\ell_t = \log \piold(y_t|c_t) - \log \piroll(y_t|c_t)$ denote the per-token log IS ratio.
+
+\begin{table}[h]
+\centering
+\caption{Existing IS correction methods for off-policy mismatch in LLM-RL.}
+\label{tab:existing-is}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{llll}
+\toprule
+\textbf{Method} & \textbf{IS Weight} & \textbf{Granularity} & \textbf{Causal} \\
+\midrule
+TIS & $\exp(\ell_t)$ clamped to $[\lambda, \Lambda]$ & Token & No \\
+ICEPOP & $\exp(\ell_t) \cdot \mathbb{I}[\exp(\ell_t) \in [\lambda, \Lambda]]$ & Token & No \\
+seq-mask-tis & $\mathbb{I}[\exp(\bar{\ell}) \in [\lambda, \Lambda]] \cdot \exp(\ell_t)$ & Sequence & No \\
+GSPO & $\exp\!\big(\sum_t \ell_t m_t / \sum_t m_t\big)$ & Sequence & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Here $\bar{\ell} = \sum_t \ell_t m_t / \sum_t m_t$ is the sequence-level geometric mean log-ratio and $m_t$ is the action mask. Most existing methods in the critic-free LLM-RL setting share a common limitation: they either operate at the token level (ignoring that early deviations affect the entire future trajectory) or at the sequence level (losing the ability to distinguish where divergence occurs within a sequence).
+
+\begin{lemma}[Context Shift Propagation]
+\label{lem:coupling}
+If two policies $\pi$ and $\pi'$ differ at position $s$ with $\Dtvtok(c_s) > 0$ for some context $c_s$ satisfying $d_s^{\pi}(c_s) > 0$, and if for all subsequent positions $t > s$ the policies assign positive probability to all tokens reachable under either policy (i.e., $\pi(y_t|c_t) > 0 \iff \pi'(y_t|c_t) > 0$ for all reachable $c_t$), then for all $t > s$, the context visitation distributions satisfy $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. That is, a token-level divergence at a reachable context propagates to all future context distributions.
+\end{lemma}
+
+\begin{proof}
+By definition, $d_t^{\pi}(c_t) = P(x)\prod_{s'=1}^{t-1}\pi(y_{s'}|c_{s'})$. Consider the joint distributions over prefixes $(y_1, \ldots, y_{t-1})$ under $\pi$ and $\pi'$. Since $\pi(\cdot|c_s) \neq \pi'(\cdot|c_s)$ at a context $c_s$ with $d_s^{\pi}(c_s) > 0$, the joint distributions assign different probabilities to prefixes passing through $c_s$. Specifically, for any token $v$ where $\pi(v|c_s) \neq \pi'(v|c_s)$, the joint probability of the prefix $(y_1, \ldots, y_{s-1}, v)$ differs between the two policies. Under the support overlap condition, subsequent tokens do not zero out this difference: the multiplicative factors $\pi(y_{s'}|c_{s'})$ and $\pi'(y_{s'}|c_{s'})$ are both positive for reachable contexts, so the probability difference propagates through to the marginal $d_t$. Therefore $d_t^{\pi} \neq d_t^{\pi'}$, and $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. The exact magnitude can be bounded via the KL chain rule and Pinsker's inequality (see \Cref{thm:prefix-adaptive}).
+\end{proof}

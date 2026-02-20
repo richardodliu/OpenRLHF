@@ -1,0 +1,2290 @@
+\documentclass[11pt]{article}
+
+%==============================================================================
+% PACKAGES
+%==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[margin=1in]{geometry}
+\usepackage{natbib}
+\usepackage{thmtools}
+\usepackage{listings}
+
+% Listing style for Python code
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  frame=single,
+  breaklines=true
+}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{assumption}[theorem]{Assumption}
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\piroll}{\pi_{\mathrm{roll}}}
+\newcommand{\pitheta}{\pi_{\theta}}
+\newcommand{\piold}{\pi_{\mathrm{old}}}
+\newcommand{\ylt}{y_{<t}}
+\newcommand{\yle}{y_{\le t}}
+\newcommand{\DKL}{D_{\mathrm{KL}}}
+\newcommand{\DTV}{D_{\mathrm{TV}}}
+\newcommand{\Dklseq}{D_{\mathrm{KL}}^{\mathrm{seq}}}
+\newcommand{\Dkltok}{D_{\mathrm{KL}}^{\mathrm{tok}}}
+\newcommand{\Dkltokmax}{D_{\mathrm{KL}}^{\mathrm{tok,max}}}
+\newcommand{\Dtvtok}{D_{\mathrm{TV}}^{\mathrm{tok}}}
+\newcommand{\Dtvtokmax}{D_{\mathrm{TV}}^{\mathrm{tok,max}}}
+\newcommand{\Dtvseq}{D_{\mathrm{TV}}^{\mathrm{seq}}}
+\newcommand{\Dklrev}{D_{\mathrm{KL}}^{\mathrm{rev}}}
+\newcommand{\Dklrevmax}{D_{\mathrm{KL}}^{\mathrm{rev,max}}}
+\newcommand{\Dklseqrev}{D_{\mathrm{KL}}^{\mathrm{seq,rev}}}
+\newcommand{\Dbar}{\bar{D}}
+
+\title{Trust Region Masking for Long-Horizon LLM Reinforcement Learning}
+
+\usepackage[affil-it]{authblk}
+
+\author{Yingru Li\thanks{Equal contribution}}
+\author{Jiacai Liu\textsuperscript{*,1}}
+\author{Jiawei Xu\textsuperscript{*,2}}
+\author{Yuxuan Tong}
+\author{Ziniu Li\textsuperscript{2}}
+\author{\protect\\Qian Liu}
+\author{Baoxiang Wang\textsuperscript{2}}
+
+\affil{\small \textsuperscript{1}Fudan University, \textsuperscript{2}The Chinese University of Hong Kong, Shenzhen}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{abstract}
+Policy gradient methods for Large Language Models optimize a policy $\pi_\theta$ via a surrogate objective computed from samples of a rollout policy $\pi_{\text{roll}}$. However, modern LLM-RL pipelines suffer from unavoidable implementation divergences---backend discrepancies, Mixture-of-Experts routing discontinuities, and distributed training staleness---causing off-policy mismatch ($\pi_{\text{roll}} \neq \pi_\theta$) and approximation errors between the surrogate and the true objective.
+We demonstrate that classical trust region bounds on this error scale as $O(T^2)$ with sequence length $T$, rendering them vacuous for long-horizon tasks. To address this, we derive a family of bounds---both KL-based and TV-based---including a \emph{Pinsker-Marginal} bound ($O(T^{3/2})$), a \emph{Mixed} bound ($O(T)$), and an \emph{Adaptive} bound that strictly generalizes the Pinsker-Marginal bound via per-position importance-ratio decomposition. Taking the minimum over all bounds yields the tightest known guarantee across all divergence regimes.
+Crucially, all bounds depend on the maximum token-level divergence $\Dkltokmax$ (or $\Dtvtokmax$), a \emph{sequence-level} quantity that cannot be controlled by token-independent methods like PPO clipping. We propose Trust Region Masking (TRM), which masks entire sequences violating the trust region, enabling the first non-vacuous monotonic improvement guarantees for long-horizon LLM-RL.
+\end{abstract}
+
+%==============================================================================
+% INTRODUCTION (merged with Related Work)
+%==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+Reinforcement Learning (RL) has become central to training Large Language Models (LLMs) for tasks requiring extended reasoning, multi-step problem solving, and agentic behavior~\citep{zeng2025simplerl, liu2024exploring, yang2024swe}. As response lengths expand from hundreds to thousands of tokens, policy gradient methods---particularly PPO~\citep{schulman2017proximal}---face increasingly strained theoretical foundations.
+
+Trust region methods~\citep{kakade2002approximately, schulman2015trust} provide monotonic improvement guarantees by bounding the approximation error $|J(\pitheta) - J(\piroll) - L(\pitheta)|$ between the true objective $J$ and the surrogate $L$. This guarantee requires controlling the divergence between the rollout policy $\piroll$ and the training policy $\pitheta$---a divergence that is \emph{unavoidable} in modern LLM-RL due to three primary sources. \textbf{(i) Backend discrepancies:} high-throughput inference engines (vLLM~\citep{kwon2023efficient}, SGLang~\citep{zheng2024sglang}) use different attention kernels, precision formats, and operator fusion strategies than training frameworks (Megatron-LM~\citep{shoeybi2019megatron}, PyTorch FSDP~\citep{zhao2023pytorch}), causing logit differences that compound autoregressively. \textbf{(ii) MoE routing discontinuities:} in Mixture-of-Experts models~\citep{shazeer2017outrageously, liu2024deepseek}, minor numerical jitter can flip expert selection, causing high-magnitude jumps in token probabilities. \textbf{(iii) Distributed staleness:} asynchronous actor-learner architectures~\citep{espeholt2018impala, nair2015massively} introduce latency between data generation and gradient updates. These factors are documented in detail by~\citet{liu2025rlcollapse} and~\citet{yao2025offpolicy}; we provide further analysis in Appendix~\ref{app:mismatch}.
+
+Classical trust region bounds~\citep{kakade2002approximately, achiam2017constrained} scale as $O(T^2)$ with sequence length. For a reasoning task with $T = 4096$ tokens and per-token divergence $\Dkltokmax = 10^{-4}$, the classical bound yields $|\mathrm{Error}| \le 1677$---vacuous given maximum reward of 1. While acceptable for short-horizon control tasks ($T \approx 100$), these bounds provide no guarantee that optimization actually improves performance at modern LLM scales.
+
+Standard PPO addresses trust regions through token-level clipping~\citep{ziegler2019fine}, but autoregressive generation is inherently sequential: a small probability shift at an early token compounds through the entire trajectory, a phenomenon related to ``exposure bias''~\citep{bengio2015scheduled}. Distributed RL frameworks like IMPALA~\citep{espeholt2018impala} introduce correction mechanisms for staleness, but do not address the fundamental $O(T^2)$ scaling of the approximation error. Our work bridges this gap by deriving tight, non-vacuous bounds for autoregressive sequence generation and proposing sequence-level masking to enforce them.
+
+We make the following contributions:
+\begin{enumerate}
+    \item \textbf{A family of tighter bounds (\Cref{sec:theory}):} We derive KL-based and TV-based variants of three bound families---Pinsker-Marginal ($O(T^{3/2})$), Mixed ($O(T)$), and Adaptive---and show that their minimum is the tightest known guarantee across all divergence regimes (\Cref{thm:unified}).
+
+    \item \textbf{Trust Region Masking (\Cref{sec:trm}):} We show that all bounds depend on the maximum token-level divergence---a sequence-level quantity uncontrollable by token-level PPO clipping---and propose TRM, which masks entire sequences violating the trust region, enabling non-vacuous monotonic improvement guarantees. We demonstrate empirical training stability on mathematical reasoning benchmarks.
+\end{enumerate}
+
+
+%==============================================================================
+% BACKGROUND
+%==============================================================================
+\section{Background and Problem Setup}
+\label{sec:background}
+
+\subsection{Autoregressive Generation and Objective}
+
+A policy $\pitheta$ generates a response $y = (y_1, \ldots, y_T)$ given prompt $x$, with trajectory probability $P^{\pitheta}(y \mid x) = \prod_{t=1}^T \pitheta(y_t \mid x, y_{<t})$. We define the context $c_t = (x, y_{<t})$ and the context visitation distribution:
+\begin{equation}
+    d_t^{\pi}(c_t) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid c_s).
+\end{equation}
+Given a scalar reward $R(x, y) \in [0, 1]$, the objective is $J(\pitheta) = \E_{x \sim P(x),\, y \sim \pitheta(\cdot|x)}[R(x, y)]$.
+
+\subsection{The Surrogate Objective}
+
+Samples are generated from a rollout policy $\piroll$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately}, we define the surrogate:
+\begin{equation}
+    L_{\piroll}(\pitheta) = \E_{\piroll}\!\left[ A \cdot \sum_{t=1}^T \rho_t \right],
+    \label{eq:surrogate}
+\end{equation}
+where $A = R(x, y) - b$ is the trajectory advantage (with baseline $b$), $\rho_t = \pitheta(y_t \mid c_t) / \piroll(y_t \mid c_t)$ is the per-token importance ratio, and the gradient matches the true gradient at the reference: $\nabla L_{\piroll}(\pitheta)|_{\pitheta = \piroll} = \nabla J(\pitheta)|_{\pitheta = \piroll}$. The approximation error is:
+\begin{equation}
+    \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - L(\pitheta).
+    \label{eq:error-def}
+\end{equation}
+Bounding $|\mathrm{Error}|$ guarantees that maximizing $L$ leads to monotonic improvement in $J$.
+
+\begin{remark}[Surrogate equivalence]
+\label{rem:surrogate-equiv}
+The error analysis uses the equivalent form $L'_{\piroll}(\pitheta) = \E_{\piroll}[R(x,y)\sum_{t}(\rho_t - 1)]$. Any fixed baseline $b$ contributes a $\pitheta$-independent constant that does not affect $\mathrm{Error}$, so all bounds apply equally to both forms.
+\end{remark}
+
+\subsection{Divergence Measures}
+
+We employ two families of divergence measures throughout.
+
+\begin{definition}[Token-level divergences]
+\label{def:token-div}
+For context $c_t = (x, y_{<t})$:
+\begin{align}
+    \Dtvtok(c_t) &:= \DTV(\pitheta(\cdot|c_t) \| \piroll(\cdot|c_t)) = \tfrac{1}{2}\textstyle\sum_v |\pitheta(v|c_t) - \piroll(v|c_t)|, \\
+    \DKL(c_t) &:= \DKL(\piroll(\cdot|c_t) \| \pitheta(\cdot|c_t)) = \textstyle\sum_v \piroll(v|c_t) \log\frac{\piroll(v|c_t)}{\pitheta(v|c_t)}.
+\end{align}
+\end{definition}
+
+\begin{definition}[Sequence-level divergences]
+\label{def:seq-div}
+We define the maximum token-level divergences, the sequence-level divergences, and the expected per-position TV:
+\begin{align}
+    \epsilon &:= \Dtvtokmax := \max_{t, c_t} \Dtvtok(c_t), &
+    \delta &:= \Dkltokmax := \max_{t, c_t} \DKL(c_t), \label{eq:eps-delta} \\
+    \Dtvseq &:= \DTV(P^{\piroll}(\cdot|x) \| P^{\pitheta}(\cdot|x)), &
+    \Dklseq &:= \textstyle\sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}[\DKL(c_t)], \label{eq:seq-divs} \\
+    \Dbar_t &:= \E_{c_t \sim d_t^{\piroll}}\![\Dtvtok(c_t)]. & \label{eq:dbar}
+\end{align}
+\end{definition}
+
+The key relationships between these quantities are (proofs in Appendix~\ref{app:lemma-proofs}):
+\begin{itemize}
+    \item \textbf{Pinsker's inequality:} $\Dtvtok(c_t) \le \min\!\big(1,\; \sqrt{\DKL(c_t)/2}\big)$, and therefore $\epsilon \le \min(1, \sqrt{\delta/2})$.
+    \item \textbf{KL chain rule:} $\DKL(d_t^{\piroll} \| d_t^{\pitheta}) = \sum_{s=1}^{t-1}\E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)] \le (t\!-\!1)\,\delta$.
+    \item \textbf{Data processing inequality:} $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \Dtvseq$.
+\end{itemize}
+Pinsker is \emph{tight} when the two distributions differ uniformly across the vocabulary, and \emph{loose} when divergence is concentrated on a few tokens (e.g., MoE routing flips). This motivates maintaining TV-based bounds alongside KL-based bounds: the KL route exploits sublinear context-shift scaling via Pinsker, while the TV route avoids Pinsker's looseness.
+
+
+%==============================================================================
+% THEORETICAL ANALYSIS
+%==============================================================================
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+We derive a family of bounds on $|\mathrm{Error}|$ using both KL-based and TV-based routes. All proofs are in Appendix~\ref{app:proofs}.
+
+\subsection{Building Blocks}
+
+The error decomposes via the Performance Difference Identity~\citep{kakade2002approximately}. Let $A_t^{\piroll}(c_t, y_t) := \E_{\piroll}[R \mid c_t, y_t] - \E_{\piroll}[R \mid c_t]$ be the per-step advantage and $g_t(c_t) := \E_{y_t \sim \pitheta}[A_t^{\piroll}(c_t, y_t)]$ the expected advantage shift. Then:
+\begin{equation}
+    \mathrm{Error} = \sum_{t=1}^T \Big( \E_{c_t \sim d_t^{\pitheta}}[g_t(c_t)] - \E_{c_t \sim d_t^{\piroll}}[g_t(c_t)] \Big).
+    \label{eq:error-pdi}
+\end{equation}
+Each summand is bounded via $|\E_P[f] - \E_Q[f]| \le 2\|f\|_\infty \cdot \DTV(P, Q)$. Two building blocks control the factors:
+
+\begin{lemma}[Advantage Bound]
+\label{lem:advantage-bound}
+For $R \in [0,1]$: $\|g_t\|_\infty \le 2\min\!\big(1,\;\epsilon,\;\sqrt{\delta/2}\big)$.
+\end{lemma}
+
+\begin{lemma}[Context Shift]
+\label{lem:context-shift}
+The context distribution shift is bounded by:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\Big(1,\;\underbrace{(t\!-\!1)\,\epsilon}_{\text{coupling}},\;\underbrace{\sqrt{(t\!-\!1)\,\delta/2}}_{\text{Pinsker-on-marginal-KL}},\;\underbrace{\Dtvseq}_{\text{data processing}},\;\underbrace{\sqrt{\Dklseq/2}}_{\text{Pinsker-on-seq-KL}}\Big).
+    \label{eq:context-shift-all}
+\end{equation}
+\end{lemma}
+
+Choosing different combinations of these building blocks yields different bound families.
+
+\paragraph{The Classical Bound and Its Failure}
+
+Using $\|g_t\|_\infty \le 2\epsilon$ with the coupling bound $(t\!-\!1)\epsilon$ and no caps:
+\begin{equation}
+    |\mathrm{Error}| \le 4\epsilon^2 \sum_{t=1}^T (t\!-\!1) = 2T(T\!-\!1)\epsilon^2.
+    \label{eq:classical}
+\end{equation}
+Since $\epsilon \le \sqrt{\delta/2}$, this implies $|\mathrm{Error}| \le T(T\!-\!1)\delta$. At $T = 4096$, $\delta = 10^{-4}$: $|\mathrm{Error}| \le 4096 \times 4095 \times 10^{-4} \approx 1677$---\emph{vacuous}.
+
+\subsection{New Tighter Bounds}
+\paragraph{Pinsker-Marginal Bounds}
+
+Applying Pinsker's inequality to the \emph{marginal} KL gives a sublinear context shift $\sqrt{(t\!-\!1)\delta/2}$, while the advantage factor can use either the KL-derived bound $\sqrt{\delta/2}$ or the direct TV value $\epsilon$:
+
+\begin{theorem}[Pinsker-Marginal Bounds]
+\label{thm:pinsker-marginal}
+\begin{align}
+    B_{\mathrm{PM}}^{\mathrm{KL}} &= 4\min\!\Big(1,\sqrt{\tfrac{\delta}{2}}\Big) \sum_{t=1}^{T}\min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big), \label{eq:B-PM-KL} \\
+    B_{\mathrm{PM}}^{\mathrm{TV}} &= 4\,\min(1,\epsilon) \sum_{t=1}^{T}\min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big). \label{eq:B-PM-TV}
+\end{align}
+In the small-divergence regime ($\delta \le 2/T$, so all caps are inactive):
+\begin{equation}
+    B_{\mathrm{PM}}^{\mathrm{KL}} = \tfrac{4}{3}T^{3/2}\delta, \qquad
+    B_{\mathrm{PM}}^{\mathrm{TV}} = \tfrac{8}{3}T^{3/2}\,\epsilon\sqrt{\delta/2}.
+    \label{eq:PM-simplified}
+\end{equation}
+\end{theorem}
+
+The TV variant replaces $\sqrt{\delta/2}$ with $\epsilon$ in the advantage factor, gaining whenever Pinsker is loose ($\epsilon < \sqrt{\delta/2}$). When Pinsker is tight ($\epsilon = \sqrt{\delta/2}$), both variants coincide.
+
+\paragraph{Mixed Bounds}
+
+Using a \emph{uniform} context-shift bound from the sequence-level divergence (which does not grow with $t$):
+
+\begin{theorem}[Mixed Bounds]
+\label{thm:mixed}
+\begin{align}
+    B_{\mathrm{Mix}}^{\mathrm{KL}} &= 4T \cdot \min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \cdot \min\!\Big(1, \sqrt{\tfrac{\Dklseq}{2}}\Big), \label{eq:B-Mix-KL} \\
+    B_{\mathrm{Mix}}^{\mathrm{TV}} &= 4T \cdot \min(1,\,\epsilon) \cdot \min(1,\, \Dtvseq). \label{eq:B-Mix-TV}
+\end{align}
+When both caps are inactive: $B_{\mathrm{Mix}}^{\mathrm{KL}} = 2T\sqrt{\delta \cdot \Dklseq}$ and $B_{\mathrm{Mix}}^{\mathrm{TV}} = 4T\,\epsilon\,\Dtvseq$.
+\end{theorem}
+
+The Mixed bounds scale as $O(T)$ and are tighter when divergence is sparse ($\Dklseq \ll T\delta$).
+
+\paragraph{Coupling Bounds}
+
+The pure TV-coupling route avoids all KL/Pinsker conversions:
+
+\begin{theorem}[Coupling Bound]
+\label{thm:coupling}
+\begin{equation}
+    B_{\mathrm{Coup}} = 4\,\min(1,\epsilon) \sum_{t=1}^{T}\min\!\big(1,\;(t\!-\!1)\,\epsilon\big).
+    \label{eq:B-Coup}
+\end{equation}
+When $T\epsilon \le 1$: $B_{\mathrm{Coup}} = 2T(T\!-\!1)\epsilon^2$ (classical). When $T\epsilon > 1$: $B_{\mathrm{Coup}} \le 4T\epsilon$ ($O(T)$ via the cap).
+\end{theorem}
+
+\paragraph{Adaptive Bounds}
+\label{sec:adaptive-bound}
+
+The preceding bounds use worst-case advantage terms ($\epsilon$ or $\sqrt{\delta/2}$). The Adaptive bound preserves the data-dependent per-position divergence $\Dbar_t$ via an importance-ratio decomposition (full derivation in Appendix~\ref{app:proof-adaptive}).
+
+\begin{theorem}[Adaptive Bounds]
+\label{thm:adaptive}
+\begin{align}
+    B_{\mathrm{Adap}}^{\mathrm{KL}} &= 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\; \sqrt{\tfrac{(T-t)\,\delta}{2}}\Big), \label{eq:B-Adap-KL} \\
+    B_{\mathrm{Adap}}^{\mathrm{TV}} &= 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\big(1,\;(T\!-\!t)\,\epsilon\big), \label{eq:B-Adap-TV} \\
+    B_{\mathrm{Adap}}^{*} &= 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big). \label{eq:B-Adap-star}
+\end{align}
+The hybrid bound $B_{\mathrm{Adap}}^{*} \le \min(B_{\mathrm{Adap}}^{\mathrm{KL}}, B_{\mathrm{Adap}}^{\mathrm{TV}})$ by construction.
+\end{theorem}
+
+The Adaptive bounds are tighter than the Pinsker-Marginal and Coupling bounds in two independent ways:
+\begin{enumerate}
+    \item \textbf{Data-dependent advantage:} $\Dbar_t$ (expected per-position TV under $\piroll$) replaces $\epsilon$ or $\sqrt{\delta/2}$ (worst-case). When divergence is non-uniform---e.g., concentrated at a few tokens due to MoE routing---$\Dbar_t \ll \epsilon$ at most positions.
+    \item \textbf{Adaptive future bounding:} The future-trajectory TV is bounded by the tighter of two routes at each position. The Pinsker route gives $\sqrt{(T\!-\!t)\delta/2}$ (sublinear in remaining horizon); the coupling route gives $(T\!-\!t)\epsilon$ (linear but avoids Pinsker looseness). The crossover occurs at $T - t = \delta/(2\epsilon^2)$.
+\end{enumerate}
+
+\begin{remark}[Recovery of prior bounds]
+\label{rem:relationship}
+Setting $\Dbar_t = \min(1, \sqrt{\delta/2})$ in $B_{\mathrm{Adap}}^{\mathrm{KL}}$ recovers $B_{\mathrm{PM}}^{\mathrm{KL}}$ exactly (via the index reversal $\sum_t f(T\!-\!t) = \sum_t f(t\!-\!1)$). Setting $\Dbar_t = \epsilon$ in $B_{\mathrm{Adap}}^{\mathrm{TV}}$ recovers $B_{\mathrm{Coup}}$ exactly. Since $\Dbar_t \le \min(1, \epsilon, \sqrt{\delta/2})$ always, the Adaptive bounds are at least as tight and strictly tighter when divergence is non-uniform.
+\end{remark}
+
+
+\subsection{The Unified Bound}
+\label{sec:unified}
+
+Since all bounds hold independently, their minimum is valid:
+
+\begin{theorem}[Unified Bound]
+\label{thm:unified}
+The approximation error satisfies $|\mathrm{Error}| \le B^*$, where:
+\begin{equation}
+    \boxed{B^* = \min\!\Big\{ B_{\mathrm{PM}}^{\mathrm{KL}},\; B_{\mathrm{PM}}^{\mathrm{TV}},\; B_{\mathrm{Mix}}^{\mathrm{KL}},\; B_{\mathrm{Mix}}^{\mathrm{TV}},\; B_{\mathrm{Coup}},\; B_{\mathrm{Adap}}^{*}\Big\}.}
+    \label{eq:unified-bound}
+\end{equation}
+Defining $\mathcal{M}(\pitheta) := L(\pitheta) - B^*$, the condition $\mathcal{M}(\pitheta) > 0$ guarantees monotonic improvement: $J(\pitheta) > J(\piroll)$.
+\end{theorem}
+
+
+\begin{table*}[t]
+\centering
+\caption{%
+  Error bounds for $T = 4096$.
+  \textbf{Small divergence:} $\delta = 10^{-4}$, $\epsilon = 5 \times 10^{-3}$ (actual TV $< \sqrt{\delta/2} \approx 7.07 \times 10^{-3}$, so Pinsker is loose), $\Dklseq = 0.01$, $\Dtvseq = 0.05$.
+  \textbf{KL-only:} same $\delta$ and $\Dklseq$, with $\epsilon$ and $\Dtvseq$ derived via Pinsker ($\epsilon = 7.07 \times 10^{-3}$, $\Dtvseq = 0.0707$), showing that TV bounds reduce to KL bounds.
+  The unified bound $B^*$ (bottom row) takes the minimum over all rows.%
+}
+\label{tab:bounds}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l l c r r}
+\toprule
+\textbf{Bound} & \textbf{Route} & \textbf{Scaling} &
+  \textbf{KL-only} & \textbf{KL+TV} \\
+\midrule
+Classical & TV (uncapped) & $O(T^{2})$ & $1{,}677$ & $839$ \\[3pt]
+Coupling & TV coupling (capped) & $O(T)^{\dagger}$ & $113.8$ & $79.9$ \\[3pt]
+Pinsker-Marginal & KL & $O(T^{3/2})$ & $35.0$ & $35.0$ \\
+Pinsker-Marginal & TV+KL & $O(T^{3/2})$ & $35.0$ & $24.7$ \\[3pt]
+Mixed & KL & $O(T)$ & $8.2$ & $8.2$ \\
+Mixed & TV & $O(T)$ & $8.2$ & $4.1$ \\[3pt]
+Adaptive (hybrid) & KL+TV & data-dep. & $\le 35.0^{*}$ & $\le 24.7^{*}$ \\
+\midrule
+\textbf{Unified} $B^*$ & \textbf{min all} & --- & $\mathbf{\le 8.2}$ & $\mathbf{\le 4.1}$ \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize
+$^{\dagger}$\,$O(T^2)$ without caps; $O(T)$ when $T\epsilon > 1$ and the $\min(1, \cdot)$ cap activates.\quad
+$^{*}$\,Worst-case Adaptive hybrid (uniform $\Dbar_t$): reduces to PM-KL when $\epsilon = \sqrt{\delta/2}$, and to PM-TV when $\epsilon < \sqrt{\delta/2}$. Strictly tighter with non-uniform $\Dbar_t$.}
+\end{table*}
+
+
+% \subsection{Implications}
+
+\textbf{All bounds depend on token-level maxima.} Whether parameterized by $\delta = \Dkltokmax$ or $\epsilon = \Dtvtokmax$, every bound depends on the worst-case per-token divergence. Controlling only the average is provably insufficient:
+
+\begin{proposition}
+\label{prop:no-pure-seq}
+There exists no function $f\!: \mathbb{R}^+ \to \mathbb{R}^+$ such that $\Dkltokmax \le f(\Dklseq)$ for all policy pairs.
+\end{proposition}
+\begin{proof}
+Let $c^*$ occur with probability $p$ under $\piroll$, with $\DKL(c^*) = 1$ and $\DKL(c) = 0$ for $c \neq c^*$. Then $\Dkltokmax = 1$ while $\Dklseq = p \to 0$ as $p \to 0$.
+\end{proof}
+
+\textbf{KL and TV routes are complementary.} The KL route (Pinsker on marginal KL) gives sublinear context-shift scaling but is lossy in the advantage factor. The TV route gives a tight advantage factor but only linear context-shift scaling. The per-position crossover in the hybrid Adaptive bound $B_{\mathrm{Adap}}^*$ (Eq.~\eqref{eq:B-Adap-star}) automatically selects the tighter route at each position: the Pinsker route dominates for early positions (large remaining horizon $T\!-\!t$), while the coupling route dominates for late positions (small $T\!-\!t$) or when $\epsilon \ll \sqrt{\delta/2}$.
+
+%==============================================================================
+% TRM (merged: token-level failure + algorithm + experiments)
+%==============================================================================
+\section{Trust Region Masking}
+\label{sec:trm}
+
+\subsection{Why Token-Level Methods Fail}
+
+Since the approximation error depends on $\Dkltokmax$ (or $\Dtvtokmax$), controlling it requires a \emph{sequence-level} intervention. Standard token-level methods fail for two structural reasons.
+
+\textbf{PPO clipping leaks gradients.} PPO~\citep{schulman2017proximal} constrains updates via clipping: $L^{\mathrm{CLIP}} = \E[\sum_t \min(\rho_t A_t, \mathrm{clip}(\rho_t, 1\!-\!\epsilon, 1\!+\!\epsilon) A_t)]$. The clipping is asymmetric: when $\rho_t \gg 1 + \epsilon$ and $A_t < 0$, the objective uses the unclipped $\rho_t A_t$. In standard RL, this correctly penalizes over-represented bad actions. Under implementation divergence, the large $\rho_t$ reflects numerical noise (e.g., MoE routing flip where $\piroll(v) = 0.9$ but $\pitheta(v) = 0.001$, giving $\rho \approx 900$), producing a massive erroneous gradient.
+
+\textbf{Token masking preserves vacuous bounds.} Zeroing the gradient of outlier tokens (where $|\log \rho_t| > \tau$) prevents immediate gradient explosion but does not change the underlying divergence $\Dkltokmax$ between $\piroll$ and $\pitheta$. The trust region remains violated:
+
+\begin{proposition}
+\label{prop:token-masking-fails}
+Let $\mathcal{T}_{\mathrm{mask}}$ be a token-level masking operator. Then $$\Dkltokmax(\pitheta, \piroll) = \Dkltokmax(\mathcal{T}_{\mathrm{mask}}(\pitheta), \piroll).$$ Token masking modifies the optimization direction but does not restore the monotonic improvement guarantee.
+\end{proposition}
+
+The root cause is that the approximation error is cumulative over the sequence. If \emph{any} token violates the trust region, the entire trajectory is compromised as an estimator for $J(\pitheta)$, and the entire sequence must be excluded.
+
+
+\subsection{The Masked Surrogate Objective}
+
+We define a binary sequence mask $M(x, y) = \mathbb{I}[(x, y) \in \text{Trust Region}]$ and the masked surrogate:
+\begin{equation}
+    L_{\mathrm{masked}}(\pitheta) = \E_{\piroll}\!\left[ M(x, y) \cdot A(x, y) \cdot \sum_{t=1}^T \rho_t \right].
+    \label{eq:masked-surrogate}
+\end{equation}
+The gradient is normalized by the \emph{total} batch size $N$ (not the accepted count), so rejected sequences contribute zero gradient. This is a rejection sampling mechanism: we choose not to learn from trajectories where off-policy divergence renders the gradient unreliable.
+
+\subsection{Masking Criterion and Implementation}
+
+\textbf{Exact KL computation.} Because $\piroll$ logits are stored during rollout and $\pitheta$ logits are computed during the training forward pass, $\DKL(c_t)$ is computed exactly---over the full vocabulary---at no extra inference cost:
+\begin{equation}
+    \DKL(c_t) = \sum_{v \in \mathcal{V}} \piroll(v|c_t) \log \frac{\piroll(v|c_t)}{\pitheta(v|c_t)}.
+\end{equation}
+
+\textbf{Max-based criterion:} $M(x,y) = \mathbb{I}[\max_t \DKL(c_t) \le \delta]$, directly bounding $\Dkltokmax$. The threshold $\delta$ is \emph{length-invariant}: it does not depend on $T$.
+
+\textbf{Combined criterion:} In practice, combining max and average constraints ($\frac{1}{T}\sum_t \DKL(c_t) \le \delta_{\mathrm{avg}}$) allows looser individual thresholds while maintaining robustness.
+
+\textbf{Sample-based approximation.} When full logits are unavailable, we recommend $k_2(\rho) = \frac{1}{2}(\log \rho)^2$ for max-filtering (symmetric, detects both $\rho \to 0$ and $\rho \to \infty$) and $k_3(\rho) = \rho - 1 - \log \rho$ for averaging (unbiased: $\E_{\piroll}[k_3] = \DKL(\piroll \| \pitheta)$). See Appendix~\ref{app:k3}.
+
+\begin{algorithm}[t]
+\caption{Trust Region Masking (TRM)}
+\label{alg:trm}
+\begin{algorithmic}[1]
+    \REQUIRE Threshold $\delta$; Batch $\mathcal{D} = \{(x^{(i)}, y^{(i)})\}_{i=1}^N$; Stored $\piroll$ logits
+    \STATE \textbf{Forward Pass:} Compute $\pitheta$ logits on all data
+    \FOR{each sequence $i$}
+        \STATE Compute $\DKL(c_t^{(i)})$ for all $t$ using stored $\piroll$ and current $\pitheta$ logits
+        \STATE $M_i \leftarrow \mathbb{I}[\max_{t} \DKL(c_t^{(i)}) \le \delta]$
+    \ENDFOR
+    \STATE \textbf{Backward Pass:} $\nabla L_{\mathrm{masked}} \leftarrow \frac{1}{N}\sum_{i=1}^{N} M_i \cdot A^{(i)} \cdot \sum_{t} \rho_t^{(i)} \nabla\log\pitheta(y_t^{(i)}|c_t^{(i)})$
+    \STATE \textbf{Update:} $\theta \leftarrow \theta + \alpha \cdot \nabla L_{\mathrm{masked}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Theoretical Guarantee}
+
+\begin{theorem}[TRM Guarantee]
+\label{thm:trm-guarantee}
+Algorithm~\ref{alg:trm} with threshold $\delta$ satisfies:
+\begin{enumerate}
+    \item \textbf{Bounded divergence:} For all accepted sequences ($M_i = 1$), $\max_t \DKL(c_t^{(i)}) \le \delta$.
+    \item \textbf{Length-invariant threshold:} $\delta$ does not depend on sequence length $T$.
+    \item \textbf{Non-vacuous error bound:} If additionally $\Dkltokmax \le \delta$ holds globally (for all reachable contexts), then:
+    \begin{equation}
+        |J(\pitheta) - J(\piroll) - L(\pitheta)| \le B^*(\delta, \epsilon),
+    \end{equation}
+    where $B^*$ is the unified bound (\Cref{thm:unified}) with $\Dkltokmax$ replaced by $\delta$. The condition $L(\pitheta) > B^*$ guarantees $J(\pitheta) > J(\piroll)$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+Part~(1) holds by construction of the masking criterion. Part~(2) follows because the criterion $\max_t \DKL(c_t) \le \delta$ depends only on the per-token maximum, not on $T$. Part~(3): when $\Dkltokmax \le \delta$ globally, all bounds in \Cref{sec:theory} apply with $\Dkltokmax$ replaced by $\delta$, giving $|\mathrm{Error}| \le B^*$. Since $J(\pitheta) - J(\piroll) = L(\pitheta) + \mathrm{Error} \ge L(\pitheta) - B^*$, the condition $L(\pitheta) > B^*$ ensures $J(\pitheta) > J(\piroll)$.
+\end{proof}
+
+\begin{remark}[Role of masking]
+\label{rem:masking-role}
+The error bound involves the \emph{full} surrogate $L$, while TRM computes the \emph{masked} surrogate $L_{\mathrm{masked}}$. TRM serves two complementary roles: (1)~a high acceptance rate provides empirical evidence that $\Dkltokmax \le \delta$ holds globally, validating the precondition; (2)~discarding mismatched trajectories avoids erroneous gradient updates, so $L_{\mathrm{masked}} \approx L$ when acceptance is high. We recommend monitoring acceptance rates above 70\%.
+\end{remark}
+
+\textbf{Numerical illustration.} At $T = 4096$, $\delta = 10^{-4}$, $\epsilon = 5 \times 10^{-3}$, $\Dklseq = 0.01$, $\Dtvseq = 0.05$: the unified bound gives $B^* \le 4.1$ (TV-Mixed), compared to the classical bound of $1677$---a $\mathbf{409\times}$ improvement.
+
+
+\subsection{Experiments}
+\label{sec:experiments}
+
+We validate TRM on mathematical reasoning using Qwen3-8B-Base under Zero-RL setup~\citep{guo2025deepseek}, trained on deduplicated DAPO-MATH-17k and evaluated on AIME25. We use GRPO~\citep{shao2024deepseekmath} with group size 16, batch size 32, and learning rate $1 \times 10^{-6}$. Evaluation uses Top-P$=0.95$, Temperature$=1.0$, reporting avg@32.
+
+To simulate realistic mismatch, we use vLLM for inference and PyTorch FSDP for training. We measure the \emph{Log Absolute Perplexity (PPL) Gap}:
+\begin{equation}
+    \Delta_{\mathrm{PPL}} = \frac{1}{N} \sum_{i=1}^N \left| \frac{1}{T_i} \sum_{t=1}^{T_i} \log \pitheta(y_t^{(i)} | c_t^{(i)}) - \frac{1}{T_i}\sum_{t=1}^{T_i}\log \piroll(y_t^{(i)} | c_t^{(i)}) \right|.
+\end{equation}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_tokenis_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{Token-level IS vs.\ PPO Clipping. Clipping exacerbates instability (larger PPL Gap, degraded score), confirming that token-level interventions cannot control $\Dkltokmax$.}
+    \label{fig:vs_tokenis}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_single_criterion_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{TRM vs.\ PPO Clipping. Both TRM-Max ($\delta\!=\!0.05$) and TRM-Avg ($\delta\!=\!0.001$) stabilize training, keeping the PPL Gap bounded.}
+    \label{fig:vs_ppo_clip}
+\end{figure}
+
+\Cref{fig:vs_tokenis} confirms that token-level PPO clipping exacerbates instability. \Cref{fig:vs_ppo_clip} shows that both TRM variants maintain stability and consistent improvement on AIME25, keeping the PPL Gap bounded by rejecting mismatched sequences.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_multi_criterion_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{Combined criteria. Individually loose TRM-Max ($\delta\!=\!0.1$) and TRM-Avg ($\delta\!=\!0.002$) fail, but their combination succeeds---the max criterion catches outliers while the average criterion limits accumulated drift.}
+    \label{fig:combined_criterion}
+\end{figure}
+
+
+%==============================================================================
+% CONCLUSION
+%==============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+Off-policy mismatch is unavoidable in modern LLM-RL. We show that classical $O(T^2)$ trust region bounds are vacuous for long-horizon tasks and derive a family of tighter bounds---both KL-based and TV-based---whose minimum yields the tightest known guarantee. The KL route provides sublinear context-shift scaling; the TV route avoids Pinsker's looseness. Their combination strictly dominates either alone. All bounds depend on the maximum token-level divergence, which cannot be controlled by token-level methods. Trust Region Masking enforces this constraint at the sequence level, enabling the first non-vacuous monotonic improvement guarantees for long-horizon LLM-RL. We discuss length-neutral extensions in Appendix~\ref{app:length-neutral}.
+
+\bibliography{ref}
+\bibliographystyle{plainnat}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+
+\section{Details on Off-Policy Mismatch in LLM-RL}
+\label{app:mismatch}
+
+\subsection{Backend Discrepancies}
+
+Modern LLM-RL pipelines use separate stacks for inference and training:
+
+\begin{center}
+\begin{tabular}{ll}
+    \toprule
+    \textbf{Inference (vLLM/SGLang)} & \textbf{Training (Megatron/FSDP)} \\
+    \midrule
+    PagedAttention & FlashAttention-2 \\
+    FP8/INT8 KV-cache quantization & BF16/FP32 accumulation \\
+    Aggressive operator fusion & Tensor parallelism \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The root cause is floating-point non-associativity: $(a \oplus b) \oplus c \neq a \oplus (b \oplus c)$. Different parallel reduction orders in the softmax denominator yield slightly different results. While negligible for a single token, these errors compound autoregressively over $T$ steps.
+
+\subsection{MoE Routing Discontinuities}
+
+In MoE models~\citep{shazeer2017outrageously, liu2024deepseek}, the output is $y = \sum_{i \in \mathcal{K}} g_i(x) \cdot E_i(x)$ where $\mathcal{K} = \mathrm{Top\text{-}K}(h(x))$. The Top-K operator is discontinuous: if numerical jitter shifts $h_{\mathrm{inf}} = h_{\mathrm{train}} + \varepsilon$ such that $|h_{(K)} - h_{(K+1)}| < \|\varepsilon\|$, the selected experts change. This can cause $\piroll(v) = 0.9$ but $\pitheta(v) \approx 0.001$, producing importance ratio spikes $\rho \approx 900$.
+
+\subsection{Distributed Staleness}
+
+Actor-learner architectures~\citep{espeholt2018impala, nair2015massively} generate rollouts with $\theta_{\mathrm{old}}$ while the learner updates to $\theta_{\mathrm{new}}$. A lag of $k$ gradient steps ensures $\piroll \neq \pitheta$ even with identical implementations.
+
+
+%==============================================================================
+% APPENDIX: FULL PROOFS OF FOUNDATIONAL LEMMAS
+%==============================================================================
+\section{Proofs of Foundational Lemmas}
+\label{app:lemma-proofs}
+
+\subsection{KL Chain Rule (Lemma~\ref{lem:kl-chain-app})}
+
+\begin{lemma}[KL Chain Rule]
+\label{lem:kl-chain-app}
+For any time step $t$:
+\begin{equation}
+    \DKL(d_t^{\piroll} \| d_t^{\pitheta}) = \sum_{s=1}^{t-1} \E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)].
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The joint trajectory distribution factorizes as:
+\begin{equation}
+    d_t^{\pi}(x, y_{<t}) = P(x) \prod_{s=1}^{t-1} \pi(y_s | c_s).
+\end{equation}
+Since $P(x)$ is shared, the KL divergence is:
+\begin{align}
+    \DKL(d_t^{\piroll} \| d_t^{\pitheta})
+    &= \E_{(x, y_{<t}) \sim d_t^{\piroll}}\!\left[\log \frac{d_t^{\piroll}(x, y_{<t})}{d_t^{\pitheta}(x, y_{<t})}\right] \\
+    &= \E_{d_t^{\piroll}}\!\left[\log \frac{P(x)\prod_{s=1}^{t-1}\piroll(y_s|c_s)}{P(x)\prod_{s=1}^{t-1}\pitheta(y_s|c_s)}\right] \\
+    &= \E_{d_t^{\piroll}}\!\left[\sum_{s=1}^{t-1} \log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)}\right] \\
+    &= \sum_{s=1}^{t-1} \E_{d_t^{\piroll}}\!\left[\log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)}\right]. \label{eq:kl-chain-step}
+\end{align}
+For each term in the sum, the expectation over $(x, y_{<t})$ under $d_t^{\piroll}$ can be decomposed. The log-ratio $\log(\piroll(y_s|c_s)/\pitheta(y_s|c_s))$ depends only on $(c_s, y_s) = (x, y_{\le s})$. Marginalizing out $y_{s+1}, \ldots, y_{t-1}$:
+\begin{align}
+    \E_{d_t^{\piroll}}\!\left[\log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)}\right]
+    &= \E_{(x, y_{\le s}) \sim d_{s+1}^{\piroll}}\!\left[\log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)}\right] \\
+    &= \E_{c_s \sim d_s^{\piroll}}\!\left[\E_{y_s \sim \piroll(\cdot|c_s)}\!\left[\log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)}\right]\right] \\
+    &= \E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)].
+\end{align}
+Substituting back into Eq.~\eqref{eq:kl-chain-step} completes the proof.
+\end{proof}
+
+\begin{corollary}
+\label{cor:kl-chain-bound}
+$\DKL(d_t^{\piroll} \| d_t^{\pitheta}) \le (t-1)\,\delta$ and $\Dklseq = \sum_{t=1}^T \E[\DKL(c_t)] \le T\delta$.
+\end{corollary}
+\begin{proof}
+Each summand satisfies $\E_{c_s}[\DKL(c_s)] \le \max_{c_s} \DKL(c_s) \le \delta$.
+\end{proof}
+
+
+\subsection{Martingale Property}
+
+\begin{lemma}[Martingale Property]
+\label{lem:martingale-app}
+For any context $c_t$: $\E_{y_t \sim \piroll(\cdot|c_t)}[A_t^{\piroll}(c_t, y_t)] = 0$.
+\end{lemma}
+
+\begin{proof}
+Define $Q_t(c_t, y_t) := \E_{\piroll}[R \mid c_t, y_t]$ and $V_t(c_t) := \E_{\piroll}[R \mid c_t] = \E_{y_t \sim \piroll}[Q_t(c_t, y_t)]$. Then $A_t = Q_t - V_t$, so:
+\begin{equation}
+    \E_{y_t \sim \piroll}[A_t(c_t, y_t)] = \E_{y_t \sim \piroll}[Q_t(c_t, y_t)] - V_t(c_t) = V_t(c_t) - V_t(c_t) = 0.
+\end{equation}
+\end{proof}
+
+
+\subsection{Advantage Bound (Lemma~\ref{lem:advantage-bound})}
+
+\begin{proof}[Full proof]
+Using the Martingale Property:
+\begin{align}
+    g_t(c_t) &= \E_{y_t \sim \pitheta}[A_t(c_t, y_t)] - \underbrace{\E_{y_t \sim \piroll}[A_t(c_t, y_t)]}_{= 0} \\
+    &= \sum_{y_t \in \mathcal{V}} \big(\pitheta(y_t|c_t) - \piroll(y_t|c_t)\big) \cdot A_t(c_t, y_t). \label{eq:gt-expansion}
+\end{align}
+\textbf{Bounding $|A_t|$:} Since $R \in [0,1]$, both $Q_t(c_t, y_t) = \E[R|c_t, y_t]$ and $V_t(c_t) = \E[R|c_t]$ lie in $[0,1]$. Therefore $|A_t| = |Q_t - V_t| \le 1$.
+
+\textbf{H\"{o}lder's inequality:} Taking absolute values in Eq.~\eqref{eq:gt-expansion}:
+\begin{align}
+    |g_t(c_t)| &\le \sum_{y_t} |\pitheta(y_t|c_t) - \piroll(y_t|c_t)| \cdot |A_t(c_t, y_t)| \\
+    &\le \sum_{y_t} |\pitheta(y_t|c_t) - \piroll(y_t|c_t)| \cdot 1 \\
+    &= 2\,\Dtvtok(c_t). \label{eq:gt-tv-bound}
+\end{align}
+
+\textbf{Capping:} Since $\Dtvtok(c_t) \le 1$ for any pair of distributions, and by Pinsker's inequality $\Dtvtok(c_t) \le \sqrt{\DKL(c_t)/2}$:
+\begin{equation}
+    |g_t(c_t)| \le 2\min\!\big(1, \sqrt{\DKL(c_t)/2}\big).
+\end{equation}
+Maximizing over $c_t$: $\|g_t\|_\infty \le 2\min\!\big(1,\; \epsilon,\; \sqrt{\delta/2}\big)$.
+\end{proof}
+
+
+\subsection{Context Shift (Lemma~\ref{lem:context-shift})}
+
+\begin{proof}[Full proof]
+We establish each of the five bounds in Eq.~\eqref{eq:context-shift-all}.
+
+\textbf{Bound 1: Trivial.} $\DTV(P, Q) \le 1$ for any distributions $P, Q$.
+
+\textbf{Bound 2: Coupling.} We prove $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le (t-1)\,\epsilon$ by induction.
+
+\emph{Base case ($t = 1$):} $d_1^{\pitheta} = d_1^{\piroll} = P(x)$, so $\DTV = 0 = (1-1)\epsilon$.
+
+\emph{Inductive step:} Assume $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le (t-1)\epsilon$. The distribution at step $t+1$ is:
+\begin{equation}
+    d_{t+1}^{\pi}(x, y_{\le t}) = d_t^{\pi}(x, y_{<t}) \cdot \pi(y_t | c_t).
+\end{equation}
+Using the triangle inequality for product distributions (coupling lemma):
+\begin{align}
+    \|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\|_{\mathrm{TV}}
+    &= \frac{1}{2}\sum_{x, y_{\le t}} |d_t^{\pitheta}(c_t)\,\pitheta(y_t|c_t) - d_t^{\piroll}(c_t)\,\piroll(y_t|c_t)| \\
+    &\le \frac{1}{2}\sum_{c_t, y_t} |d_t^{\pitheta}(c_t) - d_t^{\piroll}(c_t)| \cdot \pitheta(y_t|c_t) \nonumber\\
+    &\quad + \frac{1}{2}\sum_{c_t, y_t} d_t^{\piroll}(c_t) \cdot |\pitheta(y_t|c_t) - \piroll(y_t|c_t)| \\
+    &= \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \cdot \underbrace{\sum_{y_t}\pitheta(y_t|c_t)}_{=1} + \E_{c_t \sim d_t^{\piroll}}[\Dtvtok(c_t)] \\
+    &\le (t-1)\epsilon + \epsilon = t\,\epsilon.
+\end{align}
+In the last step, we used the inductive hypothesis and $\Dtvtok(c_t) \le \epsilon$ for all $c_t$.
+
+\textbf{Bound 3: Pinsker on marginal KL.} By the KL chain rule (\Cref{lem:kl-chain-app}):
+\begin{equation}
+    \DKL(d_t^{\piroll} \| d_t^{\pitheta}) = \sum_{s=1}^{t-1}\E_{c_s}[\DKL(c_s)] \le (t-1)\,\delta.
+\end{equation}
+Applying Pinsker's inequality to the marginal distributions:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \sqrt{\frac{\DKL(d_t^{\piroll} \| d_t^{\pitheta})}{2}} \le \sqrt{\frac{(t-1)\,\delta}{2}}.
+\end{equation}
+
+\textbf{Bound 4: Data processing.} Since $d_t^{\pi}$ is a marginal of the full trajectory distribution $P^{\pi}(y|x)$ (obtained by marginalizing out $y_t, \ldots, y_T$), the data processing inequality gives:
+\begin{equation}
+    \|d_t^{\pitheta}(\cdot|x) - d_t^{\piroll}(\cdot|x)\|_{\mathrm{TV}} \le \|P^{\pitheta}(\cdot|x) - P^{\piroll}(\cdot|x)\|_{\mathrm{TV}} = \Dtvseq.
+\end{equation}
+
+\textbf{Bound 5: Pinsker on sequence KL.} Since $\DKL(d_t^{\piroll} \| d_t^{\pitheta}) \le \Dklseq$ (all summands in the chain rule are non-negative), Pinsker gives $\DTV \le \sqrt{\Dklseq/2}$.
+
+Taking the minimum of all five bounds yields Eq.~\eqref{eq:context-shift-all}.
+\end{proof}
+
+
+%==============================================================================
+% APPENDIX: FULL PROOFS OF MAIN THEOREMS
+%==============================================================================
+\section{Proofs of Main Theorems}
+\label{app:proofs}
+
+All bounds start from the error decomposition (Eq.~\eqref{eq:error-pdi}):
+\begin{equation}
+    |\mathrm{Error}| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}},
+    \label{eq:master-decomp}
+\end{equation}
+which follows from $|\E_P[f] - \E_Q[f]| \le 2\|f\|_\infty \cdot \DTV(P, Q)$ applied to each summand.
+
+
+\subsection{Pinsker-Marginal Bounds (\Cref{thm:pinsker-marginal})}
+
+\textbf{KL variant.} Use the advantage bound $\|g_t\|_\infty \le 2\min(1, \sqrt{\delta/2})$ and the Pinsker context shift $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min(1, \sqrt{(t\!-\!1)\delta/2})$. Substituting into Eq.~\eqref{eq:master-decomp}:
+\begin{align}
+    |\mathrm{Error}| &\le \sum_{t=1}^T 2 \cdot 2\min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \cdot \min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big) \\
+    &= 4\min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \sum_{t=1}^T \min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big) = B_{\mathrm{PM}}^{\mathrm{KL}}.
+\end{align}
+
+\textbf{Small-divergence simplification.} When $\delta \le 2/T$: for all $t \le T$, $(t\!-\!1)\delta/2 \le (T\!-\!1)\delta/2 < 1$, so the context-shift cap is inactive. Also $\delta/2 < 1/T < 1$, so the advantage cap is inactive. Then:
+\begin{align}
+    B_{\mathrm{PM}}^{\mathrm{KL}} &= 4\sqrt{\tfrac{\delta}{2}} \sum_{t=1}^T \sqrt{\tfrac{(t-1)\delta}{2}} = 4 \cdot \tfrac{\delta}{2} \sum_{k=0}^{T-1} \sqrt{k}.
+\end{align}
+The sum is bounded by the integral: $\sum_{k=0}^{T-1}\sqrt{k} \le \int_0^T \sqrt{x}\,dx = \frac{2}{3}T^{3/2}$. Therefore:
+\begin{equation}
+    B_{\mathrm{PM}}^{\mathrm{KL}} \le 4 \cdot \tfrac{\delta}{2} \cdot \tfrac{2}{3}T^{3/2} = \tfrac{4}{3}T^{3/2}\delta.
+\end{equation}
+
+\textbf{Verification at $T=4096$, $\delta=10^{-4}$:} $\frac{4}{3} \times (4096)^{3/2} \times 10^{-4} = \frac{4}{3} \times 262144 \times 10^{-4} = 34.95 \approx 35.0$. \checkmark
+
+\textbf{TV variant.} Replace the advantage bound with $\|g_t\|_\infty \le 2\min(1, \epsilon)$, keeping the Pinsker context shift unchanged:
+\begin{equation}
+    B_{\mathrm{PM}}^{\mathrm{TV}} = 4\min(1, \epsilon) \sum_{t=1}^T \min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big).
+\end{equation}
+In the small-divergence regime: $B_{\mathrm{PM}}^{\mathrm{TV}} = 4\epsilon \cdot \sqrt{\delta/2} \cdot \frac{2}{3}T^{3/2} = \frac{8}{3}T^{3/2}\epsilon\sqrt{\delta/2}$.
+
+\textbf{Verification at $T=4096$, $\delta=10^{-4}$, $\epsilon=5\times10^{-3}$:}
+$\frac{8}{3} \times 262144 \times 5\times10^{-3} \times \sqrt{5\times10^{-5}} = \frac{8}{3} \times 262144 \times 5\times10^{-3} \times 7.07\times10^{-3} = 24.7$. \checkmark
+
+Note: when $\epsilon = \sqrt{\delta/2}$ (Pinsker tight), $B_{\mathrm{PM}}^{\mathrm{TV}} = B_{\mathrm{PM}}^{\mathrm{KL}}$. The TV variant is strictly tighter only when $\epsilon < \sqrt{\delta/2}$.
+\qed
+
+
+\subsection{Mixed Bounds (\Cref{thm:mixed})}
+
+\textbf{KL variant.} The marginal KL at any step $t$ is bounded by the full sequence KL:
+\begin{equation}
+    \DKL(d_t^{\piroll} \| d_t^{\pitheta}) = \sum_{s=1}^{t-1}\E[\DKL(c_s)] \le \sum_{s=1}^{T}\E[\DKL(c_s)] = \Dklseq.
+\end{equation}
+The inequality holds because all summands are non-negative. Applying Pinsker:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\Big(1, \sqrt{\tfrac{\Dklseq}{2}}\Big).
+    \label{eq:mixed-context-shift}
+\end{equation}
+This bound is uniform in $t$. Summing over $T$ steps with the KL advantage bound:
+\begin{align}
+    |\mathrm{Error}| &\le \sum_{t=1}^T 2 \cdot 2\min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \cdot \min\!\Big(1, \sqrt{\tfrac{\Dklseq}{2}}\Big) \\
+    &= 4T \cdot \min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \cdot \min\!\Big(1, \sqrt{\tfrac{\Dklseq}{2}}\Big) = B_{\mathrm{Mix}}^{\mathrm{KL}}.
+\end{align}
+When both caps are inactive: $B_{\mathrm{Mix}}^{\mathrm{KL}} = 4T\sqrt{\delta/2}\sqrt{\Dklseq/2} = 2T\sqrt{\delta \cdot \Dklseq}$.
+
+\textbf{Verification at $T=4096$, $\delta=10^{-4}$, $\Dklseq=0.01$:}
+$2 \times 4096 \times \sqrt{10^{-4} \times 0.01} = 8192 \times 10^{-3} = 8.192 \approx 8.2$. \checkmark
+
+\textbf{TV variant.} Use the TV advantage bound $\|g_t\|_\infty \le 2\min(1, \epsilon)$ and the data-processing context shift $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min(1, \Dtvseq)$:
+\begin{equation}
+    B_{\mathrm{Mix}}^{\mathrm{TV}} = 4T \cdot \min(1, \epsilon) \cdot \min(1, \Dtvseq).
+\end{equation}
+
+\textbf{Validity of the TV context-shift bound.} The distribution $d_t^{\pi}(\cdot|x)$ over $(y_1, \ldots, y_{t-1})$ is a marginal of the full trajectory distribution $P^{\pi}(\cdot|x)$ over $(y_1, \ldots, y_T)$. By the data processing inequality for total variation, marginalization cannot increase TV distance:
+\begin{equation}
+    \|d_t^{\pitheta}(\cdot|x) - d_t^{\piroll}(\cdot|x)\|_{\mathrm{TV}} \le \|P^{\pitheta}(\cdot|x) - P^{\piroll}(\cdot|x)\|_{\mathrm{TV}} = \Dtvseq.
+\end{equation}
+
+When caps are inactive: $B_{\mathrm{Mix}}^{\mathrm{TV}} = 4T\epsilon\,\Dtvseq$.
+
+\textbf{Verification at $T=4096$, $\epsilon=5\times10^{-3}$, $\Dtvseq=0.05$:}
+$4 \times 4096 \times 5\times10^{-3} \times 0.05 = 16384 \times 2.5\times10^{-4} = 4.096 \approx 4.1$. \checkmark
+
+When $\epsilon = \sqrt{\delta/2}$ and $\Dtvseq = \sqrt{\Dklseq/2}$: $B_{\mathrm{Mix}}^{\mathrm{TV}} = 4T\sqrt{\delta/2}\sqrt{\Dklseq/2} = 2T\sqrt{\delta\Dklseq} = B_{\mathrm{Mix}}^{\mathrm{KL}}$. \checkmark
+\qed
+
+
+\subsection{Coupling Bound (\Cref{thm:coupling})}
+
+Use the TV advantage bound $\|g_t\|_\infty \le 2\min(1, \epsilon)$ and the coupling context shift $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min(1, (t\!-\!1)\epsilon)$:
+\begin{equation}
+    |\mathrm{Error}| \le \sum_{t=1}^T 2 \cdot 2\min(1, \epsilon) \cdot \min(1, (t\!-\!1)\epsilon) = 4\min(1, \epsilon)\sum_{t=1}^T \min(1, (t\!-\!1)\epsilon) = B_{\mathrm{Coup}}.
+\end{equation}
+
+\textbf{Regime analysis.} Define $t^* = \lfloor 1/\epsilon \rfloor + 1$ as the position where the cap activates.
+
+\textbf{Case 1: $T\epsilon \le 1$ (small divergence).} All caps are inactive ($t^* > T$):
+\begin{equation}
+    B_{\mathrm{Coup}} = 4\epsilon \cdot \epsilon\sum_{k=0}^{T-1}k = 4\epsilon^2 \cdot \tfrac{T(T-1)}{2} = 2T(T-1)\epsilon^2.
+\end{equation}
+This recovers the classical bound.
+
+\textbf{Case 2: $T\epsilon > 1$ (large divergence).} Split the sum at $t^*$:
+\begin{align}
+    \sum_{t=1}^T \min(1, (t\!-\!1)\epsilon) &= \epsilon\sum_{k=0}^{t^*-2}k + (T - t^* + 1) \\
+    &\le \epsilon \cdot \tfrac{(1/\epsilon)^2}{2} + T = \tfrac{1}{2\epsilon} + T.
+\end{align}
+So $B_{\mathrm{Coup}} \le 4\epsilon(T + 1/(2\epsilon)) = 4T\epsilon + 2$. For large $T$: $B_{\mathrm{Coup}} = O(T\epsilon)$.
+
+\textbf{Verification at $T=4096$, $\epsilon=7.07\times10^{-3}$ (Pinsker-derived):}
+$1/\epsilon = 141.4$, so $t^* = 142$. Sum $= 7.07\times10^{-3} \times \frac{141 \times 142}{2} + (4096 - 142) = 70.8 + 3954 = 4024.8$. $B_{\mathrm{Coup}} = 4 \times 7.07\times10^{-3} \times 4024.8 = 113.8$. \checkmark
+\qed
+
+
+%==============================================================================
+% APPENDIX: PROOF OF ADAPTIVE BOUND
+%==============================================================================
+\section{Proof of the Adaptive Bound (\Cref{thm:adaptive})}
+\label{app:proof-adaptive}
+
+The Adaptive bound uses an alternative error decomposition based on importance ratios rather than the Performance Difference Identity. We develop the proof in four steps.
+
+\subsection{Step 1: Exact Error Identity}
+
+\begin{lemma}[Exact Error Identity]
+\label{lem:exact-identity}
+\begin{equation}
+    J(\pitheta) - J(\piroll) = L'_{\piroll}(\pitheta) - \Delta,
+\end{equation}
+where:
+\begin{equation}
+    \Delta := \E_{y \sim \piroll}\!\left[R(y)\sum_{t=1}^{T}\left(\rho_t - 1\right)\!\left(1 - \prod_{j=t+1}^{T}\rho_j\right)\right].
+    \label{eq:delta-def}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+We use the telescoping identity for products. For any sequence $(\rho_1, \ldots, \rho_T)$:
+\begin{equation}
+    \prod_{t=1}^T \rho_t - 1 = \sum_{t=1}^T (\rho_t - 1)\prod_{j=t+1}^T \rho_j.
+    \label{eq:telescoping}
+\end{equation}
+\emph{Proof of Eq.~\eqref{eq:telescoping}:} Write $\prod_{t=1}^T \rho_t = \rho_1 \cdot \prod_{j=2}^T \rho_j$. Then:
+\begin{align}
+    \prod_{t=1}^T \rho_t - 1 &= (\rho_1 - 1)\prod_{j=2}^T \rho_j + \Big(\prod_{j=2}^T \rho_j - 1\Big).
+\end{align}
+Applying the same decomposition recursively to $\prod_{j=2}^T \rho_j - 1$, and continuing, yields Eq.~\eqref{eq:telescoping}.
+
+Now, the true performance difference is:
+\begin{align}
+    J(\pitheta) - J(\piroll)
+    &= \E_{y \sim \piroll}\!\left[R(y)\left(\prod_{t=1}^T \rho_t - 1\right)\right] \\
+    &= \E_{y \sim \piroll}\!\left[R(y)\sum_{t=1}^T (\rho_t - 1)\prod_{j>t}\rho_j\right]. \label{eq:Jdiff-expanded}
+\end{align}
+The surrogate is $L'_{\piroll}(\pitheta) = \E_{y \sim \piroll}[R(y)\sum_t (\rho_t - 1)]$. Subtracting:
+\begin{align}
+    J(\pitheta) - J(\piroll) - L'_{\piroll}(\pitheta)
+    &= \E_{y \sim \piroll}\!\left[R(y)\sum_t (\rho_t - 1)\left(\prod_{j>t}\rho_j - 1\right)\right] \\
+    &= -\E_{y \sim \piroll}\!\left[R(y)\sum_t (\rho_t - 1)\left(1 - \prod_{j>t}\rho_j\right)\right] = -\Delta.
+\end{align}
+Therefore $\mathrm{Error} = J(\pitheta) - J(\piroll) - L'(\pitheta) = -\Delta$, and $|\mathrm{Error}| = |\Delta|$.
+\end{proof}
+
+
+\subsection{Step 2: Tower Property Factorization}
+
+Define for each $t$:
+\begin{equation}
+    A_t := |\rho_t - 1|, \qquad B_t := \left|1 - \prod_{j=t+1}^{T}\rho_j\right|.
+\end{equation}
+Since $|R(y)| \le 1$, the triangle inequality gives:
+\begin{equation}
+    |\Delta| \le \E_{y \sim \piroll}\!\left[\sum_{t=1}^{T} A_t \cdot B_t\right] = \sum_{t=1}^{T}\E_{y \sim \piroll}[A_t \cdot B_t].
+    \label{eq:delta-triangle}
+\end{equation}
+
+The factor $A_t$ depends on $(c_t, y_t)$, while $B_t$ depends on $y_{>t} = (y_{t+1}, \ldots, y_T)$. They are \emph{not} independent given $c_t$ (since $c_{t+1} = (c_t, y_t)$ determines the future). We apply the tower property by conditioning on $c_{t+1}$:
+\begin{align}
+    \E_{y \sim \piroll}[A_t \cdot B_t]
+    &= \E_{c_{t+1} \sim d_{t+1}^{\piroll}}\!\left[\E_{y_t|c_t}\!\left[A_t \;\middle|\; c_{t+1}\right] \cdot \E_{y_{>t}|c_{t+1}}\![B_t]\right]. \label{eq:tower-wrong}
+\end{align}
+Wait---since $A_t$ is determined by $(c_t, y_t)$ and $c_{t+1} = (c_t, y_t)$, conditioning on $c_{t+1}$ makes $A_t$ deterministic. More precisely:
+\begin{align}
+    \E_{y \sim \piroll}[A_t \cdot B_t]
+    &= \E_{y_{\le t} \sim \piroll}\!\left[A_t \cdot \E_{y_{>t} \sim \piroll(\cdot|c_{t+1})}[B_t]\right].
+    \label{eq:tower-correct}
+\end{align}
+
+Now we compute the inner expectation. For fixed $c_{t+1}$:
+\begin{align}
+    \E_{y_{>t} \sim \piroll(\cdot|c_{t+1})}\![B_t]
+    &= \E_{y_{>t} \sim \piroll}\!\left[\left|1 - \prod_{j=t+1}^T \frac{\pitheta(y_j|c_j)}{\piroll(y_j|c_j)}\right|\right] \\
+    &= \E_{y_{>t} \sim \piroll}\!\left[\left|1 - \frac{P^{\pitheta}(y_{>t}|c_{t+1})}{P^{\piroll}(y_{>t}|c_{t+1})}\right|\right] \\
+    &= \sum_{y_{>t}} P^{\piroll}(y_{>t}|c_{t+1}) \left|1 - \frac{P^{\pitheta}(y_{>t}|c_{t+1})}{P^{\piroll}(y_{>t}|c_{t+1})}\right| \\
+    &= \sum_{y_{>t}} |P^{\piroll}(y_{>t}|c_{t+1}) - P^{\pitheta}(y_{>t}|c_{t+1})| \\
+    &= 2\,\DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1})). \label{eq:Bt-is-TV}
+\end{align}
+This is the total variation distance between the future-trajectory distributions.
+
+For the outer factor, we expand the expectation over $(c_t, y_t)$:
+\begin{align}
+    \E_{y_{\le t} \sim \piroll}[A_t] &= \E_{c_t \sim d_t^{\piroll}}\!\left[\E_{y_t \sim \piroll(\cdot|c_t)}\!\left[|\rho_t - 1|\right]\right].
+\end{align}
+We compute the inner expectation:
+\begin{align}
+    \E_{y_t \sim \piroll(\cdot|c_t)}\!\left[\left|\frac{\pitheta(y_t|c_t)}{\piroll(y_t|c_t)} - 1\right|\right]
+    &= \sum_{y_t} \piroll(y_t|c_t) \left|\frac{\pitheta(y_t|c_t)}{\piroll(y_t|c_t)} - 1\right| \\
+    &= \sum_{y_t} |\pitheta(y_t|c_t) - \piroll(y_t|c_t)| \\
+    &= 2\,\Dtvtok(c_t). \label{eq:At-is-TV}
+\end{align}
+Therefore:
+\begin{equation}
+    \E_{y_{\le t}}[A_t] = 2\,\E_{c_t \sim d_t^{\piroll}}[\Dtvtok(c_t)] = 2\,\Dbar_t.
+    \label{eq:At-expectation}
+\end{equation}
+
+
+\subsection{Step 3: Bounding the Future-Trajectory TV}
+
+We bound $\DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1}))$ for any fixed $c_{t+1}$. The future trajectory has $T - t$ steps.
+
+\textbf{Route A (Trivial):}
+\begin{equation}
+    \DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1})) \le 1.
+    \label{eq:future-trivial}
+\end{equation}
+
+\textbf{Route B (Pinsker + KL chain rule):} By Pinsker's inequality applied to the future joint distribution:
+\begin{equation}
+    \DTV \le \sqrt{\frac{1}{2}\DKL(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1}))}.
+    \label{eq:future-pinsker}
+\end{equation}
+The conditional future KL decomposes via the chain rule:
+\begin{align}
+    \DKL(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1}))
+    &= \sum_{k=t+1}^{T}\E_{c_k \sim \piroll(\cdot|c_{t+1})}[\DKL(c_k)] \\
+    &\le (T - t) \cdot \max_{k, c_k} \DKL(c_k) = (T-t)\,\delta. \label{eq:future-kl}
+\end{align}
+Combining: $\DTV \le \sqrt{(T-t)\delta/2}$.
+
+\textbf{Route C (Coupling):} Applying the coupling argument to the $T-t$ remaining steps:
+\begin{equation}
+    \DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1})) \le (T-t)\,\epsilon.
+    \label{eq:future-coupling}
+\end{equation}
+This follows from the same inductive argument as the context-shift coupling bound, applied to the conditional future distributions.
+
+\textbf{Combined:} Taking the minimum of all three routes:
+\begin{equation}
+    \DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1})) \le \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big).
+    \label{eq:future-combined}
+\end{equation}
+
+\textbf{Crucially}, this bound holds for \emph{every} realization of $c_{t+1}$, because the worst-case replacement in Eqs.~\eqref{eq:future-kl}--\eqref{eq:future-coupling} does not depend on the specific context. Therefore, the bound can be pulled outside the outer expectation over $c_{t+1}$.
+
+
+\subsection{Step 4: Combining the Factors}
+
+Substituting Eqs.~\eqref{eq:Bt-is-TV}, \eqref{eq:At-expectation}, and \eqref{eq:future-combined} into Eq.~\eqref{eq:tower-correct}:
+\begin{align}
+    |\Delta| &\le \sum_{t=1}^T \E_{y_{\le t}}[A_t] \cdot \sup_{c_{t+1}} 2\DTV(P^{\piroll}(\cdot|c_{t+1}) \| P^{\pitheta}(\cdot|c_{t+1})) \\
+    &\le \sum_{t=1}^T 2\Dbar_t \cdot 2\min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\delta}{2}}\Big) \\
+    &= 4\sum_{t=1}^T \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\delta}{2}}\Big) = B_{\mathrm{Adap}}^*.
+\end{align}
+This proves Eq.~\eqref{eq:B-Adap-star}. The KL and TV variants (Eqs.~\eqref{eq:B-Adap-KL}--\eqref{eq:B-Adap-TV}) follow by dropping one of the two non-trivial terms inside the $\min$.
+
+
+\subsection{Step 5: Strictness over Prior Bounds}
+
+\textbf{Recovery of $B_{\mathrm{PM}}^{\mathrm{KL}}$.} Set $\Dbar_t = \min(1, \sqrt{\delta/2})$ (worst-case per-position TV via Pinsker) and use only the Pinsker route for the future TV in $B_{\mathrm{Adap}}^{\mathrm{KL}}$:
+\begin{equation}
+    B_{\mathrm{Adap}}^{\mathrm{KL}} = 4\min\!\Big(1, \sqrt{\tfrac{\delta}{2}}\Big) \sum_{t=1}^T \min\!\Big(1, \sqrt{\tfrac{(T-t)\delta}{2}}\Big).
+\end{equation}
+By the index substitution $k = T - t$ (so $t = T - k$, and $k$ ranges from $0$ to $T-1$):
+\begin{equation}
+    \sum_{t=1}^T \min\!\Big(1, \sqrt{\tfrac{(T-t)\delta}{2}}\Big) = \sum_{k=0}^{T-1} \min\!\Big(1, \sqrt{\tfrac{k\delta}{2}}\Big) = \sum_{t=1}^T \min\!\Big(1, \sqrt{\tfrac{(t-1)\delta}{2}}\Big).
+\end{equation}
+This is exactly the sum in $B_{\mathrm{PM}}^{\mathrm{KL}}$ (Eq.~\eqref{eq:B-PM-KL}), confirming $B_{\mathrm{Adap}}^{\mathrm{KL}}|_{\Dbar_t = \sqrt{\delta/2}} = B_{\mathrm{PM}}^{\mathrm{KL}}$.
+
+\textbf{Recovery of $B_{\mathrm{Coup}}$.} Set $\Dbar_t = \epsilon$ and use only the coupling route in $B_{\mathrm{Adap}}^{\mathrm{TV}}$:
+\begin{equation}
+    B_{\mathrm{Adap}}^{\mathrm{TV}} = 4\epsilon\sum_{t=1}^T\min(1, (T\!-\!t)\epsilon) = 4\epsilon\sum_{k=0}^{T-1}\min(1, k\epsilon) = B_{\mathrm{Coup}}.
+\end{equation}
+
+\textbf{Strict improvement.} Since $\Dbar_t \le \min(1, \epsilon, \sqrt{\delta/2})$ always, and strict inequality $\Dbar_t < \epsilon$ or $\Dbar_t < \sqrt{\delta/2}$ holds whenever the per-position divergence is non-uniform, the Adaptive bounds are strictly tighter than their PM/Coupling counterparts whenever divergence is non-uniform across positions.
+
+Additionally, $B_{\mathrm{Adap}}^*$ with the per-position $\min$ over coupling and Pinsker routes is at least as tight as $\min(B_{\mathrm{Adap}}^{\mathrm{KL}}, B_{\mathrm{Adap}}^{\mathrm{TV}})$, since the per-position minimum is at most the global minimum of the two sums.
+\qed
+
+
+\subsection{Crossover Analysis}
+\label{app:crossover}
+
+The hybrid bound $B_{\mathrm{Adap}}^*$ selects between two routes for the future TV at each position. The crossover occurs where $(T\!-\!t)\epsilon = \sqrt{(T\!-\!t)\delta/2}$, i.e., $(T\!-\!t) = \delta/(2\epsilon^2)$.
+
+\textbf{When Pinsker is tight} ($\epsilon = \sqrt{\delta/2}$): crossover at $T - t = 1$. The Pinsker route is tighter for all but the last position, and the hybrid reduces to $B_{\mathrm{Adap}}^{\mathrm{KL}}$.
+
+\textbf{When Pinsker is loose} ($\epsilon \ll \sqrt{\delta/2}$): crossover at $T - t = \delta/(2\epsilon^2) \gg 1$. The coupling route wins for positions near the end (small $T\!-\!t$), while Pinsker wins for early positions (large $T\!-\!t$). The hybrid interpolates, providing significant improvement over either route alone.
+
+
+%==============================================================================
+% APPENDIX: SAMPLE-BASED ESTIMATORS
+%==============================================================================
+\section{Sample-Based Estimators ($k_2$ and $k_3$)}
+\label{app:k3}
+
+When storing full logits is infeasible, we use sample-based estimators from $\rho_t = \pitheta(y_t|c_t)/\piroll(y_t|c_t)$.
+
+\textbf{$k_3$ for averaging:} $f(\rho) = \rho - 1 - \log\rho$. This is the unique estimator satisfying $\E_{y_t \sim \piroll}[k_3(\rho_t)] = \DKL(\piroll(\cdot|c_t) \| \pitheta(\cdot|c_t))$ exactly, verified by:
+\begin{align}
+    \E_{\piroll}[\rho - 1 - \log\rho]
+    &= \E_{\piroll}\!\Big[\frac{\pitheta}{\piroll} - 1\Big] - \E_{\piroll}\!\Big[\log\frac{\pitheta}{\piroll}\Big] = (1 - 1) + \E_{\piroll}\!\Big[\log\frac{\piroll}{\pitheta}\Big] = \DKL.
+\end{align}
+It is non-negative ($k_3 \ge 0$ by Jensen's inequality) and asymmetric (penalizes $\rho \gg 1$ more than $\rho \ll 1$).
+
+\textbf{$k_2$ for max-filtering:} $f(\rho) = \frac{1}{2}(\log\rho)^2$. This is symmetric: $k_2(\rho) = k_2(1/\rho)$. It detects both support collapse ($\rho \to 0$) and impulse noise ($\rho \to \infty$) equally, which is essential for the max-based criterion. Note $k_2$ is biased as an estimator of $\DKL$ but serves as a robust outlier detector.
+
+The rigorous guarantees of \Cref{thm:trm-guarantee} hold only with exact KL from full logits.
+
+
+%==============================================================================
+% APPENDIX: LENGTH-NEUTRAL EXTENSIONS
+%==============================================================================
+\section{Length-Neutral Trust Region Masking}
+\label{app:length-neutral}
+
+\subsection{Length Bias in TRM}
+
+While TRM's threshold $\delta$ is length-invariant, the \emph{rejection probability} increases with $T$. Under a simplifying i.i.d.\ assumption with per-token violation probability $p$:
+\begin{equation}
+    \Pr[\text{accept}] = (1-p)^T \approx e^{-pT}.
+\end{equation}
+This decays exponentially in $T$, systematically rejecting long sequences. For reasoning tasks where correct solutions often require longer chains of thought, this bias is concerning.
+
+\subsection{Length-Neutral TRM (LN-TRM)}
+
+Motivated by the Adaptive bound, we define a trajectory-level error score:
+\begin{equation}
+    W(y) := \sum_{t=1}^{T}|\rho_t - 1| \cdot w_t, \qquad w_t := \min\!\Big(1,\;(T\!-\!t)\epsilon,\;\sqrt{\tfrac{(T-t)\delta}{2}}\Big),
+\end{equation}
+and normalize by the weight sum $Z(T) := \sum_{t=1}^T w_t$ (precomputable). The masking criterion is:
+\begin{equation}
+    M(y) = \mathbb{I}\!\Big[\widetilde{W}(y) := W(y)/Z(T) \le \delta_W\Big].
+\end{equation}
+Since $\widetilde{W}$ is a \emph{weighted average} of $|\rho_t - 1|$, it is approximately length-invariant.
+
+\begin{proposition}[LN-TRM Guarantee]
+\label{prop:ln-trm-guarantee}
+If $\Dkltokmax \le \delta$ globally, then $|\mathrm{Error}| \le 2\,\E_{\piroll}[W(y)]$. For accepted trajectories, $W(y) \le \delta_W \cdot Z(T)$.
+\end{proposition}
+\begin{proof}
+From the Adaptive bound proof (Step 4): $|\mathrm{Error}| \le 2\sum_t \E[|\rho_t - 1|] \cdot w_t = 2\,\E[W(y)]$ by linearity of expectation (since $w_t$ is deterministic). For accepted sequences, $\widetilde{W}(y) \le \delta_W$ gives $W(y) \le \delta_W \cdot Z(T)$.
+\end{proof}
+
+
+\subsection{Simplified Variant: Sequence-Error Ratio (SER)}
+
+For minimal implementation overhead:
+\begin{equation}
+    W_{\mathrm{SER}}(y) := \frac{1}{T}\sum_{t=1}^{T}|\rho_t - 1|, \qquad M(y) = \mathbb{I}[W_{\mathrm{SER}}(y) \le \delta_{\mathrm{SER}}].
+\end{equation}
+This adds three lines to any GRPO/PPO implementation:
+\begin{lstlisting}
+W = mean(abs(rho - 1), dim=-1)  # per-sequence average
+M = (W <= delta_ser).float()     # binary mask
+loss = loss * M                  # mask rejected sequences
+\end{lstlisting}
+SER connects to the linear bound via $\E[|\rho_t - 1|] = 2\Dtvtok(c_t)$: controlling $W_{\mathrm{SER}} \le \delta$ bounds the per-trajectory error at rate $O(T\delta)$. Since $W_{\mathrm{SER}}$ is an average, its variance decreases as $O(1/\sqrt{T})$ by CLT, making SER mildly biased \emph{in favor of} longer sequences. We recommend $\delta_{\mathrm{SER}} \in [0.03, 0.10]$.
+
+\begin{table}[htbp]
+\centering
+\caption{Length bias properties of masking methods.}
+\label{tab:length-bias}
+\begin{tabular}{llll}
+    \toprule
+    \textbf{Method} & \textbf{Criterion} & \textbf{Rejection scaling} & \textbf{Guarantee} \\
+    \midrule
+    TRM-Max & $\max_t \DKL(c_t) \le \delta$ & $1-(1-p)^T$ (exponential) & Exact \\
+    TRM-Avg & $\frac{1}{T}\sum_t \DKL(c_t) \le \delta$ & $\approx$ constant & Weaker (avg $\ne$ max) \\
+    LN-TRM & $\widetilde{W}(y) \le \delta_W$ & $\approx$ constant & Up to $Z(T)$ factor \\
+    SER & $\frac{1}{T}\sum|\rho_t-1| \le \delta$ & $\approx$ constant & Via linear bound \\
+    \bottomrule
+\end{tabular}
+\end{table}
+
+
+\end{document}
+
+\documentclass[11pt]{article}
+
+%==============================================================================
+% PACKAGES
+%==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage[margin=1in]{geometry}
+\usepackage{natbib}
+\usepackage{thmtools}
+\usepackage{listings}
+
+% Listing style for Python code
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  frame=single,
+  breaklines=true
+}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{assumption}[theorem]{Assumption}
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\piroll}{\pi_{\mathrm{roll}}}
+\newcommand{\pitheta}{\pi_{\theta}}
+\newcommand{\piold}{\pi_{\mathrm{old}}}
+\newcommand{\ylt}{y_{<t}}
+\newcommand{\yle}{y_{\le t}}
+\newcommand{\DKL}{D_{\mathrm{KL}}}
+\newcommand{\DTV}{D_{\mathrm{TV}}}
+\newcommand{\Dklseq}{D_{\mathrm{KL}}^{\mathrm{seq}}}
+\newcommand{\Dkltok}{D_{\mathrm{KL}}^{\mathrm{tok}}}
+\newcommand{\Dkltokmax}{D_{\mathrm{KL}}^{\mathrm{tok,max}}}
+\newcommand{\Dtvtok}{D_{\mathrm{TV}}^{\mathrm{tok}}}
+\newcommand{\Dtvtokmax}{D_{\mathrm{TV}}^{\mathrm{tok,max}}}
+\newcommand{\Dklrev}{D_{\mathrm{KL}}^{\mathrm{rev}}}
+\newcommand{\Dklrevmax}{D_{\mathrm{KL}}^{\mathrm{rev,max}}}
+\newcommand{\Dklseqrev}{D_{\mathrm{KL}}^{\mathrm{seq,rev}}}
+\newcommand{\Dbar}{\bar{D}}
+
+\title{Trust Region Masking for Long-Horizon LLM Reinforcement Learning}
+
+% \author{
+%     Yingru Li\thanks{These authors contributed equally to this work.}, Jiacai Liu\footnotemark[1]$^{1}$, Jiawei Xu\footnotemark[1]$^{2}$, Yuxuan Tong, Ziniu Li$^{2}$, Qian Liu, Baoxiang Wang$^{2}$ \vspace{0.5cm}\\
+%      $^{1}$Fudan University, $^{2}$The Chinese University of Hong Kong, Shenzhen
+% }
+
+\usepackage[affil-it]{authblk}
+
+% Define the symbol manually if needed, or use *
+\author{Yingru Li\thanks{Equal contribution}}
+\author{Jiacai Liu\textsuperscript{*,1}}
+\author{Jiawei Xu\textsuperscript{*,2}}
+\author{Yuxuan Tong}
+\author{Ziniu Li\textsuperscript{2}}
+\author{\protect\\Qian Liu}
+\author{Baoxiang Wang\textsuperscript{2}}
+
+\affil{\small \textsuperscript{1}Fudan University, \textsuperscript{2}The Chinese University of Hong Kong, Shenzhen}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{abstract}
+Policy gradient methods for Large Language Models optimize a policy $\pi_\theta$ via a surrogate objective computed from samples of a rollout policy $\pi_{\text{roll}}$. However, modern LLM-RL pipelines suffer from unavoidable implementation divergences, such as backend discrepancies, Mixture-of-Experts routing discontinuities, and distributed training staleness. These factors cause an off-policy mismatch ($\pi_{\text{roll}} \neq \pi_\theta$), leading to approximation errors between the surrogate and the true objective.
+We demonstrate that classical trust region bounds on this error scale as $O(T^2)$ with sequence length $T$, rendering them vacuous for long-horizon tasks. To address this,
+we derive two new bounds: a \emph{Pinsker-Marginal} bound scaling as $O(T^{3/2})$ and a \emph{Mixed} bound scaling as $O(T)$. We further derive an \emph{Adaptive} bound that strictly generalizes the Pinsker-Marginal bound by combining an importance-ratio decomposition of the error with an adaptive per-position application of Pinsker's inequality on the future trajectory divergence; the minimum over all three bounds is tighter than any individual bound. Crucially, all bounds depend on $\Dkltokmax$, the maximum token-level KL divergence across the sequence. As a \emph{sequence-level} term, the divergence cannot be controlled by previous token-independent methods like PPO clipping. We propose Trust Region Masking (TRM), which masks entire sequences that violate the trust region. TRM enables the first non-vacuous monotonic improvement guarantees and demonstrates empirical training stability for long-horizon LLM-RL.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+
+Reinforcement Learning (RL) has emerged as a cornerstone in training Large Language Models (LLMs) for complex tasks that demand extended reasoning, multi-step problem solving, and agentic behavior. As LLMs are deployed for long-horizon applications---ranging from mathematical reasoning~\citep{zeng2025simplerl} and code generation~\citep{liu2024exploring} to autonomous tool use~\citep{yang2024swe}---sequence lengths have rapidly expanded from hundreds to thousands of tokens. While policy gradient methods \citep{williams1992simple,sutton1999policy}, particularly Proximal Policy Optimization (PPO) \citep{schulman2017proximal}, remain the standard for these tasks, their theoretical foundations are increasingly strained by these extended horizons.
+
+Trust region methods \citep{kakade2002approximately, schulman2015trust} offer a principled framework for policy optimization by utilizing a surrogate objective, $L(\pitheta)$, computed via samples from a rollout policy $\piroll$. The central appeal of this framework is the \emph{monotonic improvement guarantee}: provided the surrogate objective improves and the policy remains within a specific trust region, the true objective $J(\pitheta)$ is guaranteed to increase. However, this guarantee is predicated on bounding the approximation error $|J(\pitheta) - J(\piroll) - L(\pitheta)|$, a quantity strictly dependent on the divergence between the rollout policy $\piroll$ and the training policy $\pitheta$.
+
+
+
+In the context of modern LLM-RL systems, recent work demonstrates that off-policy mismatch ($\piroll \ne \pitheta$) is not merely an implementation snag but an inevitable consequence of trust-region methods \citep{liu2025rlcollapse, yao2025offpolicy}. This mismatch arises from three primary sources:
+\begin{itemize}
+    \item \textbf{Backend Discrepancies:} Discrepancies between high-throughput inference engines (e.g., vLLM \citep{kwon2023efficient}, SGLang \citep{zheng2024sglang}) and precise training frameworks (e.g., Megatron-LM \citep{shoeybi2019megatron}, PyTorch FSDP \citep{zhao2023pytorch}) result in differing logits despite identical weights.
+    \item \textbf{MoE Routing Discontinuities:}  In Mixture-of-Experts models~\citep{shazeer2017outrageously, liu2024deepseek}, minor numerical jitter can flip the expert selection, causing high-magnitude jumps in token probabilities that disrupt the smoothness assumptions of standard RL.
+    \item \textbf{Distributed Staleness:} Asynchronous training pipelines \citep{espeholt2018impala, nair2015massively} introduce latency between data generation and gradient updates, resulting in training occurring on $\pitheta$ while rollouts are generated by stale weights $\piroll$.
+\end{itemize}
+We also provide a more detailed analysis of these mismatch sources in Appendix~\ref{app:mismatch}.
+
+Given that $\piroll \ne \pitheta$ is inevitable, the magnitude of the approximation error becomes a critical concern. Crucially, classical error bounds \citep{kakade2002approximately, schulman2015trust} scale quadratically with sequence length ($O(T^2)$). For modern reasoning tasks where responses frequently exceed $T = 4096$ tokens, these bounds become theoretically vacuous. Even with a negligible per-token divergence of $\Dkltokmax = 10^{-4}$, the classical bound predicts an error of $\approx 1677$---a value far exceeding any plausible reward improvement. Consequently, existing theory provides \emph{no guarantee} that optimization steps in long-horizon LLM-RL actually improve performance.
+
+
+To address this gap, we make the following contributions:
+\begin{enumerate}
+    \item \textbf{Tighter Error Bounds:} We derive two novel bounds on the approximation error that significantly tighten theoretical guarantees: the \emph{Pinsker-Marginal Bound} ($O(T^{3/2})$) and the \emph{Mixed Bound} ($O(T)$). We further derive an \emph{Adaptive Bound} that strictly generalizes the Pinsker-Marginal bound by combining a trajectory-level importance-ratio decomposition with a per-position adaptive application of Pinsker's inequality. The minimum over all three bounds is tighter than any individual bound (\Cref{sec:theory}).
+
+    \item \textbf{Analysis of Token-Level Failure:} We demonstrate that because both bounds depend on $\Dkltokmax$---the maximum token-level divergence across the sequence---this error is inherently a sequence-level quantity. Consequently, it cannot be effectively controlled by token-independent interventions such as standard PPO clipping or token masking (\Cref{sec:token-failure}).
+
+    \item \textbf{Trust Region Masking (TRM):} We propose TRM to mask entire sequences violating the trust region. By ensuring $\Dkltokmax \le \delta$ for all accepted data and empirically verifying this condition globally, TRM enables non-vacuous monotonic improvement guarantees for long-horizon LLM-RL (\Cref{sec:algorithm}). We additionally propose a length-neutral variant (LN-TRM) that mitigates the systematic bias against longer sequences inherent in any sequence-level masking criterion (\Cref{app:length-neutral}). Finally, we present empirical evidence demonstrating the training stability of TRM (\Cref{sec:experiments}).
+\end{enumerate}
+
+\section{Related Work}
+\label{sec:related_work}
+
+RL has become the standard paradigm for training LLMs in complex tasks where outcomes can be objectively verified, including mathematical reasoning~\citep{lightman2023let, zeng2025simplerl} and code generation~\citep{gu2023llm, liu2024exploring}. However, applying policy gradient methods to reasoning chains that exceed thousands of tokens introduces severe stability challenges.
+Trust region methods, originating from Conservative Policy Iteration (CPI)~\citep{kakade2002approximately}, provide the theoretical bedrock for stable RL training. TRPO~\citep{schulman2015trust} practically applied these concepts by enforcing a KL divergence constraint between the training and rollout policies, guaranteeing monotonic improvement under the assumption that the divergence is small. However, the theoretical bounds underpinning these methods scale poorly with horizon length $T$. The classical result bounds the approximation error by $O(T^2)$ in the finite-horizon setting~\citep{achiam2017constrained}. While acceptable for short-horizon control tasks ($T \approx 100$), these bounds become vacuous for modern LLMs where $T$ frequently exceeds 4000 tokens. Our work bridges this gap by deriving tight, non-vacuous bounds specifically for autoregressive sequence generation.
+
+The divergence between the rollout and the training policy is a critical challenge in distributed RL. Frameworks like IMPALA~\citep{espeholt2018impala} and APPO~\citep{schulman2017proximal} introduce correction mechanisms to mitigate staleness in actor-learner architectures. In the context of LLMs, this mismatch is exacerbated by the bifurcation of inference and training stacks. Rollout generation often utilizes high-throughput engines like vLLM~\citep{kwon2023efficient} or SGLang~\citep{zheng2024sglang}, which may employ optimizations not present in the training loop (e.g., Megatron-LM~\citep{shoeybi2019megatron}). Recent studies characterize this ``implementation divergence'' as a primary driver of RL training instability~\citep{liu2025rlcollapse, yao2025offpolicy}.
+
+Standard PPO implementations in LLMs enforce trust regions via token-level clipping~\citep{ziegler2019fine}. However, autoregressive generation is inherently sequential; a small probability shift at an early token can lead to a vastly different semantic sequence, a phenomenon related to ``exposure bias''~\citep{bengio2015scheduled}.
+Our proposed Trust Region Masking (TRM) addresses this by enforcing constraints at the sequence level, ensuring that the theoretical preconditions for monotonic improvement are met in practice.
+%==============================================================================
+% BACKGROUND
+%==============================================================================
+\section{Background and Problem Setup}
+\label{sec:background}
+
+\subsection{Autoregressive Language Generation}
+
+We focus on autoregressive language generation tasks where a policy $\pitheta$ generates a response $y = (y_1, \ldots, y_T)$ given a prompt $x$. Each token $y_t$ is sampled from a fixed vocabulary $\mathcal{V}$ according to:
+\begin{equation}
+    y_t \sim \pitheta(\cdot \mid x, y_{<t}),
+\end{equation}
+where $y_{<t} = (y_1, \ldots, y_{t-1})$ represents the sequence of tokens generated prior to step $t$. The probability distribution for the full trajectory factorizes as:
+\begin{equation}
+    P^{\pitheta}(y \mid x) = \prod_{t=1}^T \pitheta(y_t \mid x, y_{<t}).
+\end{equation}
+We define the \emph{context} at step $t$ as $c_t = (x, y_{<t})$. The \emph{context visitation distribution} induced by the policy $\pi$ is given by:
+\begin{equation}
+    d_t^{\pi}(c_t) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid x, y_{<s}).
+\end{equation}
+This distribution represents the probability of reaching a specific context $c_t$ when following policy $\pi$.
+
+\subsection{The Optimization Problem}
+
+Given a scalar reward function $R(x, y) \in [0, 1]$, our objective is to maximize the expected reward:
+\begin{equation}
+    J(\pitheta) = \E_{x \sim P(x)} \E_{y \sim \pitheta(\cdot|x)} \left[ R(x, y) \right].
+\end{equation}
+A fundamental challenge in this setting is the off-policy mismatch: we generate samples from a \emph{rollout policy} $\piroll$, which generally differs from the \emph{training policy} $\pitheta$. This necessitates the use of importance sampling or surrogate objectives to estimate gradients for $\pitheta$.
+
+\subsection{The Surrogate Objective}
+
+Following \citet{kakade2002approximately} and \citet{schulman2015trust}, we utilize the surrogate objective:
+\begin{equation}
+    L_{\piroll}(\pitheta) = \E_{\piroll}\left[ A \cdot \sum_{t=1}^T \rho_t \right],
+    \label{eq:surrogate}
+\end{equation}
+where $A = R(x, y) - b$ denotes the trajectory advantage (relative to a baseline $b$), and
+\begin{equation}
+    \rho_t = \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}
+\end{equation}
+is the per-token importance ratio. A critical property of this surrogate is that its gradient matches the true gradient at the reference policy~\citep{kakade2002approximately}:
+\begin{equation}
+    \nabla L_{\piroll}(\pitheta)\big|_{\pitheta = \piroll} = \nabla J(\pitheta)\big|_{\pitheta = \piroll}.
+\end{equation}
+While $L$ serves as a valid local approximation of $J$, the approximation error grows as the divergence between $\pitheta$ and $\piroll$ increases.
+
+\begin{remark}[Surrogate equivalence]
+\label{rem:surrogate-equiv}
+The error analysis in \Cref{sec:theory} and Appendix \ref{app:proof-adaptive} employs the equivalent surrogate $L'_{\piroll}(\pitheta) = \E_{\piroll}[R(x,y)\sum_{t=1}^{T}(\rho_t - 1)]$. Since $\E_{\piroll}[\sum_t (\rho_t - 1)]$ does not depend on $\pitheta$ at $\pitheta = \piroll$ (where it equals zero), any fixed baseline $b$ contributes a term that vanishes at the reference and does not affect the error $J(\pitheta) - J(\piroll) - L(\pitheta)$ up to a $\pitheta$-independent constant. All bounds derived in this work apply equally to both forms.
+\end{remark}
+
+\subsection{Divergence Measures}
+
+To quantify the discrepancy between policies, we employ the following divergence measures.
+
+\begin{definition}[Token-level divergences]
+\label{def:token-div}
+For a given context $c_t = (x, y_{<t})$, we define the Total Variation (TV) distance and the Kullback-Leibler (KL) divergence as:
+\begin{align}
+    \Dtvtok(c_t) &:= \DTV(\pitheta(\cdot|c_t) \parallel \piroll(\cdot|c_t)) = \frac{1}{2}\sum_v \left| \pitheta(v|c_t) - \piroll(v|c_t) \right|, \\
+    \DKL(c_t) &:= \DKL(\piroll(\cdot|c_t) \parallel \pitheta(\cdot|c_t)) = \sum_v \piroll(v|c_t) \log\frac{\piroll(v|c_t)}{\pitheta(v|c_t)}.
+\end{align}
+\end{definition}
+
+Consistent with TRPO \citep{schulman2015trust}, we utilize the KL divergence from the rollout policy to the training policy, $\DKL(\piroll \parallel \pitheta)$. This direction is preferred because (1) it aligns with the constraint formulation in TRPO, and (2) it is computationally tractable using stored rollout logits.
+
+Building on these token-level definitions, we define the corresponding sequence-level metrics:
+
+\begin{definition}[Maximum and sequence-level divergences]
+\label{def:seq-div}
+\begin{align}
+    \Dtvtokmax &:= \max_{t, c_t} \Dtvtok(c_t), \\
+    \Dkltokmax &:= \max_{t, c_t} \DKL(c_t), \\
+    \label{eq:kl-chain}
+    \Dklseq &:= \DKL(P^{\piroll}(\cdot|x) \parallel P^{\pitheta}(\cdot|x)) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\left[\DKL(c_t)\right].
+\end{align}
+\end{definition}
+
+We also define the \emph{expected per-position TV divergence} along the rollout distribution:
+\begin{equation}
+    \Dbar_t := \E_{c_t \sim d_t^{\piroll}}\!\left[\Dtvtok(c_t)\right],
+    \label{eq:dbar}
+\end{equation}
+which plays a central role in data-dependent bounds (\Cref{sec:adaptive-bound}).
+
+The relationship between the sequence-level KL and the token-level KL is governed by the chain rule. We formally state and prove this property below.
+
+\begin{lemma}[KL Chain Rule]
+\label{lem:kl-chain}
+For any time step $t$, the divergence between context distributions decomposes as:
+\begin{equation}
+    \DKL(d_t^{\piroll} \parallel d_t^{\pitheta}) = \sum_{s=1}^{t-1} \E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)].
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The joint trajectory distribution factorizes as $P^{\pi}(x, y_{<t}) = P(x) \prod_{s=1}^{t-1} \pi(y_s | c_s)$. The KL divergence is:
+\begin{align}
+    \DKL(d_t^{\piroll} \parallel d_t^{\pitheta}) &= \E_{d_t^{\piroll}}\left[ \sum_{s=1}^{t-1} \log \frac{\piroll(y_s|c_s)}{\pitheta(y_s|c_s)} \right] = \sum_{s=1}^{t-1} \E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)].
+\end{align}
+\end{proof}
+
+Note that the definition of $\Dklseq$ in Eq.~\eqref{eq:kl-chain} corresponds to the special case considering the full sequence.
+
+Finally, we recall Pinsker's inequality~\citep{pinsker1964information}, which bounds the Total Variation by the KL divergence:
+\begin{equation}
+    (\Dtvtok)^2 \le \frac{1}{2}\DKL.
+    \label{eq:pinsker}
+\end{equation}
+Since the Total Variation distance is symmetric, Pinsker's inequality applies regardless of the KL direction. We use $\DKL(\piroll \parallel \pitheta)$ as our primary measure of divergence throughout this work. Combined with the universal bound $\Dtvtok \le 1$, this yields:
+\begin{equation}
+    \Dtvtok \le \min\!\left(1,\;\sqrt{\frac{\DKL}{2}}\right).
+    \label{eq:pinsker-capped}
+\end{equation}
+
+
+%==============================================================================
+% THEORETICAL ANALYSIS
+%==============================================================================
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+We develop tighter error bounds for the surrogate objective. We firstly define the approximation error as:
+\begin{equation}
+    \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - L(\pitheta).
+\end{equation}
+This quantity measures the discrepancy between the true objective improvement and the surrogate improvement. Bounding $|\mathrm{Error}|$ is sufficient to guarantee that maximizing $L$ leads to a monotonic improvement in $J$.
+
+This error can be decomposed into a sum over timesteps using the Performance Difference Identity~\citep{kakade2002approximately}. Let the per-step advantage be $A_t^{\piroll}(c, y_t) := \E_{\piroll}[R \mid c, y_t] - \E_{\piroll}[R \mid c]$, and define the expected advantage as $g_t(c_t) := \E_{y_t \sim \pitheta}[A_t^{\piroll}(c_t, y_t)]$. The error is then given by:
+\begin{equation}
+    \mathrm{Error} = \sum_{t=1}^T \left( \E_{c_t \sim d_t^{\pitheta}}[g_t(c_t)] - \E_{c_t \sim d_t^{\piroll}}[g_t(c_t)] \right).
+    \label{eq:error-pdi}
+\end{equation}
+Intuitively, the error arises from evaluating the expected advantage $g_t$ under the mismatching context distribution $d_t^{\piroll}$ rather than the true distribution $d_t^{\pitheta}$.
+
+Our analysis relies on the following fundamental lemmas involving the advantage bound and context shift. We derive them formally below.
+
+\begin{lemma}[Martingale Property]
+\label{lem:martingale}
+For any context $c_t$, the expected advantage under the rollout policy is zero: $\E_{y_t \sim \piroll(\cdot|c_t)}[A_t(c_t, y_t)] = 0$.
+\end{lemma}
+\begin{proof}
+By definition, $V(c_t) = \E_{y_t \sim \piroll}[Q(c_t, y_t)]$ and $A_t = Q - V$. Thus, $\E_{\piroll}[A_t] = \E_{\piroll}[Q - V] = V - V = 0$.
+\end{proof}
+
+\begin{lemma}[Advantage Bound]
+\label{lem:advantage-bound}
+For rewards $R \in [0, 1]$, the expected advantage shift is bounded by:
+\begin{equation}
+    |g_t(c_t)| \le 2\Dtvtok(c_t) \le 2\min\!\left(1,\;\sqrt{\frac{\DKL(c_t)}{2}}\right).
+    \label{eq:advantage-capped}
+\end{equation}
+In particular, $|g_t(c_t)| \le 2$ always, and $\|g_t\|_\infty \le 2\min\!\left(1, \sqrt{\Dkltokmax/2}\right)$.
+\end{lemma}
+\begin{proof}
+Using the Martingale Property (\Cref{lem:martingale}), we can rewrite $g_t$:
+\begin{align}
+    g_t(c_t) &= \E_{\pitheta}[A_t] - \underbrace{\E_{\piroll}[A_t]}_{=0} = \sum_{y_t} (\pitheta(y_t|c_t) - \piroll(y_t|c_t)) \cdot A_t(c_t, y_t).
+\end{align}
+Since rewards are in $[0,1]$, we have $|A_t| \le 1$ (because $A_t = \E[R|c_t, y_t] - \E[R|c_t]$ and both conditional expectations lie in $[0,1]$). Applying H\"{o}lder's inequality:
+\begin{equation}
+    |g_t(c_t)| \le \sum_{y_t} |\pitheta(y_t|c_t) - \piroll(y_t|c_t)| \cdot 1 = 2\Dtvtok(c_t).
+\end{equation}
+Since $\Dtvtok(c_t) \le 1$ for any pair of distributions, and by Pinsker's inequality $\Dtvtok(c_t) \le \sqrt{\DKL(c_t)/2}$, the combined bound in Eq.~\eqref{eq:advantage-capped} follows.
+\end{proof}
+
+\begin{lemma}[Context Shift]
+\label{lem:context-shift}
+The context distribution shift satisfies:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\left(1,\;(t-1) \cdot \Dtvtokmax\right).
+    \label{eq:context-shift-tv}
+\end{equation}
+Moreover, by applying Pinsker's inequality to the marginal KL:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\left(1,\;\sqrt{\frac{(t-1) \cdot \Dkltokmax}{2}}\right).
+    \label{eq:context-shift-pinsker}
+\end{equation}
+\end{lemma}
+\begin{proof}
+\textbf{Coupling bound:} We proceed by induction. \textbf{Base case ($t=1$):} $d_1^{\pitheta} = d_1^{\piroll} = P(x)$, so the TV distance is 0. \textbf{Inductive step:} Using the coupling bound for product distributions:
+\begin{align}
+    \|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\|_{\mathrm{TV}} &\le \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} + \Dtvtokmax \nonumber \\
+    &\le (t-1)\Dtvtokmax + \Dtvtokmax \nonumber \\
+    &= t \cdot \Dtvtokmax.
+\end{align}
+Since $\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le 1$ for any pair of distributions, the capped bound Eq.~\eqref{eq:context-shift-tv} follows.
+
+\textbf{Pinsker bound:} By the KL chain rule (\Cref{lem:kl-chain}):
+\begin{equation}
+    \DKL(d_t^{\piroll} \parallel d_t^{\pitheta}) = \sum_{s=1}^{t-1}\E_{c_s \sim d_s^{\piroll}}[\DKL(c_s)] \le (t-1) \cdot \Dkltokmax.
+\end{equation}
+Applying Pinsker's inequality $\DTV \le \sqrt{\DKL/2}$ and capping at 1 yields Eq.~\eqref{eq:context-shift-pinsker}.
+\end{proof}
+
+\subsection{The Failure of Classical Bounds}
+
+The classical TRPO bound is derived by combining these lemmas via the inequality $|\E_P[f] - \E_Q[f]| \le 2\|f\|_\infty \cdot \DTV(P, Q)$. Using $\|g_t\|_\infty \le 2\Dtvtokmax$ and $\DTV(d_t^{\pitheta}, d_t^{\piroll}) \le (t-1)\Dtvtokmax$ without the caps, this yields:
+\begin{align}
+    |\mathrm{Error}| &\le 4(\Dtvtokmax)^2 \sum_{t=1}^T (t-1) = 2T(T-1)(\Dtvtokmax)^2 \le T(T-1) \cdot \Dkltokmax.
+\end{align}
+This bound scales as $O(T^2)$. For a typical reasoning task with sequence length $T = 4096$ and a divergence of $\Dkltokmax = 10^{-4}$, the bound yields $|\mathrm{Error}| \le 1677$. Since the maximum possible reward is 1, a bound of 1677 is \emph{vacuous}, offering no theoretical guarantee of improvement.
+
+We are now ready to introduce two tighter bounds that significantly reduce this scaling.
+
+\subsection{The Pinsker-Marginal Bound}
+
+
+Our key insight is to apply Pinsker's inequality~\citep{pinsker1964information, cover1999elements} to the \emph{marginal} KL divergence rather than summing the per-step TV distances.
+
+\begin{theorem}[Pinsker-Marginal Bound]
+\label{thm:pinsker-marginal}
+The approximation error is bounded by:
+\begin{equation}
+    |\mathrm{Error}| \le 4\min\!\left(1, \sqrt{\frac{\Dkltokmax}{2}}\right) \sum_{t=1}^{T} \min\!\left(1,\;\sqrt{\frac{(t-1) \cdot \Dkltokmax}{2}}\right).
+    \label{eq:pinsker-marginal-full}
+\end{equation}
+In the small-divergence regime where $\Dkltokmax \le 2/T$, all caps are inactive and this simplifies to:
+\begin{equation}
+    |\mathrm{Error}| \le \frac{4}{3} T^{3/2} \cdot \Dkltokmax.
+    \label{eq:pinsker-marginal-simple}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+From the context-shift decomposition (Eq.~\eqref{eq:error-pdi}) and the inequality $|\E_P[f] - \E_Q[f]| \le 2\|f\|_\infty \cdot \DTV(P,Q)$:
+\begin{equation}
+    |\mathrm{Error}| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}.
+    \label{eq:error-tv-decomp}
+\end{equation}
+
+\textbf{Advantage term.} By \Cref{lem:advantage-bound}:
+\begin{equation}
+    \|g_t\|_\infty \le 2\Dtvtokmax \le 2\min\!\left(1,\;\sqrt{\frac{\Dkltokmax}{2}}\right).
+    \label{eq:gt-capped}
+\end{equation}
+The first inequality is the Advantage Bound; the second applies Pinsker to $\Dtvtokmax$ and caps at the natural upper bound $\Dtvtokmax \le 1$.
+
+\textbf{Context shift term.} By Eq.~\eqref{eq:context-shift-pinsker} in \Cref{lem:context-shift}:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\left(1,\;\sqrt{\frac{(t-1) \cdot \Dkltokmax}{2}}\right).
+    \label{eq:dt-capped}
+\end{equation}
+
+Substituting Eq.~\eqref{eq:gt-capped} and Eq.~\eqref{eq:dt-capped} into Eq.~\eqref{eq:error-tv-decomp} yields the full bound Eq.~\eqref{eq:pinsker-marginal-full}.
+
+\textbf{Small-divergence simplification.} When $\Dkltokmax \le 2/T$, we have $(t-1)\Dkltokmax/2 \le (T-1)\Dkltokmax/2 < 1$ for all $t \le T$, and $\Dkltokmax/2 < 1/T < 1$. Thus all $\min(\cdot)$ caps are inactive, and:
+\begin{align}
+    |\mathrm{Error}| &\le 4 \cdot \sqrt{\frac{\Dkltokmax}{2}} \cdot \sum_{t=1}^T\sqrt{\frac{(t-1)\Dkltokmax}{2}} = 4 \cdot \frac{\Dkltokmax}{2} \sum_{k=0}^{T-1}\sqrt{k}.
+\end{align}
+Using $\sum_{k=0}^{T-1}\sqrt{k} \le \int_0^T \sqrt{x}\,dx = \frac{2}{3}T^{3/2}$:
+\begin{equation}
+    |\mathrm{Error}| \le 2\Dkltokmax \cdot \frac{2}{3}T^{3/2} = \frac{4}{3}T^{3/2} \cdot \Dkltokmax.
+\end{equation}
+\end{proof}
+
+For $T = 4096$ and $\Dkltokmax = 10^{-4}$, we have $2/T \approx 4.9 \times 10^{-4} > 10^{-4}$, confirming the small-divergence regime. The simplified bound yields $|\mathrm{Error}| \le 35.0$, a $48\times$ improvement over the classical result.
+
+\subsection{The Mixed Bound}
+
+We can also bound the context-shift TV uniformly using the full sequence-level KL divergence.
+
+\begin{theorem}[Mixed Bound]
+\label{thm:mixed}
+The approximation error is bounded by:
+\begin{equation}
+    |\mathrm{Error}| \le 4T \cdot \min\!\left(1, \sqrt{\frac{\Dkltokmax}{2}}\right) \cdot \min\!\left(1, \sqrt{\frac{\Dklseq}{2}}\right).
+    \label{eq:mixed-full}
+\end{equation}
+When both $\Dkltokmax \le 2$ and $\Dklseq \le 2$ (so both caps are inactive), this simplifies to:
+\begin{equation}
+    |\mathrm{Error}| \le 2T \cdot \sqrt{\Dkltokmax \cdot \Dklseq}.
+    \label{eq:mixed-simple}
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The marginal KL at any step $t$ is bounded by the full sequence KL:
+\begin{equation}
+    \DKL(d_t^{\piroll} \parallel d_t^{\pitheta}) = \sum_{s=1}^{t-1}\E[\DKL(c_s)] \le \sum_{s=1}^{T}\E[\DKL(c_s)] = \Dklseq.
+\end{equation}
+The inequality holds because all summands are non-negative. Applying Pinsker's inequality and capping at 1:
+\begin{equation}
+    \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}} \le \min\!\left(1,\;\sqrt{\frac{\Dklseq}{2}}\right).
+    \label{eq:mixed-context-shift}
+\end{equation}
+
+This bound is uniform in $t$, so summing over $T$ steps and using the capped advantage bound \eqref{eq:gt-capped}:
+\begin{align}
+    |\mathrm{Error}| &\le \sum_{t=1}^T 2 \cdot 2\min\!\left(1,\sqrt{\frac{\Dkltokmax}{2}}\right) \cdot \min\!\left(1,\sqrt{\frac{\Dklseq}{2}}\right) \nonumber \\
+    &= 4T \cdot \min\!\left(1,\sqrt{\frac{\Dkltokmax}{2}}\right) \cdot \min\!\left(1,\sqrt{\frac{\Dklseq}{2}}\right).
+\end{align}
+When both caps are inactive: $4T \cdot \sqrt{\Dkltokmax/2} \cdot \sqrt{\Dklseq/2} = 2T\sqrt{\Dkltokmax \cdot \Dklseq}$.
+\end{proof}
+
+This bound is strictly tighter when the divergence is sparse (i.e., $\Dklseq$ is small relative to $T \cdot \Dkltokmax$). For $\Dklseq = 0.01$, this yields $|\mathrm{Error}| \le 8.2$, a $200\times$ improvement over TRPO.
+
+
+\subsection{The Adaptive Bound via Importance-Ratio Decomposition}
+\label{sec:adaptive-bound}
+
+The Pinsker-Marginal and Mixed bounds both use the \emph{context-shift decomposition} (Eq.~\eqref{eq:error-pdi}), which bounds the advantage term by its worst case ($\|g_t\|_\infty \le 2\Dtvtokmax$) and then controls the context shift. This sacrifices information about the \emph{actual} per-position divergence $\Dbar_t$.
+
+We now derive a strictly tighter bound using an alternative decomposition based on importance ratios, which preserves this per-position structure. The key idea is to decompose the error into a per-token ``local deviation'' factor and a ``future-trajectory divergence'' factor, then apply Pinsker's inequality \emph{adaptively} to the future factor at each position.
+
+\begin{theorem}[Adaptive Bound]
+\label{thm:adaptive}
+The approximation error satisfies:
+\begin{equation}
+    |\mathrm{Error}| \le 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\left(1,\; \sqrt{\frac{(T-t)\,\Dkltokmax}{2}}\right),
+    \label{eq:adaptive-bound}
+\end{equation}
+where $\Dbar_t = \E_{c_t \sim d_t^{\piroll}}[\Dtvtok(c_t)]$ is the expected per-position TV divergence. Note that $$\Dbar_t \le \min(1, \sqrt{\Dkltokmax/2})$$ always. This bound is strictly tighter than both the Pinsker-Marginal bound (\Cref{thm:pinsker-marginal}) and the linear bound $4T \cdot \Dtvtokmax$ (recovered as a special case; see \Cref{rem:relationship}).
+\end{theorem}
+
+The proof is given in Appendix \ref{app:proof-adaptive}. The derivation proceeds via an importance-ratio decomposition of the error:
+
+\textbf{Step 1.} Decompose the exact error identity $J(\pitheta) - J(\piroll) = L'(\pitheta) - \Delta$ where $\Delta = \E_{y \sim \piroll}\!\big[R(y)\sum_t (\rho_t - 1)(1 - \prod_{j>t}\rho_j)\big]$ (this is an algebraic identity, not an approximation).
+
+\textbf{Step 2.} Apply the tower property to separate the per-token factor $|\rho_t - 1|$ from the future-trajectory factor $|1 - \prod_{j>t}\rho_j|$.
+Conditioned on $c_{t+1}$, the expected future factor equals $$2\DTV\!\big(P^{\piroll}(\cdot|c_{t+1}) \;\|\; P^{\pitheta}(\cdot|c_{t+1})\big),$$ where $P^{\pi}(\cdot|c_{t+1})$ denotes the distribution over future trajectories $(y_{t+1}, \ldots, y_T)$ under policy $\pi$.
+
+\textbf{Step 3.} Bound the future-trajectory TV adaptively at each position via:
+\begin{equation}
+    \DTV\!\big(P^{\piroll}(\cdot|c_{t+1}) \;\|\; P^{\pitheta}(\cdot|c_{t+1})\big) \le \min\!\left(1,\;\sqrt{\frac{(T-t)\,\Dkltokmax}{2}}\right),
+    \label{eq:future-tv-bound}
+\end{equation}
+using either the trivial bound $\DTV \le 1$ or Pinsker's inequality applied to the future conditional KL (which is $\le (T-t)\Dkltokmax$), whichever is smaller.
+
+\textbf{Step 4.} Since the min holds for \emph{every} realization of $c_{t+1}$, it can be pulled outside the outer expectation, yielding the bound with $\Dbar_t$.
+
+The result is tighter than the Pinsker-Marginal bound in two independent ways:
+\begin{enumerate}
+    \item \textbf{Data-dependent advantage:} The factor $\Dbar_t$ (expected per-position TV) replaces $\Dtvtokmax$ (worst-case per-position TV). When divergence is non-uniform across positions---e.g., concentrated at a few tokens due to MoE routing flips---$\Dbar_t \ll \Dtvtokmax$ at most positions.
+    \item \textbf{Adaptive future bounding:} The $\min(1, \cdot)$ caps the future-trajectory TV at 1 for positions near the end of the sequence (where $T-t$ is small), preventing the Pinsker estimate $\sqrt{(T-t)\Dkltokmax/2}$ from exceeding the trivial bound. For positions near the beginning, it uses the tighter Pinsker estimate.
+\end{enumerate}
+
+\begin{remark}[Relationship to prior bounds]
+\label{rem:relationship}
+Setting $\Dbar_t = \min(1, \sqrt{\Dkltokmax/2})$ (the worst-case per-position TV via Pinsker) and noting the sum identity $\sum_t f(T-t) = \sum_t f(t-1)$, we see that the Adaptive bound with uniform worst-case divergence recovers exactly the full Pinsker-Marginal bound Eq.~\eqref{eq:pinsker-marginal-full}, including all $\min(1,\cdot)$ caps. Setting $\Dbar_t = \Dtvtokmax$ and using only the $\min = 1$ branch recovers the linear bound $4T \cdot \Dtvtokmax$.\footnote{This linear special case was independently noted by \citet{qi2026rethinkingtrustregionllm}.} The Adaptive bound interpolates between these, always being at least as tight as either, and strictly tighter when both $\Dbar_t < \Dtvtokmax$ at some positions and the crossover point $t^* = T - 2/\Dkltokmax$ falls within $[1, T]$.
+\end{remark}
+
+
+\subsection{Summary and Implications}
+
+We combine all results into a unified adaptive bound. Defining the minorizer $\mathcal{M}(\pitheta) := L(\pitheta) - |\mathrm{Error}|_{\mathrm{b}}$ with the bound error, monotonic improvement ($J(\pitheta) > J(\piroll)$) is guaranteed if $\mathcal{M}(\pitheta) > 0$, where:
+\begin{equation}
+    |\mathrm{Error}|_{\mathrm{b}} = \min\left\{ B_{\mathrm{PM}}, \; B_{\mathrm{Mix}},\; B_{\mathrm{Adap}} \right\},
+    \label{eq:unified-bound}
+\end{equation}
+with:
+\begin{align}
+    B_{\mathrm{PM}} &= 4\min\!\left(1,\sqrt{\tfrac{\Dkltokmax}{2}}\right) \sum_{t=1}^{T}\min\!\left(1, \sqrt{\tfrac{(t-1)\Dkltokmax}{2}}\right), \label{eq:B-PM} \\
+    B_{\mathrm{Mix}} &= 4T \cdot \min\!\left(1,\sqrt{\tfrac{\Dkltokmax}{2}}\right) \cdot \min\!\left(1,\sqrt{\tfrac{\Dklseq}{2}}\right), \label{eq:B-Mix} \\
+    B_{\mathrm{Adap}} &= 4\sum_t \Dbar_t \cdot \min\!\left(1, \sqrt{\tfrac{(T\!-\!t)\Dkltokmax}{2}}\right). \label{eq:B-Adap}
+\end{align}
+Since each bound holds independently, the minimum is valid. The first two bounds are worst-case (depending only on $\Dkltokmax$ and $\Dklseq$), while the third is data-dependent (requiring the per-position divergences $\Dbar_t$). In the small-divergence regime ($\Dkltokmax \le 2/T$, $\Dklseq \le 2$), the caps are inactive and the expressions simplify to $\frac{4}{3}T^{3/2}\Dkltokmax$, $2T\sqrt{\Dkltokmax \cdot \Dklseq}$, and the adaptive sum, respectively.
+
+\begin{table*}[htbp]
+\centering
+\caption{%
+  Comparison of error bounds across two regimes ($T = 4096$).
+  \textbf{Small-divergence} ($\Dkltokmax = 10^{-4}$, $\Dklseq = 0.01$):
+  the $\min(1,\cdot)$ caps do not bind.
+  \textbf{Large-divergence} ($\Dkltokmax = 1$, $\Dklseq = 1$):
+  the context-shift cap in the Pinsker-Marginal bound binds (marked~$\dagger$);
+  the advantage and mixed context caps remain inactive ($\sqrt{1/2} \approx 0.71 < 1$).
+  Rows labelled ``no cap'' show what happens if the $\min(1,\cdot)$ is removed.%
+}
+\label{tab:bounds}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l c  r  r r}
+\toprule
+ & &
+  \multicolumn{1}{c}{\textbf{Small div.}} &
+  \multicolumn{2}{c}{\textbf{Large div.\ ($\Dkltokmax\!=\!1$)}} \\
+  \cmidrule(lr){4-5}
+\textbf{Bound} &
+  \textbf{Scaling} &
+  \multicolumn{1}{c}{$\Dkltokmax\!=\!10^{-4}$} &
+  \multicolumn{1}{c}{no cap} &
+  \multicolumn{1}{c}{with cap} \\
+\midrule
+Classical (TRPO)
+  & $O(T^{2})$
+  & $1{,}677$
+  & \multicolumn{2}{c}{$1.68 \times 10^{7}$} \\[4pt]
+%%% Linear %%%
+Linear
+  & $O(T)$
+  & $115.9$
+  & \multicolumn{2}{c}{$11{,}585$} \\[4pt]
+%%% Pinsker-Marginal %%%
+Pinsker-Marginal
+  & $O(T^{3/2})$
+  & $35.0$
+  & $3.49 \times 10^{5}$
+  & $11{,}582^{\dagger}$ \\[4pt]
+%%% Mixed %%%
+Mixed
+  & $O(T)$
+  & $8.2$
+  & \multicolumn{2}{c}{$8{,}192$} \\[4pt]
+%%% Adaptive %%%
+\textbf{Adaptive}
+  & $\le$ \textbf{all above}
+  & $\mathbf{\le 8.2}^{*}$
+  & —
+  & $\mathbf{\le 8{,}192}^{*}$ \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize
+$^{\dagger}$\,The context-shift cap $\min\!\bigl(1,\sqrt{(t\!-\!1)\Dkltokmax/2}\bigr)$ saturates
+at~$1$ for $4{,}094$ of $4{,}096$ positions ($t \ge 3$),
+reducing the uncapped PM value by~$30{\times}$.\quad
+$^{*}$\,Adaptive bound takes the minimum of all rows above
+(Mixed in both regimes).}
+\end{table*}
+
+Crucially, all bounds depend on $\Dkltokmax$, the maximum token-level divergence. This confirms that the error is inherently a \emph{sequence-level} quantity; controlling the average token KL is insufficient. We formalize the impossibility of removing this dependence in the following proposition.
+
+\begin{proposition}
+\label{prop:no-pure-seq}
+There exists no function $f: \mathbb{R}^+ \to \mathbb{R}^+$ such that $\Dkltokmax \le f(\Dklseq)$ for all policy pairs.
+\end{proposition}
+
+\begin{proof}
+Consider a context $c^*$ that occurs with probability $\epsilon$ under the rollout distribution $d_t^{\piroll}$. Let the divergence be concentrated solely at this context: $\DKL(c^*) = 1$ and  $\DKL(c) = 0$ for all $c \neq c^*$.
+
+Then, the maximum token divergence is $\Dkltokmax = 1$ (constant, independent of $\epsilon$). However, the sequence-level divergence is $\Dklseq = \epsilon \cdot 1 + (1-\epsilon) \cdot 0 = \epsilon$.
+As $\epsilon \to 0$, $\Dklseq \to 0$ while $\Dkltokmax$ remains 1. Thus, knowing only that $\Dklseq$ is small provides no upper bound on $\Dkltokmax$.
+\end{proof}
+
+This result necessitates our approach: sequence-level masking based on the \emph{maximum} token divergence is required because token-level operations cannot control the worst-case error that drives training collapse.
+
+%==============================================================================
+% TOKEN-LEVEL FAILURE
+%==============================================================================
+\section{Why Token-Level Methods Fail}
+\label{sec:token-failure}
+
+Our theoretical analysis establishes that the approximation error is strictly bounded by $\Dkltokmax$---a property of the \emph{entire sequence}. In this section, we analyze why standard token-level interventions, such as PPO clipping or token masking, are mathematically insufficient to control this quantity, thereby failing to prevent optimization collapse in the presence of off-policy mismatch.
+
+\subsection{PPO Clipping and Gradient Leakage}
+
+PPO \citep{schulman2017proximal} attempts to constrain updates via a clipped surrogate objective:
+\begin{equation}
+    L^{\mathrm{CLIP}}(\pitheta) = \E\left[ \sum_{t=1}^T \min\left( \rho_t A_t, \, \mathrm{clip}(\rho_t, 1-\epsilon, 1+\epsilon) A_t \right) \right].
+\end{equation}
+
+While effective for standard control tasks, this mechanism fails when faced with the severe logit discrepancies common in LLMs.
+The failure mode is structural: the clipping operator $\mathrm{clip}(\cdot)$ is asymmetric. As detailed in \Cref{tab:ppo_clipping}, the mechanism provides safety when the policy attempts to increase the probability of a ``good'' action (Positive Advantage). However, it offers no protection against the penalization of ``bad'' actions (Negative Advantage) when the importance ratio $\rho_t$ is erroneously high (e.g., $\rho_t \gg 1+\epsilon$).
+
+\begin{table}[h]
+\centering
+\caption{PPO Clipping Analysis. When off-policy mismatch causes a spike in $\rho_t$ (e.g., due to MoE routing jitter), negative advantages result in \textbf{unbounded} gradients.}
+\label{tab:ppo_clipping}
+\begin{tabular}{lccl}
+    \toprule
+    \textbf{Ratio} $\rho_t$ & \textbf{Advantage} $A_t$ & \textbf{Objective Value} & \textbf{Outcome} \\
+    \midrule
+    $> 1+\epsilon$ & $> 0$ & $(1+\epsilon)A_t$ & Clipped (Safe) \\
+    $< 1-\epsilon$ & $< 0$ & $(1-\epsilon)A_t$ & Clipped (Safe) \\
+    $> 1+\epsilon$ & $< 0$ & $\rho_t A_t$ & \textbf{Unclipped (Unbounded)} \\
+    $< 1-\epsilon$ & $> 0$ & $\rho_t A_t$ & \textbf{Unclipped (Unbounded)} \\
+    \bottomrule
+\end{tabular}
+\end{table}
+
+In standard RL, this behavior is intended to penalize actions that are much more likely under the training policy but yield poor returns. However, in the context of mismatch in LLMs (e.g., implementation divergence), a large $\rho_t$ often represents numerical noise rather than a meaningful policy shift. Consequently, the optimizer receives a massive, erroneous gradient update that pushes the weights destructively, leading to the training collapse observed in practice.
+
+\subsection{The Insufficiency of Token Masking}
+
+A common heuristic to mitigate this is \emph{token masking}: zeroing out the gradient contribution of specific tokens where $|\log \rho_t| > \delta$. The modified gradient becomes:
+\begin{equation}
+    \nabla \approx \sum_{t=1}^T M_t \cdot \rho_t \nabla \log \pitheta(y_t|c_t) \cdot A,
+\end{equation}
+where $M_t = 0$ if the divergence condition is met.
+
+While this prevents immediate gradient explosion, it fails to satisfy the theoretical requirements for monotonic improvement. The error bounds derived in \Cref{sec:theory} depend on the divergence between the distributions $\piroll$ and $\pitheta$ over the \emph{entire trajectory}. Masking a specific token $t$ in the gradient computation does not alter the fact that the rollout distribution $\piroll$ has diverged from $\pitheta$. The quantity $\Dkltokmax$ remains high, rendering the error bound vacuous.
+We formalize this limitation in the following proposition:
+
+\begin{proposition}
+\label{prop:token-masking-fails}
+\textbf{Token masking preserves vacuous bounds.} Let $\mathcal{T}_{\mathrm{mask}}$ be a token-level masking operator. The maximum token-level divergence of the underlying process remains unchanged:
+\begin{equation}
+    \Dkltokmax(\pitheta, \piroll) = \Dkltokmax(\mathcal{T}_{\mathrm{mask}}(\pitheta), \piroll).
+\end{equation}
+Consequently, token masking alters the optimization direction but fails to restore the validity of the monotonic improvement guarantee.
+\end{proposition}
+
+\subsection{The Sequence-Level Imperative}
+
+Neither approach satisfies the theoretical requirements: standard PPO suffers from severe gradient leakage, while token masking prevents leakage but leaves $\Dkltokmax$ unchanged, so the error bound remains vacuous. The root cause is that the approximation error is cumulative and depends on the worst-case divergence in the sequence. If \emph{any} token violates the trust region, the validity of the entire trajectory as an estimator for $J(\pitheta)$ is compromised. Therefore, relying on the tighter bounds derived in this work, we must exclude the \emph{entire sequence} from the gradient computation, as proposed in Trust Region Masking (TRM).
+
+%==============================================================================
+% ALGORITHM
+%==============================================================================
+\section{Trust Region Masking}
+\label{sec:algorithm}
+
+The theoretical analysis in \Cref{sec:theory} establishes that the approximation error is governed by $\Dkltokmax$---a sequence-level quantity. Consequently, standard token-level interventions (such as PPO clipping) are insufficient to guarantee monotonic improvement. To address this, we propose \textbf{Trust Region Masking (TRM)}, which masks \emph{entire sequences} that violate the trust region constraints.
+
+\subsection{The Masked Surrogate Objective}
+
+We define a binary sequence mask $M(x, y) = \mathbb{I}[(x, y) \in \text{Trust Region}]$ and the corresponding masked surrogate objective:
+\begin{equation}
+    L_{\mathrm{masked}}(\pitheta) = \E_{\piroll}\left[ M(x, y) \cdot A(x, y) \cdot \sum_{t=1}^T \rho_t \right].
+\end{equation}
+The gradient is estimated using a batch of $N$ samples:
+\begin{equation}
+    \nabla L_{\mathrm{masked}} \approx \frac{1}{N} \sum_{i=1}^N M_i \cdot A^{(i)} \cdot \sum_{t=1}^T \rho_t^{(i)} \nabla \log \pitheta(y_t^{(i)}|c_t^{(i)}).
+\end{equation}
+Crucially, the normalization factor is the \emph{total} batch size $N$, not the count of accepted sequences. This ensures that rejected sequences effectively contribute zero gradient, preserving the unbiased nature of the estimate over the valid trust region. This acts as a rejection sampling mechanism: we simply choose not to learn from trajectories where the off-policy divergence renders the gradient unreliable.
+
+\subsection{Implementation and Divergence Estimation}
+
+\paragraph{Exact KL Computation.}
+Following TRPO~\citep{schulman2015trust}, we utilize the forward KL divergence $\DKL(\piroll \parallel \pitheta)$. Because $\piroll$ logits are stored during data generation and $\pitheta$ logits are computed during the training forward pass, this quantity can be computed \emph{exactly} without extra inference cost:
+\begin{equation}
+    \DKL(c_t) = \sum_{v \in \mathcal{V}} \piroll(v|c_t) \log \frac{\piroll(v|c_t)}{\pitheta(v|c_t)}.
+\end{equation}
+This eliminates the high variance associated with sample-based estimators used in standard PPO.
+
+
+\paragraph{Masking Criterion.}
+We employ a max-based criterion $M(x,y) = \mathbb{I}[\max_t \DKL(c_t) \le \delta]$. This choice directly bounds $\Dkltokmax$, ensuring the preconditions for our theoretical bounds are met. A key property of this criterion is \emph{length-invariance}: unlike sum-based constraints, the threshold $\delta$ does not need to be adjusted as sequence length $T$ grows. In practice, to tolerate occasional outliers while maintaining robustness, one may combine this with an average-based constraint: $\frac{1}{T}\sum_t \DKL(c_t) \le \delta_{\mathrm{avg}}$.
+
+\paragraph{Sample-based Approximation.}
+In memory-constrained settings where storing full rollout logits is infeasible, one must rely on sample-based estimates derived from the importance ratio $\rho_t$. We recommend distinct criteria:
+\begin{enumerate}
+    \item \textbf{Max-Criterion ($k_2$):} We recommend the symmetric estimator $f(\rho) = \frac{1}{2}(\log \rho)^2$. This metric detects divergence symmetrically, flagging both support collapse ($\rho \to 0$) and impulse noise ($\rho \to \infty$) equally.
+    \item \textbf{Average-Criterion ($k_3$):} We recommend the estimator $f(\rho) = \rho - 1 - \log\rho$. This estimator is preferred because it is strictly non-negative and \emph{unbiased} ($\E[f(\rho)] = \DKL$), ensuring that the sample average converges to the true sequence KL.
+\end{enumerate}
+We provide a more detailed explanation in Appendix~\ref{app:k3}.
+
+\begin{algorithm}[t]
+\caption{Trust Region Masking (TRM)}
+\label{alg:trm}
+\begin{algorithmic}[1]
+    \REQUIRE Threshold $\delta$; Batch $\mathcal{D} = \{(x^{(i)}, y^{(i)})\}_{i=1}^N$; Stored $\piroll$ logits
+    \STATE \textbf{Forward Pass:} Compute logits for $\pitheta$ on all data $(x, y) \in \mathcal{D}$
+    \FOR{each sequence $i \in \{1, \dots, N\}$}
+        \STATE Compute per-token KL: $\DKL(c_t^{(i)}) = \DKL(\piroll(\cdot|c_t^{(i)}) \parallel \pitheta(\cdot|c_t^{(i)}))$
+        \STATE Compute mask: $M_i \leftarrow \mathbb{I}\left[\max_{t} \DKL(c_t^{(i)}) \le \delta\right]$
+    \ENDFOR
+    \STATE \textbf{Backward Pass:} Compute $\nabla L_{\mathrm{masked}}$ using only samples where $M_i = 1$
+    \STATE \textbf{Update:} $\theta \leftarrow \theta + \alpha \cdot \nabla L_{\mathrm{masked}}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Theoretical Guarantees}
+
+We formalize the properties of TRM in \Cref{thm:trm-guarantee}. By enforcing the trust region via rejection rather than penalty, TRM ensures the approximation error remains within the non-vacuous bounds derived in \Cref{sec:theory}.
+
+\begin{theorem}[TRM Guarantee]
+\label{thm:trm-guarantee}
+Algorithm~\ref{alg:trm} with exact KL computation and threshold $\delta$ satisfies:
+\begin{enumerate}
+    \item \textbf{Bounded Divergence:} For all accepted sequences (where $M=1$), $\max_t \DKL(c_t) \le \delta$.
+    \item \textbf{Length-Invariant Threshold:} The validity of the bound depends only on $\delta$, not sequence length $T$.
+    \item \textbf{Non-Vacuous Error Bound:} If additionally $\Dkltokmax \le \delta$ holds globally (i.e., for all reachable contexts, not just those observed in the batch), then:
+    \begin{equation*}
+        |J(\pitheta) - J(\piroll) - L(\pitheta)| \le \min\left\{ B_{\mathrm{PM}}(\delta),\; B_{\mathrm{Mix}}(\delta),\; B_{\mathrm{Adap}}(\delta) \right\},
+    \end{equation*}
+    where $B_{\mathrm{PM}}$, $B_{\mathrm{Mix}}$, $B_{\mathrm{Adap}}$ are as in Eqs.~\eqref{eq:B-PM}--\eqref{eq:B-Adap} with $\Dkltokmax$ replaced by $\delta$, and $L$ is the \emph{full} (unmasked) surrogate. Writing $B(\delta) := \min\{B_{\mathrm{PM}}(\delta),\, B_{\mathrm{Mix}}(\delta),\, B_{\mathrm{Adap}}(\delta)\}$, the condition $L(\pitheta) > B(\delta)$ guarantees monotonic improvement: $J(\pitheta) > J(\piroll)$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+\textbf{(1) Bounded Divergence:} By construction of Algorithm~\ref{alg:trm}, $M_i = 1$ only if $\max_t \DKL(c_t^{(i)}) \le \delta$. Thus, for all accepted sequences, $\max_t \DKL(c_t) \le \delta$.
+
+\textbf{(2) Length-Invariant Threshold:} The masking criterion $\max_t \DKL(c_t) \le \delta$ depends only on the per-token maximum, not on any sum over $T$. Hence, $\delta$ is a fixed constant independent of sequence length.
+
+\textbf{(3) Non-Vacuous Error Bound:} When $\Dkltokmax \le \delta$ globally, Theorems~\ref{thm:pinsker-marginal}, \ref{thm:mixed}, and \ref{thm:adaptive} apply directly:
+\begin{equation*}
+    |J(\pitheta) - J(\piroll) - L(\pitheta)| \le \min\left\{ B_{\mathrm{PM}}(\delta),\; B_{\mathrm{Mix}}(\delta),\; B_{\mathrm{Adap}}(\delta) \right\}.
+\end{equation*}
+Since $J(\pitheta) - J(\piroll) \ge L(\pitheta) - B(\delta)$, $L(\pitheta) > B(\delta)$ implies $J(\pitheta) > J(\piroll)$.
+\end{proof}
+
+\begin{remark}[Role of masking in the guarantee]
+\label{rem:masking-role}
+The error bound in Part~(3) involves the \emph{full} surrogate $L$, while TRM computes the \emph{masked} surrogate $L_{\mathrm{masked}} = L - L_{\mathrm{rej}}$, where $L_{\mathrm{rej}} = \E_{\piroll}[(1-M) \cdot A \cdot \sum_t \rho_t]$ denotes the contribution from rejected sequences.
+TRM serves two complementary roles:
+\begin{enumerate}
+    \item \textbf{Verification:} A high acceptance rate (most sampled trajectories satisfy $\max_t \DKL(c_t) \le \delta$) provides empirical evidence that $\Dkltokmax \le \delta$ holds globally, validating the precondition of Part~(3).
+    \item \textbf{Robust gradient estimation:} By discarding trajectories with large importance ratios, the masked gradient $\nabla L_{\mathrm{masked}}$ avoids the erroneous, high-variance updates from mismatched data (cf.\ \Cref{sec:token-failure}). When the acceptance rate is high, $L_{\mathrm{masked}} \approx L$, so $L_{\mathrm{masked}} > B(\delta)$ approximately guarantees monotonic improvement.
+\end{enumerate}
+We recommend monitoring the acceptance rate: a rate above $70\%$ provides reasonable confidence that $\Dkltokmax \approx \delta$ and $L_{\mathrm{masked}} \approx L$.
+\end{remark}
+
+\paragraph{Numerical Illustration.} Revisiting the scenario from \Cref{tab:bounds} ($T = 4096$, $\delta = 10^{-4}$), when $\Dkltokmax \le \delta$ holds globally, the error is bounded by \textbf{8.2} (Mixed bound) or \textbf{35.0} (Pinsker-Marginal). This contrasts sharply with the classical bound of \textbf{1677}, confirming that TRM---by enforcing and verifying this condition---provides the first theoretically grounded optimization path for long-horizon LLM reasoning.
+
+\paragraph{Length bias and length-neutral extensions.} While the TRM masking criterion $\max_t \DKL(c_t) \le \delta$ is length-invariant in its \emph{threshold}, the \emph{probability of rejection} can increase with sequence length $T$ because longer sequences have more tokens that could individually violate the threshold. This may introduce a systematic bias against longer responses in practice. In Appendix \ref{app:length-neutral}, we propose a length-neutral variant (LN-TRM) that mitigates this concern using normalized position-aware error scores derived from the Adaptive bound, while preserving the theoretical guarantees up to controlled relaxation factors.
+
+
+%==============================================================================
+% EXPERIMENTS
+%==============================================================================
+
+\section{Experiments}
+\label{sec:experiments}
+
+In this section, we provide empirical evidence validating the effectiveness of our Trust Region Masking (TRM).
+We conduct experiments on mathematical reasoning using the vanilla Qwen3-8B-Base model under Zero-RL setup~\citep{guo2025deepseek}. The training dataset is a deduplicated version of DAPO-MATH-17k, and evaluation is performed on the AIME25 benchmark. We utilize GRPO~\citep{shao2024deepseekmath} for advantage approximation with group size 16. The train batch size and rollout batch size are both set to 32, with a learning rate of $1\times 10^{-6}$. For robust evaluation, we use sampling parameters $\text{Top-P}=0.95$ and $\text{Temperature}=1.0$, reporting the avg@32 score.
+
+To simulate a realistic, high-throughput training environment, we introduce backend discrepancies by using vLLM for the inference (rollout) engine and PyTorch FSDP for the training engine. As discussed in Appendix~\ref{app:mismatch}, the accumulation of floating-point differences between these backends acts as a primary source of off-policy divergence. To explicitly measure this mismatch between the rollout policy $\piroll$ and the training policy $\pitheta$ during the update phase, we define the \emph{Log Absolute Perplexity (PPL) Gap}. For a batch size $N$, this is calculated as:
+\begin{equation}
+\begin{aligned}
+    \Delta_{\mathrm{PPL}} = \frac{1}{N} \sum_{i=1}^N \Bigg| \frac{1}{T_i} \sum_{t=1}^{T_i} \log \pi_{\theta}(y_t^{(i)} \mid c_t^{(i)}) - \frac{1}{T_i}\sum_{t=1}^{T_i}\log \pi_{\mathrm{roll}}(y_t^{(i)} \mid c_t^{(i)}) \Bigg|.
+\end{aligned}
+\end{equation}
+This metric quantifies the average per-token log-probability drift attributable to backend discrepancies.
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_tokenis_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{Comparison of Token IS and PPO Clipping.}
+    \label{fig:vs_tokenis}
+\end{figure}
+
+We first compare original Token-level Importance Sampling (Token IS) against Token-level PPO Clipping. For the clipping method, we adopt the range settings from DAPO~\citep{yu2025dapo}, clipping ratios to $[0.8, 1.28]$. As shown in \Cref{fig:vs_tokenis}, token-level PPO Clipping exacerbates training instability, resulting in a significantly larger PPL Gap and degraded performance. This empirical finding aligns with our analysis in \Cref{sec:token-failure}: standard token-level interventions are mathematically insufficient to control $\Dkltokmax$---a property of the \emph{entire sequence}. Consequently, they fail to prevent optimization collapse when faced with off-policy mismatch.
+
+
+
+Then we demonstrate the effectiveness of our proposed sequence-level method, TRM. We compare TRM against standard PPO Clipping using two variants: \textbf{TRM-Max}, which masks sequences using a threshold $\delta=0.05$, and \textbf{TRM-Avg}, which uses a threshold $\delta=0.001$.
+
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_single_criterion_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{Empirical comparison between TRM and standard PPO Clipping.}
+    \label{fig:vs_ppo_clip}
+\end{figure}
+
+As illustrated in \Cref{fig:vs_ppo_clip}, standard PPO Clipping fails to prevent collapse; the validation score degrades rapidly as the training progresses, correlating with an explosion in the PPL Gap. This confirms our theoretical finding in \Cref{sec:token-failure} that token-level clipping allows gradient leakage from mismatched trajectories. In contrast, both TRM variants maintain training stability. By rejecting entire sequences where implementation divergence exceeds the trust region, TRM keeps the PPL Gap bounded and ensures consistent improvement on the AIME25 benchmark.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.65\linewidth]{figs/vs_multi_criterion_rollout_correction_log_ppl_abs_diff_val_test_score_extra_score_deepscaler_aime25.pdf}
+    \caption{Effectiveness of Combined Criterion.}
+    \label{fig:combined_criterion}
+\end{figure}
+
+
+In practice, one can also apply both Max and Avg criteria simultaneously, which allows for the use of looser thresholds. As demonstrated in \Cref{fig:combined_criterion}, while TRM-Max (with $\delta=0.1$) and TRM-Avg (with $\delta=0.002$) individually fail to prevent training collapse due to the relaxed constraints, their combination (TRM-Max\&Avg) successfully stabilizes training. This suggests that the two criteria are complementary: the max constraint catches extreme outliers, while the average constraint limits accumulated drift. Therefore, we recommend monitoring health metrics such as the Log Absolute PPL Gap to determine the appropriate criterion and thresholds when deploying TRM in real-world applications.
+
+
+
+%==============================================================================
+% DISCUSSION
+%==============================================================================
+\section{Conclusion and Discussion}
+\label{sec:conclusion}
+
+Off-policy mismatch is unavoidable in modern LLM-RL due to implementation divergence. We show that classical trust region bounds, scaling as $O(T^2)$, become theoretically vacuous for long-horizon tasks common in reasoning domains. By deriving the Pinsker-Marginal bound ($O(T^{3/2})$), the Mixed bound ($O(T)$), and the Adaptive bound (which strictly generalizes the Pinsker-Marginal bound via a trajectory-level importance-ratio decomposition with per-position Pinsker application), we establish that valid policy improvement depends strictly on the \emph{maximum} token-level divergence---a quantity uncontrollable by standard token-level clipping. The minimum over all three bounds is tighter than any individual bound across divergence regimes. Consequently, we propose Trust Region Masking (TRM), a sequence-level intervention that masks entire sequences violating trust region constraints, thereby enabling the first non-vacuous monotonic improvement guarantees for long-horizon LLM-RL.
+
+Our analysis extends beyond the specific algorithm proposed here, applying to any method utilizing the standard surrogate objective, including REINFORCE and various PPO derivatives. The fundamental insight---that trust region constraints must be enforced at the sequence level rather than the token level---is universal for autoregressive generation.
+While the strict max-criterion used in TRM ensures theoretical rigor, it can be aggressive in high-noise regimes. The average-criterion offers a pragmatic relaxation, trading some theoretical tightness for improved sample efficiency. We additionally identify \emph{length bias} as a practical concern for any sequence-level masking method and propose length-neutral extensions in Appendix \ref{app:length-neutral}. We recommend that practitioners monitor the off-policy mismatch gap, masking rate, and length-stratified rejection rates as diagnostic tools. In future work, we will explore tighter bounds by leveraging distributional information beyond bounded reward assumptions, as well as adaptive thresholds and soft masking (e.g., importance weighting) to further enhance stability in complex agentic workflows.
+
+
+
+\bibliography{ref}
+\bibliographystyle{plainnat}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+
+\section{Details on Off-Policy Mismatch in LLM-RL}
+\label{app:mismatch}
+
+Prior work has established that off-policy mismatch ($\piroll \ne \pitheta$) is unavoidable in modern LLM-RL pipelines due to system-level constraints~\citep{liu2025rlcollapse, yao2025offpolicy}. Here, we detail the specific sources of this divergence.
+
+\subsection{Backend Discrepancies}
+
+To maximize throughput, modern LLM infrastructures employ distinct software stacks for inference and training~\citep{kwon2023efficient, zheng2024sglang, shoeybi2019megatron}. These differences are summarized below:
+
+\begin{center}
+\begin{tabular}{ll}
+    \toprule
+    \textbf{Inference (vLLM/SGLang)} & \textbf{Training (Megatron/FSDP)} \\
+    \midrule
+    PagedAttention & FlashAttention-2 \\
+    FP8/INT8 KV-cache quantization & BF16/FP32 accumulation \\
+    Aggressive operator fusion & Tensor parallelism \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Floating-point Non-associativity.} The root cause of divergence is the non-associativity of floating-point arithmetic: $(a \oplus b) \oplus c \neq a \oplus (b \oplus c)$. In attention mechanisms, the softmax denominator requires reducing over the context length. Different parallel reduction orders yield slightly different denominators. While these errors are negligible for a single token, they compound autoregressively over $T$ steps, leading to significant trajectory divergence.
+
+\subsection{Mixture-of-Experts (MoE) Routing Discontinuities}
+
+In MoE architectures~\citep{shazeer2017outrageously, liu2024deepseek}, the output is computed as:
+\begin{equation}
+    y = \sum_{i \in \mathcal{K}} g_i(x) \cdot E_i(x), \quad \mathcal{K} = \mathrm{Top\text{-}K}(h(x)),
+\end{equation}
+where $h(x)$ represents the router logits. The $\mathrm{Top\text{-}K}$ operator is \emph{discontinuous}. If numerical precision differences cause a shift $h_{\mathrm{inf}} = h_{\mathrm{train}} + \epsilon$ such that $|h_{(K)} - h_{(K+1)}| < \|\epsilon\|$, the set of selected experts $\mathcal{K}$ changes.
+
+\paragraph{Support Collapse.} A change in expert selection can drastically alter the output distribution. For instance, if $\piroll(\text{``apple''}) = 0.9$ but a routing flip causes $\pitheta(\text{``apple''}) \approx 0.001$, the importance ratio spikes to $\rho \approx 900$. This creates \emph{impulse noise} in the gradient estimator, destabilizing training.
+
+\subsection{Distributed Staleness}
+
+Large-scale training typically employs a decoupled actor-learner architecture~\citep{espeholt2018impala, nair2015massively}:
+\begin{itemize}
+    \item \textbf{Actors} generate rollouts using parameters $\theta_{\mathrm{old}}$.
+    \item \textbf{Learner} updates parameters to $\theta_{\mathrm{new}}$.
+    \item \textbf{Latency} introduces a lag of $k$ gradient steps between generation and consumption.
+\end{itemize}
+Consequently, $\theta_{\mathrm{train}} = \theta_{\mathrm{rollout}} + \sum_{i=1}^k \Delta\theta_i$, ensuring $\piroll \neq \pitheta$ even if implementations were identical.
+
+\paragraph{Summary.} These factors render off-policy mismatch \emph{systemic} rather than incidental. Robust theoretical bounds must therefore account for $\piroll \neq \pitheta$ explicitly.
+
+
+
+\section{Sample-Based Estimators ($k_2$ and $k_3$)}
+\label{app:k3}
+
+In settings where storing full logits is infeasible, we rely on sample-based estimators computed from the importance ratio $\rho_t = \pitheta(y_t|c_t) / \piroll(y_t|c_t)$. We analyze two estimators: $k_3$ (for unbiased averaging) and $k_2$ (for symmetric max-filtering).
+
+
+\subsection{The $k_3$ Estimator for Averaging}
+The $k_3$ estimator is defined as $f(\rho) = \rho - 1 - \log \rho$.
+\begin{itemize}
+    \item \textbf{Unbiased:} It is the only estimator where $\E_{y \sim \piroll}[k_3(\rho)] = \DKL(\piroll \parallel \pitheta)$ exactly. This makes it ideal for the \emph{average-based criterion} $\frac{1}{T}\sum k_3$, as the sample mean converges to the true sequence KL by the Law of Large Numbers.
+    \item \textbf{Non-negative:} $k_3 \ge 0$ for all $\rho$, preventing cancellation artifacts common with simple log-ratios.
+    \item \textbf{Asymmetric:} The $k_3$ estimator penalizes $\rho \gg 1$ much more heavily than $\rho \ll 1$. This is correct for averaging (since high $\rho$ values are rare under $\piroll$), but makes it poor for detecting single-token outliers.
+\end{itemize}
+
+\subsection{The $k_2$ Estimator for Max-Filtering}
+The $k_2$ estimator is defined as $f(\rho) = \frac{1}{2}(\log \rho)^2$. This is the second-order Taylor approximation of the KL divergence.
+\begin{itemize}
+    \item \textbf{Symmetric:} $k_2(\rho) = k_2(1/\rho)$. It penalizes deviations in either direction equally.
+    \item \textbf{Robustness:} For the \emph{max-based criterion}, we require a detector that flags both ``support collapse'' (where $\pitheta \ll \piroll$, $\rho \to 0$) and ``impulse noise'' (where $\pitheta \gg \piroll$, $\rho \to \infty$). The $k_3$ estimator fails to flag $\rho \to 0$ aggressively (e.g., $k_3(0.01) \approx 3.6$), whereas $k_2$ treats it symmetrically to $\rho=100$ ($k_2 \approx 10.6$).
+    \item \textbf{Usage:} We recommend $k_2$ specifically for the max-threshold check: $M_i = \mathbb{I}[\max_t k_2(\rho_t) \le \delta]$.
+\end{itemize}
+
+\paragraph{Caveat.} Both $k_2$ and $k_3$ are single-sample approximations. While effective heuristics, the rigorous guarantees of \Cref{thm:trm-guarantee} hold only when using the exact KL computed from full logits.
+
+
+%==============================================================================
+% NEW APPENDIX: PROOF OF ADAPTIVE BOUND
+%==============================================================================
+\section{Proof of the Adaptive Bound}
+\label{app:proof-adaptive}
+
+We provide the full proof of \Cref{thm:adaptive}, which combines an importance-ratio decomposition of the error with an adaptive per-position application of Pinsker's inequality.
+
+\subsection{The Importance-Ratio Error Decomposition}
+
+We begin from an exact identity for the error. Let $\mu = \piroll$ and $\pi = \pitheta$ for brevity. The surrogate can be written as:
+\begin{equation}
+    L'_\mu(\pi) = \E_{y \sim \mu}\!\left[R(y)\sum_{t=1}^{T}\!\left(\frac{\pi_t}{\mu_t} - 1\right)\right],
+    \label{eq:ir-surrogate}
+\end{equation}
+where $\pi_t := \pi(y_t|c_t)$, $\mu_t := \mu(y_t|c_t)$, and $R(y) \in [0,1]$.
+
+\begin{lemma}[Exact Error Identity]
+\label{lem:exact-identity}
+The performance difference satisfies:
+\begin{equation}
+    J(\pi) - J(\mu) = L'_\mu(\pi) - \Delta(\mu, \pi),
+\end{equation}
+where:
+\begin{equation}
+    \Delta(\mu, \pi) = \E_{y \sim \mu}\!\left[R(y)\sum_{t=1}^{T}\left(\frac{\pi_t}{\mu_t} - 1\right)\!\left(1 - \prod_{j=t+1}^{T}\frac{\pi_j}{\mu_j}\right)\right].
+    \label{eq:delta-exact}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+We verify this algebraic identity. Using the telescoping decomposition of the full importance weight:
+\begin{equation}
+    \prod_{t=1}^T \rho_t - 1 = \sum_{t=1}^T (\rho_t - 1)\prod_{j=t+1}^T \rho_j,
+\end{equation}
+the true performance difference is:
+\begin{align}
+    J(\pi) - J(\mu) &= \E_{y \sim \mu}\!\left[R(y)\left(\prod_{t=1}^T \rho_t - 1\right)\right] = \E_{y \sim \mu}\!\left[R(y)\sum_{t=1}^T (\rho_t - 1)\prod_{j>t}\rho_j\right].
+\end{align}
+The surrogate is $L'_\mu(\pi) = \E_{y \sim \mu}[R(y)\sum_t (\rho_t - 1)]$. Subtracting:
+\begin{align}
+    J(\pi) - J(\mu) - L'_\mu(\pi) &= \E_{y \sim \mu}\!\left[R(y)\sum_t (\rho_t - 1)\left(\prod_{j>t}\rho_j - 1\right)\right] = -\Delta(\mu,\pi).
+\end{align}
+Hence $J(\pi) - J(\mu) = L'_\mu(\pi) - \Delta(\mu,\pi)$, and $|\mathrm{Error}| = |\Delta|$.
+\end{proof}
+
+\subsection{Factoring via the Tower Property}
+
+For each summand in Eq.~\eqref{eq:delta-exact}, define:
+\begin{equation}
+    A_t := \left|\frac{\pi_t}{\mu_t} - 1\right|, \qquad B_t := \left|1 - \prod_{j=t+1}^{T}\frac{\pi_j}{\mu_j}\right|.
+\end{equation}
+Since $|R(y)| \le 1$, the triangle inequality gives:
+\begin{equation}
+    |\Delta| \le \E_{y \sim \mu}\!\left[\sum_{t=1}^{T} A_t \cdot B_t\right].
+    \label{eq:delta-triangle}
+\end{equation}
+
+The crucial observation is that $A_t$ depends on $y_t$ (given $c_t$) while $B_t$ depends on $y_{>t} = (y_{t+1}, \ldots, y_T)$. However, they are \emph{not} independent given $c_t$, because $y_{>t}$ depends on $y_t$ through $c_{t+1} = (c_t, y_t)$. We apply the tower property by conditioning on $c_{t+1}$:
+
+\begin{align}
+    \E_{y \sim \mu}\!\left[\sum_t A_t B_t\right] &= \sum_{t=1}^{T}\E_{y_{\le t} \sim \mu}\!\left[A_t \cdot \E_{y_{>t} \sim \mu(\cdot|c_{t+1})}\![B_t]\right].
+    \label{eq:tower}
+\end{align}
+
+Now, the inner expectation has a clean interpretation:
+\begin{align}
+    \E_{y_{>t} \sim \mu(\cdot|c_{t+1})}\![B_t] &= \E_{y_{>t} \sim \mu(\cdot|c_{t+1})}\!\left[\left|1 - \frac{\pi(y_{>t}|c_{t+1})}{\mu(y_{>t}|c_{t+1})}\right|\right] \nonumber\\
+    &= \sum_{y_{>t}} \mu(y_{>t}|c_{t+1})\left|1 - \frac{\pi(y_{>t}|c_{t+1})}{\mu(y_{>t}|c_{t+1})}\right| \nonumber\\
+    &= \sum_{y_{>t}} \left|\mu(y_{>t}|c_{t+1}) - \pi(y_{>t}|c_{t+1})\right| \nonumber\\
+    &= 2\,\DTV\!\left(\mu_{>t}(\cdot|c_{t+1}) \;\|\; \pi_{>t}(\cdot|c_{t+1})\right),
+    \label{eq:future-tv}
+\end{align}
+where $\mu_{>t}(\cdot|c_{t+1})$ and $\pi_{>t}(\cdot|c_{t+1})$ are the distributions over future trajectories $(y_{t+1}, \ldots, y_T)$ under $\mu$ and $\pi$ respectively, conditioned on the context $c_{t+1}$.
+
+\subsection{Bounding the Future-Trajectory TV Adaptively}
+\label{app:future-tv}
+
+We now bound the future-trajectory TV distance in Eq.~\eqref{eq:future-tv}. For any fixed context $c_{t+1}$, we have two routes:
+
+\textbf{Route 1 (Trivial):} Since TV distance is bounded by 1:
+\begin{equation}
+    \DTV(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1})) \le 1.
+    \label{eq:route-trivial}
+\end{equation}
+
+\textbf{Route 2 (Pinsker + KL chain rule):} By Pinsker's inequality applied to the joint future distribution:
+\begin{equation}
+    \DTV(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1})) \le \sqrt{\frac{1}{2}\DKL(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1}))}.
+    \label{eq:route-pinsker}
+\end{equation}
+By the KL chain rule applied to the conditional future distribution:
+\begin{equation}
+    \DKL(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1})) = \sum_{k=t+1}^{T}\E_{c_k \sim \mu(\cdot|c_{t+1})}\!\left[\DKL(c_k)\right] \le (T-t) \cdot \Dkltokmax.
+    \label{eq:future-kl}
+\end{equation}
+The inequality follows because $\DKL(c_k) \le \Dkltokmax$ for all $c_k$ by definition.
+
+Combining Eq.~\eqref{eq:route-pinsker} and Eq.~\eqref{eq:future-kl}:
+\begin{equation}
+    \DTV(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1})) \le \sqrt{\frac{(T-t)\Dkltokmax}{2}}.
+    \label{eq:route-pinsker-final}
+\end{equation}
+
+Taking the minimum of Eq.~\eqref{eq:route-trivial} and Eq.~\eqref{eq:route-pinsker-final}:
+\begin{equation}
+    \DTV(\mu_{>t}(\cdot|c_{t+1}) \| \pi_{>t}(\cdot|c_{t+1})) \le \min\!\left(1,\;\sqrt{\frac{(T-t)\Dkltokmax}{2}}\right).
+    \label{eq:future-tv-adaptive}
+\end{equation}
+
+\textbf{Crucially}, this bound holds for \emph{every} realization of $c_{t+1}$, because the worst-case replacement in Eq.~\eqref{eq:future-kl} does not depend on the specific context. Therefore, it can be factored out of the outer expectation in Eq.~\eqref{eq:tower}.
+
+\subsection{Combining the Factors}
+
+Substituting Eq.~\eqref{eq:future-tv} and Eq.~\eqref{eq:future-tv-adaptive} into Eq.~\eqref{eq:tower}:
+\begin{align}
+    |\Delta| &\le \sum_{t=1}^{T} \E_{y_{\le t} \sim \mu}\!\left[A_t\right] \cdot 2\min\!\left(1,\;\sqrt{\frac{(T-t)\Dkltokmax}{2}}\right) \nonumber\\
+    &= 2\sum_{t=1}^{T}\E_{c_t \sim d_t^{\mu}}\!\left[\E_{y_t \sim \mu(\cdot|c_t)}\!\left[\left|\frac{\pi_t}{\mu_t} - 1\right|\right]\right] \cdot \min\!\left(1,\;\sqrt{\frac{(T-t)\Dkltokmax}{2}}\right).
+    \label{eq:combined-step}
+\end{align}
+
+Now, $\E_{y_t \sim \mu(\cdot|c_t)}[|\pi_t/\mu_t - 1|] = \sum_{v}|\pi(v|c_t) - \mu(v|c_t)| = 2\Dtvtok(c_t)$. Therefore:
+\begin{equation}
+    \E_{c_t \sim d_t^{\mu}}\!\left[\E_{y_t \sim \mu(\cdot|c_t)}\!\left[\left|\frac{\pi_t}{\mu_t} - 1\right|\right]\right] = 2\Dbar_t,
+\end{equation}
+where $\Dbar_t = \E_{c_t \sim d_t^{\mu}}[\Dtvtok(c_t)]$.
+
+\begin{proof}[Proof of \Cref{thm:adaptive}]
+Substituting into Eq.~\eqref{eq:combined-step}:
+\begin{equation}
+    |\Delta| \le 4\sum_{t=1}^{T}\Dbar_t \cdot \min\!\left(1,\;\sqrt{\frac{(T-t)\Dkltokmax}{2}}\right).
+    \label{eq:adaptive-final}
+\end{equation}
+Since $\mathrm{Error} = -\Delta$ (from \Cref{lem:exact-identity}), this gives $|\mathrm{Error}| = |\Delta|$, completing the proof.
+
+\textbf{Strictness over Pinsker-Marginal:} We show this by demonstrating that the worst-case Adaptive bound (with $\Dbar_t$ replaced by its upper bound) recovers the full Pinsker-Marginal bound Eq.~\eqref{eq:pinsker-marginal-full}. Since $\Dbar_t \le \Dtvtokmax \le \min(1, \sqrt{\Dkltokmax/2})$, and the future-trajectory TV $\min(1, \sqrt{(T-t)\Dkltokmax/2})$ mirrors the Pinsker-Marginal's context-shift term $\min(1, \sqrt{(t-1)\Dkltokmax/2})$ (via the index reversal $\sum_t f(T-t) = \sum_t f(t-1)$), the worst-case Adaptive bound equals the Pinsker-Marginal bound with all caps included. Since $\Dbar_t \le \Dtvtokmax$ with possible strict inequality, and the Adaptive bound includes the $\min(1,\cdot)$ cap on the future factor, it is at least as tight as the Pinsker-Marginal bound, and strictly tighter whenever $\Dbar_t < \Dtvtokmax$ at some position.
+
+\textbf{Strictness over the linear bound:} The linear bound corresponds to setting the future TV to its trivial upper bound of 1 at every position: $|\Delta| \le 4\sum_t \Dbar_t$. The Adaptive bound replaces 1 with $\min(1, \sqrt{(T-t)\Dkltokmax/2})$, which is $\le 1$ always and $< 1$ whenever $(T-t)\Dkltokmax/2 < 1$, i.e., for positions $t > T - 2/\Dkltokmax$.
+\end{proof}
+
+\subsection{Worst-Case Evaluation}
+\label{app:worst-case}
+
+When $\Dbar_t = \Dtvtokmax$ for all $t$ (uniform divergence), the Adaptive bound becomes:
+\begin{equation}
+    |\mathrm{Error}| \le 4\Dtvtokmax \sum_{t=1}^{T}\min\!\left(1,\;\sqrt{\frac{(T-t)\Dkltokmax}{2}}\right).
+    \label{eq:adaptive-worst}
+\end{equation}
+Using $\Dtvtokmax \le \min(1, \sqrt{\Dkltokmax/2})$ and evaluating the sum in two regimes defined by the crossover point $t^* = T - \lfloor 2/\Dkltokmax \rfloor$:
+
+\textbf{Case 1: $2/\Dkltokmax > T$ (small divergence).} All terms satisfy $(T-t)\Dkltokmax/2 < 1$, so $\min = \sqrt{(T-t)\Dkltokmax/2}$ throughout. Also $\Dkltokmax < 2/T < 2$, so $\Dtvtokmax \le \sqrt{\Dkltokmax/2}$ (Pinsker branch active):
+\begin{equation}
+    \text{Sum} = \sqrt{\frac{\Dkltokmax}{2}}\sum_{k=0}^{T-1}\sqrt{k} \le \sqrt{\frac{\Dkltokmax}{2}} \cdot \frac{2}{3}T^{3/2}.
+\end{equation}
+Multiplied by $4\sqrt{\Dkltokmax/2}$: $|\mathrm{Error}| \le \frac{4}{3}T^{3/2}\Dkltokmax$, recovering the simplified Pinsker-Marginal bound Eq.~\eqref{eq:pinsker-marginal-simple} exactly.
+
+\textbf{Case 2: $2/\Dkltokmax \le T$ (moderate/large divergence).} For $t \le t^*$, the min saturates at 1, contributing $t^* = T - \lfloor 2/\Dkltokmax \rfloor$ terms. For $t > t^*$, the Pinsker branch is active. The total is:
+\begin{equation}
+    \text{Sum} \le \left(T - \frac{2}{\Dkltokmax}\right) + \sqrt{\frac{\Dkltokmax}{2}} \cdot \frac{2}{3}\left(\frac{2}{\Dkltokmax}\right)^{3/2} = \left(T - \frac{2}{\Dkltokmax}\right) + \frac{4}{3\Dkltokmax}.
+\end{equation}
+The prefactor is $4\min(1, \sqrt{\Dkltokmax/2})$:
+\begin{itemize}
+    \item If additionally $\Dkltokmax < 2$: prefactor $= 4\sqrt{\Dkltokmax/2}$, and the bound becomes $4\sqrt{\Dkltokmax/2}\cdot[(T - 2/\Dkltokmax) + 4/(3\Dkltokmax)]$.
+    \item If $\Dkltokmax \ge 2$: prefactor $= 4$, and the bound becomes $4[(T - 2/\Dkltokmax) + 4/(3\Dkltokmax)]$.
+\end{itemize}
+
+For $\Dkltokmax = 0.01$ (a moderate divergence where $2/\Dkltokmax = 200 < T$), $T = 4096$: Sum $\le (4096 - 200) + 133 = 4029$, prefactor $= 4\sqrt{0.005} \approx 0.283$, giving $|\mathrm{Error}| \le 0.283 \cdot 4029 \approx 1139$. Compare to simplified Pinsker-Marginal: $\frac{4}{3}(4096)^{3/2}(0.01) \approx 3495$, a $3\times$ improvement.
+
+
+%==============================================================================
+% NEW APPENDIX: LENGTH-NEUTRAL ALGORITHMS
+%==============================================================================
+\section{Length-Neutral Trust Region Masking}
+\label{app:length-neutral}
+
+While TRM's max-criterion $\max_t \DKL(c_t) \le \delta$ is length-invariant in its \emph{threshold}, the \emph{probability of rejection} can increase with sequence length $T$. Intuitively, longer sequences have more tokens, each of which could individually violate the threshold, so the probability that at least one token exceeds $\delta$ grows with $T$. In this appendix, we formalize this concern and propose length-neutral extensions motivated by the Adaptive bound.
+
+\subsection{Quantifying Length Bias in TRM}
+\label{app:length-bias-analysis}
+
+To make the argument precise, suppose per-token KL divergences are i.i.d.\ draws from some distribution $\mathcal{F}$ with $\Pr_{\mathcal{F}}[\DKL(c_t) > \delta] = p$. This is a simplifying assumption (in practice, divergences are correlated through the shared prefix), but it captures the essential scaling behavior.
+
+The acceptance probability of a length-$T$ sequence under TRM-Max is:
+\begin{equation}
+    \Pr[\text{accept}] = \Pr\!\left[\max_t \DKL(c_t) \le \delta\right] = (1-p)^T.
+    \label{eq:accept-prob}
+\end{equation}
+For small $p$ and large $T$, this is approximately $e^{-pT}$, which decays exponentially with $T$. Concretely:
+\begin{center}
+\begin{tabular}{lccccc}
+    \toprule
+    $T$ & 256 & 1024 & 4096 & 8192 & 16384 \\
+    \midrule
+    $(1-p)^T$ at $p=10^{-3}$ & 0.774 & 0.358 & 0.017 & 0.0003 & $<10^{-7}$ \\
+    $(1-p)^T$ at $p=10^{-4}$ & 0.975 & 0.903 & 0.663 & 0.440 & 0.194 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+This confirms that TRM-Max systematically rejects long sequences.
+
+\begin{remark}[Practical consequences for reasoning]
+For RL training of reasoning models, length bias is particularly concerning because correct solutions often require longer chains of thought. If TRM systematically rejects long sequences, it may inadvertently incentivize the model to produce shorter (potentially less thorough) responses. Monitoring the acceptance rate stratified by sequence length is therefore essential.
+\end{remark}
+
+\subsection{Adaptive Error Score}
+\label{app:adaptive-error-score}
+
+Motivated by the Adaptive bound (\Cref{thm:adaptive}), we define a trajectory-level error score that reflects the actual per-trajectory contribution to the approximation error. For a trajectory $y$ of length $T$ with importance ratios $\rho_t$, define:
+\begin{equation}
+    W(y) := \sum_{t=1}^{T}|\rho_t - 1| \cdot \min\!\left(1,\;\sqrt{\frac{(T-t)\,\delta}{2}}\right),
+    \label{eq:W-score}
+\end{equation}
+where $\delta$ is the per-token KL tolerance (controlling $\Dkltokmax$). The position weight $\min(1, \sqrt{(T-t)\delta/2})$ directly reflects the future-trajectory TV bound from Eq.~\eqref{eq:future-tv-adaptive}: early tokens (small $t$, large $T-t$) have larger weights because divergence there propagates through all subsequent tokens.
+
+\subsection{Length-Neutral TRM (LN-TRM)}
+\label{app:ln-trm}
+
+The raw score $W(y)$ in Eq.~\eqref{eq:W-score} is a sum over $T$ terms and therefore grows with $T$ even when per-token divergence is constant. To obtain a length-neutral criterion, we normalize by the sum of position weights:
+
+\begin{definition}[Normalized Error Score]
+\label{def:normalized-error-score}
+\begin{equation}
+    \widetilde{W}(y) := \frac{W(y)}{Z(T)}, \quad \text{where} \quad Z(T) := \sum_{t=1}^{T}\min\!\left(1,\;\sqrt{\frac{(T-t)\,\delta}{2}}\right).
+    \label{eq:W-normalized}
+\end{equation}
+\end{definition}
+
+The normalization factor $Z(T)$ depends only on $T$ and $\delta$, so it can be precomputed. Crucially, $\widetilde{W}(y)$ is a \emph{weighted average} of per-token ratio deviations $|\rho_t - 1|$, making it approximately length-invariant: if per-token divergence is constant across lengths, $\widetilde{W}$ is constant regardless of $T$.
+
+\begin{algorithm}[h]
+\caption{Length-Neutral Trust Region Masking (LN-TRM)}
+\label{alg:ln-trm}
+\begin{algorithmic}[1]
+    \REQUIRE Per-token KL tolerance $\delta$; Error budget $\delta_W$; Batch $\mathcal{D} = \{(x^{(i)}, y^{(i)})\}_{i=1}^N$
+    \FOR{each distinct length $T$ in the batch}
+        \STATE Precompute $Z(T) \leftarrow \sum_{t=1}^{T}\min\big(1,\;\sqrt{(T-t)\,\delta/2}\big)$
+    \ENDFOR
+    \STATE \textbf{Forward Pass:} Compute logits for $\pitheta$ on all data
+    \FOR{each sequence $i$ with length $T_i$}
+        \STATE Compute $\rho_t^{(i)} \leftarrow \pitheta(y_t^{(i)}|c_t^{(i)}) / \piroll(y_t^{(i)}|c_t^{(i)})$ for all $t$
+        \STATE Compute position weights: $w_t \leftarrow \min\big(1,\;\sqrt{(T_i - t)\,\delta/2}\big)$
+        \STATE Compute $W_i \leftarrow \sum_{t=1}^{T_i} |\rho_t^{(i)} - 1| \cdot w_t$
+        \STATE Normalize: $\widetilde{W}_i \leftarrow W_i / Z(T_i)$
+        \STATE Compute mask: $M_i \leftarrow \mathbb{I}\big[\widetilde{W}_i \le \delta_W\big]$
+    \ENDFOR
+    \STATE \textbf{Backward Pass:} $\nabla L \leftarrow \frac{1}{N}\sum_{i=1}^{N} M_i \cdot A^{(i)} \cdot \sum_{t} \rho_t^{(i)} \nabla\log\pitheta(y_t^{(i)}|c_t^{(i)})$
+    \STATE \textbf{Update:} $\theta \leftarrow \theta + \alpha\cdot\nabla L$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Theoretical Guarantee for LN-TRM}
+
+LN-TRM trades exact control of $W(y)$ for length neutrality. The following proposition establishes the resulting guarantee.
+
+\begin{proposition}[LN-TRM Guarantee]
+\label{prop:ln-trm-guarantee}
+Under \Cref{alg:ln-trm} with per-token KL tolerance $\delta$:
+\begin{enumerate}
+    \item \textbf{Per-trajectory score bound:} For all accepted sequences ($M_i = 1$):
+    \begin{equation}
+        W(y^{(i)}) \le \delta_W \cdot Z(T_i).
+    \end{equation}
+    \item \textbf{Approximation error bound:} If additionally $\Dkltokmax \le \delta$ holds globally, the approximation error satisfies:
+    \begin{equation}
+        |\mathrm{Error}| \le 2\,\E_{\piroll}\!\left[W(y)\right].
+        \label{eq:error-expectation-W}
+    \end{equation}
+    In particular, when all trajectories in the support of $\piroll$ are accepted (i.e., $\widetilde{W}(y) \le \delta_W$ almost surely), this gives $|\mathrm{Error}| \le 2\,\delta_W \cdot Z(T)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+\textbf{Part~1} follows directly from the masking criterion: $\widetilde{W}_i \le \delta_W$ implies $W(y^{(i)}) = \widetilde{W}_i \cdot Z(T_i) \le \delta_W \cdot Z(T_i)$.
+
+\textbf{Part~2.} From the tower-property factorization in the proof of \Cref{thm:adaptive} (Appendix~\ref{app:proof-adaptive}, Eq.~\eqref{eq:combined-step}), when $\Dkltokmax \le \delta$:
+\begin{equation}
+    |\mathrm{Error}| \le 2\sum_{t=1}^{T}\E_{\piroll}\!\left[|\rho_t - 1|\right] \cdot \min\!\left(1,\;\sqrt{\frac{(T-t)\,\delta}{2}}\right).
+\end{equation}
+Since the position weights $\min(1, \sqrt{(T-t)\delta/2})$ are deterministic constants, linearity of expectation gives:
+\begin{equation}
+    |\mathrm{Error}| \le 2\,\E_{\piroll}\!\left[\sum_{t=1}^{T}|\rho_t - 1| \cdot \min\!\left(1,\;\sqrt{\frac{(T-t)\,\delta}{2}}\right)\right] = 2\,\E_{\piroll}[W(y)].
+\end{equation}
+If $W(y) \le \delta_W \cdot Z(T)$ holds for all $y$ in the support, then $\E[W(y)] \le \delta_W \cdot Z(T)$.
+\end{proof}
+
+\begin{remark}
+In practice, LN-TRM enforces $W(y) \le \delta_W \cdot Z(T)$ only for \emph{accepted} trajectories, not universally. The per-trajectory score $W(y)$ thus serves as an observable diagnostic: a high acceptance rate indicates that $\E[W(y)] \approx \E[W(y) \cdot M] \le \delta_W \cdot Z(T)$, providing approximate control of the error via Eq.~\eqref{eq:error-expectation-W}.
+\end{remark}
+
+The bound is $O(\delta_W \cdot Z(T))$. Since $Z(T)$ scales between $O(T)$ (when the min saturates at 1 for most positions) and $O(T^{3/2}\sqrt{\delta})$ (in the Pinsker regime), and the surrogate $L$ also scales as $O(T)$, the monotonic improvement condition is approximately length-neutral.
+
+\subsection{Simplified Variant: Sequence-Error Ratio (SER)}
+\label{app:ser}
+
+For practitioners seeking the minimal change to an existing GRPO or PPO codebase, we propose the Sequence-Error Ratio (SER) algorithm. SER uses an unweighted, length-normalized error score:
+
+\begin{equation}
+    W_{\mathrm{SER}}(y) := \frac{1}{T}\sum_{t=1}^{T}|\rho_t - 1|.
+    \label{eq:ser-score}
+\end{equation}
+
+The masking criterion is $M(y) = \mathbb{I}[W_{\mathrm{SER}}(y) \le \delta_{\mathrm{SER}}]$ with a fixed, length-independent threshold $\delta_{\mathrm{SER}}$.
+
+\begin{algorithm}[h]
+\caption{Sequence-Error Ratio (SER)}
+\label{alg:ser}
+\begin{algorithmic}[1]
+    \REQUIRE Threshold $\delta_{\mathrm{SER}}$ (e.g., $0.05$); Batch $\mathcal{D}$
+    \FOR{each sequence $i$ with length $T_i$}
+        \STATE Compute $\rho_t^{(i)}$ for all $t$
+        \STATE $W_i \leftarrow \frac{1}{T_i}\sum_{t=1}^{T_i}|\rho_t^{(i)} - 1|$
+        \STATE $M_i \leftarrow \mathbb{I}[W_i \le \delta_{\mathrm{SER}}]$
+    \ENDFOR
+    \STATE Compute $\nabla L_{\mathrm{masked}}$ with mask $M$, normalize by $N$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Theoretical motivation.} SER is connected to the linear bound via the Adaptive bound with the min set to 1. Since $\E_{y_t \sim \mu}[|\rho_t - 1|] = 2\Dtvtok(c_t)$, the score $W_{\mathrm{SER}}$ estimates twice the average per-token TV divergence. The linear bound gives $|\mathrm{Error}| \le 4\sum_t \Dbar_t$, so controlling $\sum|\rho_t - 1|/T$ at level $\delta$ bounds the per-trajectory error contribution at rate $O(T\delta)$, which scales linearly with $T$---matching the surrogate's scaling.
+
+\textbf{Length neutrality.} Because $W_{\mathrm{SER}}$ is an average (not a sum), the same threshold $\delta_{\mathrm{SER}}$ applies uniformly regardless of $T$. If per-token divergence is i.i.d., the expected score is constant across lengths. The remaining source of length bias is the \emph{variance} of the average, which decreases as $O(1/\sqrt{T})$ by the CLT. This means SER is actually \emph{mildly biased in favor of} longer sequences (their average is more concentrated), which partially counteracts the per-token violation probability effect discussed in Appendix \ref{app:length-bias-analysis}.
+
+\textbf{Practical recommendation.} SER requires adding only three lines of code to any GRPO/PPO implementation:
+\begin{lstlisting}
+W = mean(abs(rho - 1), dim=-1)  # per-sequence average
+M = (W <= delta_ser).float()     # binary mask
+loss = loss * M                  # mask rejected sequences
+\end{lstlisting}
+We recommend $\delta_{\mathrm{SER}} \in [0.03, 0.10]$ as a starting range, with the masking rate monitored to maintain $\le 30\%$ rejection.
+
+\subsection{Comparison of Length Bias Properties}
+\label{app:length-bias-comparison}
+
+There is a fundamental tension in trust region methods for sequence generation: the trade-off between the tightness of the theoretical error bound and the practical stability of the training process across varying sequence lengths. Table~\ref{tab:length-bias} provides a comparative summary of how different masking criteria behave as the sequence length $T$ increases.
+
+LN-TRM stands out as the theoretically principled choice, as it re-weights the importance ratios according to their influence on the future trajectory, ensuring that early-token deviations—which are more catastrophic for the approximation—are more strictly constrained. Additionally, SER offers the most practical path for implementation. Its variance actually decreases for longer sequences, meaning the masking becomes more reliable as $T$ grows. This property acts as a helpful counter-weight to the inherent difficulty of maintaining low divergence over long horizons, making it an ideal default for large-scale RL training of LLMs.
+
+
+\begin{table}[htbp]
+\centering
+\caption{Length bias properties of sequence-level masking methods. ``Rejection scaling'' describes how the rejection probability grows with $T$ when per-token divergence is constant.}
+\label{tab:length-bias}
+\begin{tabular}{llll}
+    \toprule
+    \textbf{Method} & \textbf{Criterion} & \textbf{Rejection scaling} & \textbf{Formal guarantee} \\
+    \midrule
+    TRM-Max & $\max_t \DKL(c_t) \le \delta$ & $1-(1-p)^T$ (exponential) & Exact \\
+    TRM-Avg & $\frac{1}{T}\sum_t \DKL(c_t) \le \delta$ & $\approx$ constant & Weaker (avg $\ne$ max) \\
+    \textbf{LN-TRM} & $\widetilde{W}(y) \le \delta_W$ & $\approx$ \textbf{constant} & \textbf{Up to $Z(T)$ factor} \\
+    \textbf{SER} & $\frac{1}{T}\sum|\rho_t-1| \le \delta$ & $\approx$ \textbf{constant} & \textbf{Via linear bound} \\
+    \bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
