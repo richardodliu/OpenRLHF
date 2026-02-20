@@ -124,13 +124,15 @@ with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserve
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
 $\beta>0$ on $\mathcal{N}$ (\Cref{prop:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
-\begin{remark}[Connection to asymmetric clipping]
-Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage sign; adaptive normalization scales the advantage magnitude differently. Both control the effective step size asymmetrically, but normalization acts through the advantage rather than the ratio, avoiding the gradient leakage problem identified by~\citet{li2025trm}.
-\end{remark}
+\paragraph{Connection to asymmetric clipping.}
+Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage
+sign; adaptive normalization scales the advantage magnitude differently. Both control the effective step size asymmetrically, but
+normalization acts through the advantage rather than the ratio, avoiding the gradient leakage problem identified by~\citet{li2025trm}.
 
-\begin{remark}[Uniform Scale Mode]
-When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional \emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization. See \Cref{app:uniform-scale} for details.
-\end{remark}
+\paragraph{Uniform scale mode.}
+When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
+\emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
+See \Cref{app:uniform-scale} for details.
 
 
 \section{REINFORCE Pro: Prefix Causal Trust Region Masking}
