@@ -155,7 +155,7 @@ intermediate policies.
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
 $M(x,y)$, yielding a masked surrogate objective of the form
 \begin{equation}
-    L_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
+    \mathcal{L}_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
     := \E_{\piroll}\!\left[
         M(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
@@ -167,7 +167,7 @@ accepts or rejects an entire trajectory via a single gate $M(x,y)$, the prefix g
 threshold, thereby retaining positional granularity while respecting the autoregressive order. For comparison, a prefix-level masked
 surrogate can be written as
 \begin{equation}
-    L_{\mathrm{masked}}^{\mathrm{prefix}}(\pitheta)
+    \mathcal{L}_{\mathrm{masked}}^{\mathrm{prefix}}(\pitheta)
     := \E_{\piroll}\!\left[
         A(x,y)\cdot \sum_{t=1}^{T} M_t^{\mathrm{prefix}}\rho_t
     \right],
@@ -489,7 +489,7 @@ directly from \eqref{eq:prefix-is}.
 \subsection{The Combined Loss}
 \label{sec:combined-loss}
 
-We define the loss as the negative surrogate objective, $\mathcal{L} = -L_{\piroll}(\pitheta)$, so that gradient descent on
+We define the loss as the negative surrogate objective, $\mathcal{L} = -\mathcal{L}_{\piroll}(\pitheta)$, so that gradient descent on
 $\mathcal{L}$ corresponds to maximizing the surrogate. The REINFORCE Pro Max loss applies the prefix mask to the standard per-token
 importance-weighted surrogate:
 \begin{equation}
