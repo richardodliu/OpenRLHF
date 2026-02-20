@@ -1,59 +1,50 @@
 # `4-method.tex` 审稿意见
 
 ## 总评
-本章已修复多处历史问题（包括 seq-mask 计数分情况、loss 方向、显式补充部分阈值条件）。当前剩余问题集中在三类：`thm:prefix-tighter` 的陈述-证明一致性、`thm:prefix-adaptive` 中 sample-level 公式与阈值界限处理不一致、以及 `\pi_{old}` 到 `\pi_\theta` 的理论桥接缺失。
+本章较前版本已完成多项关键修复（例如 `eq:threshold-kl`/Corollary 的 mask 一致性、非对称阈值上界写法等）。当前剩余问题集中在四处：`thm:prefix-tighter` 的严格适用域、Part (b)/(c) 的陈述-证明一致性、以及 `\pi_{old}` 到 `\pi_\theta` 的理论桥接。
 
 ## 结构不完整
 - 当前未发现未修复问题。
 
 ## 证明不严谨
 - [P0] 类型: 证明
-  位置: `tex/main/4-method.tex:165`
-  问题: Theorem (c) 仍写“`|L_t/P_t|` non-decreasing”，该结论不成立。即便所有 `\ell_s` 同号且均超过阈值，运行平均值也可能下降（只能保证在额外充分条件下保持阈值同侧）。
-  影响: 定理陈述包含可被反例否定的数学断言。
-  建议: 将 “non-decreasing” 改为“stays on the same threshold side under stated sufficient conditions”，或给出真正可证的单调性条件。
+  位置: `tex/main/4-method.tex:177`
+  问题: Part (a) 的证明将“越界”写成 `|L_t/P_t|` 相对 `[-\log\Lambda,\log\Lambda]` 的条件，并推导 `P_t\log\Lambda` 界；这默认了对称阈值，而定理阈值是一般的非对称区间 `[\log\lambda,\log\Lambda]`。
+  影响: 当 `|\log\lambda| \neq \log\Lambda` 时，Part (a) 结论的可证范围与陈述不一致。
+  建议: 按上下侧分别给出条件，或统一改为 `\max(|\log\lambda|,\log\Lambda)` / 分段不等式推导。
 
 - [P0] 类型: 证明
-  位置: `tex/main/4-method.tex:205`
-  问题: Eq.~\eqref{eq:threshold-kl} 写成 `\frac{1}{P_t}\sum_{s=1}^t \ell_s`，与定义 `L_t=\sum_{s=1}^t \ell_s m_s` 不一致；Corollary 同样遗漏 `m_s`（`tex/main/4-method.tex:237`）。
-  影响: prefix 约束的核心等价式与定义不一致，在存在非 action token/padding 时定理不成立。
-  建议: 统一改为带 mask 的形式：`\frac{1}{P_t}\sum_{s=1}^t \ell_s m_s`。
+  位置: `tex/main/4-method.tex:168`
+  问题: Part (c) 在严格越界假设下先给出“`|\{t:M_t^{prefix}=0\}| \le |\{t:M_t^{seq}=0\}|`（seq rejection 时 all masked）”，但证明又写“if sequence is accepted, prefix masks more tokens”（`tex/main/4-method.tex:181`）。后者与该假设下 seq 必拒绝的逻辑冲突。
+  影响: 定理陈述与证明文本存在内部不一致，削弱结论可审计性。
+  建议: 将“seq accepted”分支移到“更一般同号但不逐点越界”的子情形，或在严格越界情形中删除该分支并给出一致结论。
 
 - [P1] 类型: 证明
-  位置: `tex/main/4-method.tex:153`
-  问题: Part (a) 的掩码长度结论 `\lfloor(|\ell_1|-\epsilon)/\max(\cdot)\rfloor` 与证明给出的条件 `|\ell_1| > P_t(\log\Lambda+\epsilon)-\epsilon` 不一致，缺严格推导对应关系。
-  影响: theorem statement 与 proof 存在公式级不匹配。
-  建议: 统一 statement/proof 使用同一可证上界，或将长度结论改为条件不等式而非闭式计数。
+  位置: `tex/main/4-method.tex:157`
+  问题: Part (a) 文字称“mask 一个 contiguous block，且长度随 `|\ell_1|` 增大、随 `\epsilon` 减小”，但当前证明仅给出一个足够条件下的初始区间不等式，未给出对“块长度单调关系”的完整证明。
+  影响: 读者易将经验性趋势解读为严格定理结论。
+  建议: 将该句降级为“under stated sufficient condition”并给出精确可证定义（如最大满足不等式的 `t`）。
 
 - [P1] 类型: 证明
-  位置: `tex/main/4-method.tex:159`
-  问题: Part (b) 未声明 `\epsilon` 与阈值区间关系；若 `\epsilon` 超出阈值边界，`t<t^*` 的早期 token 也可能被 mask，与“最多从 `t^*` 开始受影响”的叙述不一致。
-  影响: Part (b) 结论适用域不清晰，可能被误用于不满足条件的场景。
-  建议: 增加显式条件（如 `\epsilon \le \min(\log\Lambda, |\log\lambda|)`）或改写为条件化结论。
+  位置: `tex/main/4-method.tex:179`
+  问题: Part (b) 证明在早期 token 的通过条件写为 `M_t^{\mathrm{prefix}} = 1` when `\epsilon < \log\Lambda`，未与定理条件 `0 \le \epsilon \le \min(\log\Lambda, |\log\lambda|)` 完整同构；下侧阈值 `|\log\lambda|` 的对应论证缺失。
+  影响: 证明文本条件域与定理陈述条件域不完全一致，降低可审计性。
+  建议: 将 Part (b) 的通过条件改为双边阈值版本（或分上下侧分别证明），确保与定理假设完全对齐。
 
 - [P1] 类型: 证明
   位置: `tex/main/4-method.tex:196`
-  问题: `thm:prefix-adaptive` 讨论的 context shift 项是 `\|d_t^{\pi_\theta}-d_t^{\pi_{roll}}\|_{TV}`，但 prefix IS 约束直接作用于 `\log(\pi_{old}/\pi_{roll})`。当前未给出从 `\pi_{old}` 到 `\pi_\theta` 的桥接假设与不等式链。
-  影响: theorem 对目标误差分解项“可控性”的论证缺关键中间步骤。
-  建议: 增加 `\pi_\theta` 与 `\pi_{old}` 的小步约束（如 trust-region / PPO clip 条件）并给出传递界，或将结论限定为对 `\pi_{old}` 的控制。
+  问题: `thm:prefix-adaptive` 讨论目标误差项 `\|d_t^{\pi_\theta}-d_t^{\pi_{roll}}\|_{TV}`，但 prefix IS 直接约束的是 `\pi_{old}/\pi_{roll}`。当前仅给启发式文字（triangle inequality + clipping narrative），缺少从 PPO clip 条件到状态分布 TV 距离的可检验不等式链。
+  影响: theorem 对“控制目标误差项”的严格性不足。
+  建议: 增加显式桥接引理（含步长/ratio/覆盖条件），或将本节结论明确限制为 `\pi_{old}` 层面的控制。
 
 ## 逻辑问题
-- [P1] 类型: 逻辑
-  位置: `tex/main/4-method.tex:230`
-  问题: 文中将 accepted sample 约束写为 `|L_t| \le t\cdot|\log\Lambda|`，该绝对值界在非对称阈值下不成立（例如 `|\log\lambda|>\log\Lambda`）。
-  影响: “sample-level 过滤 -> 有效 KL 受控”的解释链在非对称阈值设置下失真。
-  建议: 改为 `|L_t| \le t\cdot\max(|\log\lambda|,\log\Lambda)`，或按上下侧分别给界。
-
-- [P1] 类型: 逻辑
-  位置: `tex/main/4-method.tex:165`
-  问题: Part (c) 文字写“each individually exceeds threshold”，但公式使用非严格不等号（`\ell_s \ge \log\Lambda` / `\ell_s \le \log\lambda`）且阈值区间是闭区间，边界点会被接受而非 mask。
-  影响: 语义（exceeds）与公式（含等号）不一致，导致读者误解定理适用域。
-  建议: 统一为严格越界符号（`>`/`<`）或把文字改成“reaches or exceeds boundary”并重写对应结论。
+- 当前未发现未修复问题。
 
 ## 表达缺陷
 - 当前未发现未修复问题。
 
 ## 高优先级修改清单（P0/P1/P2）
-1. P0: 修复 `thm:prefix-tighter` Part (c) 中错误的“non-decreasing”断言。
-2. P0: 修复 Eq.~\eqref{eq:threshold-kl} / Corollary 与 `L_t` 定义不一致（补上 `m_s`）。
-3. P1: 补齐 `\pi_{old}` 到 `\pi_\theta` 的理论桥接，并对齐 Part (a)/(b) 的适用条件。
+1. P0: 修复 Part (a) 对非对称阈值 `[\lambda,\Lambda]` 的严格推导（避免默认对称阈值）。
+2. P0: 消除 Part (c) 陈述与证明的分情况冲突，统一 strict-over-threshold 情形下的 seq/prefix 关系。
+3. P1: 对齐 Part (b) 证明条件与定理条件（补全 `|\log\lambda|` 侧约束）。
+4. P1: 补齐 `\pi_{old}\rightarrow\pi_\theta` 的形式化桥接，避免仅靠叙述性解释。
