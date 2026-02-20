@@ -190,17 +190,19 @@ only the token-level loss terms whose prefixes violate the threshold.
 \noindent Table~\ref{tab:is-methods} summarizes these stabilization mechanisms under a unified notation.
 \begin{table}[ht]
 \centering
+\small
 \caption{Existing trust-region and IS stabilization methods in critic-free LLM-RL.}
 \label{tab:is-methods}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{lllll}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llll}
 \toprule
-\textbf{Method} & \textbf{IS Statistic} & \textbf{Gate / Truncation} & \textbf{Granularity} & \textbf{Causal} \\
+\textbf{Method} & \textbf{IS Statistic} & \textbf{Gate / Truncation} & \textbf{Granularity} \\
 \midrule
-TIS & $\rho_t$ & $w_t^{\mathrm{tok}}=\mathrm{clip}(\rho_t,1-\epslow,1+\epshigh)$ & Token & No \\
-ICEPOP & $\rho_t$ & $M_t^{\mathrm{tok}}=\mathbb{I}[\rho_t \in [1-\epslow,1+\epshigh]]$ & Token & No \\
-TRM & $\rho_t$ & $M^{\mathrm{TRM}}(x,y)$ (max-KL gate) & Sequence & No \\
-GSPO & $\rhoseq$ & $w^{\mathrm{seq}}=\mathrm{clip}(\rhoseq,1-\epslow,1+\epshigh)$ & Sequence & No \\
+TIS & $\rho_t$ & $w_t^{\mathrm{tok}}=\mathrm{clip}(\rho_t,1-\epslow,1+\epshigh)$ & Token \\
+ICEPOP & $\rho_t$ & $M_t^{\mathrm{tok}}=\mathbb{I}[\rho_t \in [1-\epslow,1+\epshigh]]$ & Token \\
+TRM & $\rho_t$ & $M^{\mathrm{TRM}}(x,y)=\mathbb{I}\!\big[\max_t\,\Dkltok(c_t;\piroll,\pitheta)\le \delta_{\mathrm{TRM}}\big]$ & Sequence \\
+GSPO & $\rhoseq$ & $w^{\mathrm{seq}}=\mathrm{clip}(\rhoseq,1-\epslow,1+\epshigh)$ & Sequence \\
 \bottomrule
 \end{tabular}
 \end{table}
