@@ -501,6 +501,51 @@ ratio = exp(sum(log_ratio * mask) / sum(mask))  # 序列级别
 - `--advantage_estimator reinforce_max`: 启用 REINFORCE Max 算法
 - `--uniform_scale`: 可选，启用后全同 reward 组跳过 RLOO baseline 和归一化，使用 r_i/n
 
+## 论文: REINFORCE Pro Max
+
+### 论文目录结构
+
+```
+tex/
+├── main.tex                    # 主控文件（摘要、宏定义、章节引入）
+├── main/
+│   ├── 1-intro.tex             # 引言 + 贡献列表
+│   ├── 2-related.tex           # 相关工作
+│   ├── 3-preliminaries.tex     # 符号、假设、surrogate 目标、IS 方法综述
+│   ├── 4-method.tex            # 核心方法（REINFORCE Max + REINFORCE Pro）
+│   ├── 5-theory.tex            # 统一框架、算法伪代码、方法对比表
+│   ├── 6-experiment.tex        # 实验（占位中）
+│   ├── 7-conclusion.tex        # 结论
+│   └── appendix.tex            # 附录（RLOO 证明、γ=1 证明、prefix IS 示例、数值稳定性、uniform scale）
+├── main/*_review.md            # 各章节审稿意见
+└── literature/                 # 参考论文（Trust Region Masking 等）
+```
+
+### 论文章节与核心定理
+
+| 章节 | 文件 | 核心内容 |
+|------|------|---------|
+| §4 REINFORCE Max | `4-method.tex` | RLOO baseline (`def:rloo`)、token expansion (`eq:token-advantage`)、adaptive normalization (`prop:alpha-beta`, `prop:gradient-direction`) |
+| §4 REINFORCE Pro | `4-method.tex` | Prefix IS (`def:prefix-is`)、masking theorem (`thm:prefix-tighter`)、Adaptive bound 连接 (`thm:prefix-adaptive`) |
+| §5 Unified Framework | `5-theory.tex` | 算法伪代码 (`alg:promax`)、方法对比表 (`tab:comparison`) |
+| Appendix | `appendix.tex` | RLOO 性质证明 (`app:rloo-proof`)、γ=1 证明 (`app:gamma-one`)、prefix IS 示例 (`app:prefix-proof`)、数值稳定性 (`app:numerical`)、uniform scale (`app:uniform-scale`) |
+
+### 论文修改规范
+
+- 修改 theorem/proposition/proof 时，检查所有 `\Cref` 引用是否一致
+- 从正文移动内容到附录时：保留 `\label`，正文用 `\Cref{app:xxx}` 引用
+- 修改公式后，用 grep 检查相关符号在全文中的残留
+- 摘要 (`main.tex`) 和贡献列表 (`1-intro.tex`) 的措辞需与 theorem 条件范围严格一致
+- 附录中的 illustrative examples 是具体数值示例，不构成一般性证明
+
+### 当前论文状态
+
+- 不使用 reference model / KL penalty（已从公式中移除 `kl_t`, `\piref`, `\lambda_{\mathrm{KL}}`）
+- Token expansion 简化为 $A_{i,t} = \tilde{r}_i$（sparse reward, γ=1）
+- RLOO 详细证明在附录，正文只保留定义和简要说明
+- Uniform scale 详细内容在附录，正文只有简短 remark
+- 实验章节为占位文本
+
 ## 代码规范
 
 - **行长度**: 119 字符 (black, isort, ruff)
