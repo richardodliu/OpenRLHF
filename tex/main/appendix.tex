@@ -441,7 +441,7 @@ numerical stability and uniform-reward detection. They are unrelated to the dive
 \end{remark}
 
 \begin{enumerate}
-    \item \textbf{Sum threshold:} If $|S^+| < \varepsilon_{\mathrm{num}}$ or $|S^-| < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
+    \item \textbf{Sum threshold:} If $S^+ < \varepsilon_{\mathrm{num}}$ or $S^- < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
 
     \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
 

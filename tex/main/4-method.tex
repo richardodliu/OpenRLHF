@@ -33,19 +33,20 @@ Standard normalization $\hat{A} = (A - \mu)/\sigma$ applies a uniform scaling to
 \begin{definition}[Adaptive Normalization]
 \label{def:adaptive-norm}
 Fix a prompt group with token-level advantages $\{A_{i,t}\}$, and exclude zero-advantage positions from the normalization statistics.
-Define the index sets and summary statistics
+Define the index sets
+\begin{equation}
+    \mathcal{P} := \{(i,t) : A_{i,t} > 0\},
+    \qquad
+    \mathcal{N} := \{(i,t) : A_{i,t} < 0\},
+\end{equation}
+and the summary statistics
 \begin{align}
-    \mathcal{P}
-    &:= \{(i,t) : A_{i,t} > 0\},
-    &
-    \mathcal{N}
-    &:= \{(i,t) : A_{i,t} < 0\},
-    \\
     S^+
     &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t},
     &
     S^-
-    &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t},
+    &:= -\sum_{(i,t) \in \mathcal{N}} A_{i,t}
+    = \sum_{(i,t) \in \mathcal{N}} |A_{i,t}|,
     \\
     Q^+
     &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t}^2,
@@ -53,35 +54,46 @@ Define the index sets and summary statistics
     Q^-
     &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t}^2,
     \\
-    N
+    N_{\mathrm{nz}}
     &:= |\mathcal{P}| + |\mathcal{N}|.
 \end{align}
 The normalized advantage is defined by a sign-dependent rescaling:
 \begin{equation}
-    \hat{A}_{i,t} = \begin{cases} \alpha \cdot A_{i,t} & \text{if } A_{i,t} > 0, \\ \beta \cdot A_{i,t} & \text{if } A_{i,t} < 0, \\ 0 & \text{if } A_{i,t} = 0, \end{cases}
+    \hat{A}_{i,t}
+    =
+    \begin{cases}
+        \alpha \cdot A_{i,t}, & \text{if } A_{i,t} > 0,
+        \\
+        \beta \cdot A_{i,t}, & \text{if } A_{i,t} < 0,
+        \\
+        0, & \text{if } A_{i,t} = 0.
+    \end{cases}
     \label{eq:adaptive-norm}
 \end{equation}
 where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} constraints over non-zero tokens:
 \begin{align}
-    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
+    \frac{1}{N_{\mathrm{nz}}}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
     \label{eq:adaptive-mean}
     \\
-    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
+    \frac{1}{N_{\mathrm{nz}}}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
     \label{eq:adaptive-var}
 \end{align}
 Equivalently, these constraints can be written as
 \begin{equation}
-    \alpha S^+ + \beta S^- = 0,
+    \alpha S^+ = \beta S^-,
     \qquad
-    \alpha^2 Q^+ + \beta^2 Q^- = N.
+    \alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}.
 \end{equation}
 \end{definition}
 
 \begin{proposition}[Closed-Form Solution]
 \label{prop:alpha-beta}
-Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique solution satisfying $\alpha S^+ + \beta S^- = 0$ and $\alpha^2 Q^+ + \beta^2 Q^- = N$ is:
+Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique solution satisfying $\alpha S^+ = \beta S^-$ and
+$\alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}$ is:
 \begin{equation}
-    \alpha = \sqrt{\frac{N}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}}, \qquad \beta = -\alpha \cdot \frac{S^+}{S^-}.
+    \alpha = \sqrt{\frac{N_{\mathrm{nz}}}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}},
+    \qquad
+    \beta = \alpha \cdot \frac{S^+}{S^-}.
     \label{eq:alpha-beta}
 \end{equation}
 \end{proposition}
@@ -89,26 +101,27 @@ Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique
 \begin{proof}
 We solve the two scalar constraints in \Cref{def:adaptive-norm} and then enforce $\alpha,\beta>0$.
 
-\textbf{Step 1 (zero empirical mean).} The constraint $\alpha S^+ + \beta S^- = 0$ implies
+\textbf{Step 1 (zero empirical mean).} The constraint $\alpha S^+ = \beta S^-$ implies
 \begin{equation}
-    \beta = -\alpha \cdot \frac{S^+}{S^-}.
+    \beta = \alpha \cdot \frac{S^+}{S^-}.
     \label{eq:beta-from-mean}
 \end{equation}
-Since $\mathcal{P}\neq\emptyset$ and $\mathcal{N}\neq\emptyset$, we have $S^+>0$ and $S^-<0$, so $S^-/S^+$ is well-defined.
+Since $\mathcal{P}\neq\emptyset$ and $\mathcal{N}\neq\emptyset$, we have $S^+>0$ and $S^->0$, so $S^+/S^-$ is well-defined.
 
-\textbf{Step 2 (unit empirical second moment).} Substituting \eqref{eq:beta-from-mean} into $\alpha^2 Q^+ + \beta^2 Q^- = N$ yields
+\textbf{Step 2 (unit empirical second moment).} Substituting \eqref{eq:beta-from-mean} into
+$\alpha^2 Q^+ + \beta^2 Q^- = N_{\mathrm{nz}}$ yields
 \begin{align}
     \alpha^2 Q^+ + \beta^2 Q^-
-    &= N,
+    &= N_{\mathrm{nz}},
     \\
     \alpha^2 Q^+ + \alpha^2\Big(\frac{S^+}{S^-}\Big)^{\!2} Q^-
-    &= N,
+    &= N_{\mathrm{nz}},
     \\
     \alpha^2
-    &= \frac{N}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
+    &= \frac{N_{\mathrm{nz}}}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
 \end{align}
-The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $N>0$ under the same assumption. Taking the positive square root
-gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
+The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $N_{\mathrm{nz}}>0$ under the same assumption. Taking the positive
+square root gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
 
 \textbf{Uniqueness.} The mean constraint uniquely specifies the ratio $\beta/\alpha$, and the second-moment constraint uniquely
 specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a unique solution.
@@ -169,9 +182,10 @@ surrogate can be written as
     \right],
     \label{eq:prefix-masked-surrogate}
 \end{equation}
-where the gate is applied at token granularity. Our implementation uses a PPO-style clipped surrogate with normalized advantages; see
-\Cref{sec:combined-loss} for the exact objective. Importantly, our prefix criterion is a tractable sample-level \emph{proxy} for Causal
-Trust Region filtering and is not the sequence-level max-divergence criterion used in TRM (based on $\max_t \DKL(c_t)$).
+where the gate is applied at token granularity. Our implementation uses a per-token importance-weighted surrogate with normalized
+advantages; see \Cref{sec:combined-loss} for the exact objective. Importantly, our prefix criterion is a tractable sample-level
+\emph{proxy} for Causal Trust Region filtering and is not the sequence-level max-divergence criterion used in TRM (based on
+$\max_t \DKL(c_t)$).
 
 \subsection{Limitations of Existing Methods}
 \label{sec:is-limitations}
