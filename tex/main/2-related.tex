@@ -8,6 +8,9 @@ The high memory cost of maintaining a critic network has motivated a family of c
 \subsection{Off-Policy Correction in LLM-RL}
 
 Modern LLM-RL pipelines decouple inference from training: high-throughput engines such as vLLM~\citep{kwon2023efficient} generate rollouts, while gradient updates are performed in separate training frameworks. This architectural separation introduces a policy mismatch between the rollout engine and the training actor~\citep{yao2025offpolicy}.
+Recent empirical analyses further show that the trust region should be anchored to the \emph{original} rollout distribution rather than a
+recomputed anchor evaluated inside the training stack, since training-inference mismatch can make these distributions differ even under
+identical parameters~\citep{qi2026rethinkingtrustregionllm}.
 
 Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. ICEPOP~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
 

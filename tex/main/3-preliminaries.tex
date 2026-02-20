@@ -26,23 +26,33 @@ Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ 
 
 \textbf{Two policies.} We consider two policies:
 \begin{itemize}
-    \item $\piold$: the \emph{behavior} (rollout) policy used to generate samples; it is fixed during each policy update;
+    \item $\piroll$: the \emph{behavior} (rollout) policy used to generate samples; it is fixed during each policy update;
     \item $\pitheta$: the \emph{training} policy being optimized by gradient steps.
 \end{itemize}
-This is the same two-policy setup as in long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}), where $\piold$ plays
-the role of the rollout policy $\piroll$.
+This is the same two-policy setup as in long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
 
 \textbf{Importance ratio.} The per-token importance ratio (and its log-ratio) are
 \begin{align}
     \rho_t
-    &:= \frac{\pitheta(y_t \mid c_t)}{\piold(y_t \mid c_t)},
+    &:= \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
     \label{eq:ratio}
     \\
     r_t
     &:= \log \rho_t
-    = \log \pitheta(y_t \mid c_t) - \log \piold(y_t \mid c_t).
+    = \log \pitheta(y_t \mid c_t) - \log \piroll(y_t \mid c_t).
     \label{eq:log-ratio}
 \end{align}
+
+\begin{remark}[From three distributions to two]
+\label{rem:three-to-two}
+Practical LLM-RL pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
+inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations \emph{recompute}
+the behavior log-probabilities inside the training stack, yielding a recomputed distribution that can differ from the true rollout
+distribution even when parameters are identical. Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the
+importance ratio) must be anchored to the original behavior distribution that generated the data. Accordingly, we define $\rho_t$ in
+\eqref{eq:ratio} using $\piroll$ and assume access to $\log \piroll(y_t\mid c_t)$ via rollout-time caching. The theoretical development
+therefore involves only the policy pair $(\piroll,\pitheta)$, as in~\citet{li2025trm}.
+\end{remark}
 
 \textbf{Action mask.} We use an action mask $m_t \in \{0,1\}$ to select active action-token positions (excluding padding, and excluding
 prompt-only positions if a unified tokenization is used). When we index only over action tokens without padding, one can take $m_t \equiv 1$.
@@ -70,7 +80,7 @@ When the policy pair is clear from context, we write $\Dtvtok(c_t)$ and $\Dkltok
 
 \begin{definition}[Max token-level divergences and expected per-position TV]
 \label{def:max-div}
-For the policy pair $(\piold,\pitheta)$, define:
+For the policy pair $(\piroll,\pitheta)$, define:
 \begin{align}
     \epsilon
     &:= \Dtvtokmax := \max_{t,\,c_t} \Dtvtok(c_t),
@@ -79,7 +89,7 @@ For the policy pair $(\piold,\pitheta)$, define:
     &:= \Dkltokmax := \max_{t,\,c_t} \Dkltok(c_t),
     \\
     \Dbar_t
-    &:= \E_{c_t \sim d_t^{\piold}}\!\big[\Dtvtok(c_t)\big].
+    &:= \E_{c_t \sim d_t^{\piroll}}\!\big[\Dtvtok(c_t)\big].
 \end{align}
 \end{definition}
 
@@ -90,8 +100,8 @@ The following assumptions are used throughout the paper:
 
 \begin{assumption}[Policy Support Overlap]
 \label{asm:support}
-For all contexts $c_t$ and tokens $y_t$ in the vocabulary, $\piold(y_t|c_t) > 0 \implies \pitheta(y_t|c_t) > 0$. This ensures the
-importance ratio $\rho_t$ in \eqref{eq:ratio} is well-defined, and that KL terms with $\piold$ in the first argument are finite.
+For all contexts $c_t$ and tokens $y_t$ in the vocabulary, $\piroll(y_t|c_t) > 0 \implies \pitheta(y_t|c_t) > 0$. This ensures the
+importance ratio $\rho_t$ in \eqref{eq:ratio} is well-defined, and that KL terms with $\piroll$ in the first argument are finite.
 \end{assumption}
 
 \begin{assumption}[Bounded Rewards]
@@ -106,15 +116,15 @@ The response length satisfies $T < \infty$ for all generated sequences.
 
 \subsection{The Surrogate Objective and Error Decomposition}
 
-Samples are generated from a behavior policy $\piold$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately},
-the standard surrogate objective uses the per-step advantage under $\piold$,
+Samples are generated from a behavior policy $\piroll$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately},
+the standard surrogate objective uses the per-step advantage under $\piroll$,
 \begin{equation}
-    A_t^{\piold}(c_t, y_t)
-    := \E_{\piold}\!\big[R(x, y)\mid c_t, y_t\big] - \E_{\piold}\!\big[R(x, y)\mid c_t\big].
+    A_t^{\piroll}(c_t, y_t)
+    := \E_{\piroll}\!\big[R(x, y)\mid c_t, y_t\big] - \E_{\piroll}\!\big[R(x, y)\mid c_t\big].
 \end{equation}
 This yields the per-step surrogate
 \begin{equation}
-    L_{\piold}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piold}}\!\Big[\E_{y_t \sim \piold(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piold}(c_t, y_t)\big]\Big],
+    L_{\piroll}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\!\Big[\E_{y_t \sim \piroll(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piroll}(c_t, y_t)\big]\Big],
     \label{eq:surrogate}
 \end{equation}
 where $\rho_t$ is defined in \eqref{eq:ratio}.
@@ -128,43 +138,43 @@ same prompt group). Define the trajectory-level advantage
 \end{equation}
 The trajectory-level surrogate used in critic-free implementations is
 \begin{equation}
-    \tilde{L}_{\piold}(\pitheta) := \E_{\piold}\!\Big[A \cdot \sum_{t=1}^T \rho_t\Big].
+    \tilde{L}_{\piroll}(\pitheta) := \E_{\piroll}\!\Big[A \cdot \sum_{t=1}^T \rho_t\Big].
 \end{equation}
 \end{definition}
 
 \begin{remark}[Per-step surrogate vs.\ implementation surrogate]
 \label{rem:surrogate-approx}
-The per-step advantage $A_t^{\piold}(c_t,y_t)$ depends on the full future trajectory conditioned on $(c_t,y_t)$, and is generally
-intractable without a learned value function. The surrogate $\tilde{L}_{\piold}$ in \Cref{def:impl-surrogate} replaces the future
-conditional advantage with a trajectory-wide scalar. Therefore $\tilde{L}_{\piold}$ should be viewed as an \emph{approximation} rather
-than an equivalent reformulation of $L_{\piold}$ in \eqref{eq:surrogate}.
+The per-step advantage $A_t^{\piroll}(c_t,y_t)$ depends on the full future trajectory conditioned on $(c_t,y_t)$, and is generally
+intractable without a learned value function. The surrogate $\tilde{L}_{\piroll}$ in \Cref{def:impl-surrogate} replaces the future
+conditional advantage with a trajectory-wide scalar. Therefore $\tilde{L}_{\piroll}$ should be viewed as an \emph{approximation} rather
+than an equivalent reformulation of $L_{\piroll}$ in \eqref{eq:surrogate}.
 \end{remark}
 
 \begin{remark}[On-policy unbiasedness vs.\ surrogate equivalence]
 \label{rem:onpolicy-unbiasedness}
-When $\piold=\pitheta$ (on-policy) and $b$ is independent of the sampled trajectory, the REINFORCE identity gives
+When $\piroll=\pitheta$ (on-policy) and $b$ is independent of the sampled trajectory, the REINFORCE identity gives
 \begin{equation}
     \E_{\pitheta}\!\Big[A \cdot \sum_{t=1}^T \nabla_\theta \log \pitheta(y_t \mid c_t)\Big] = \nabla_\theta J(\pitheta),
 \end{equation}
 which provides an unbiased estimator of the policy gradient $\nabla_\theta J(\pitheta)$. This does not imply that the trajectory-level
-surrogate $\tilde{L}_{\piold}$ is equivalent to the per-step surrogate $L_{\piold}$ in \eqref{eq:surrogate}. Accordingly, the error
-decomposition below is stated in terms of $L_{\piold}$, which yields a clean advantage/context-shift factorization, while the implemented
-loss uses $\tilde{L}_{\piold}$ as a practical approximation.
+surrogate $\tilde{L}_{\piroll}$ is equivalent to the per-step surrogate $L_{\piroll}$ in \eqref{eq:surrogate}. Accordingly, the error
+decomposition below is stated in terms of $L_{\piroll}$, which yields a clean advantage/context-shift factorization, while the implemented
+loss uses $\tilde{L}_{\piroll}$ as a practical approximation.
 \end{remark}
 
 The approximation error of the per-step surrogate is
 \begin{equation}
-    \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piold) - L_{\piold}(\pitheta).
+    \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - L_{\piroll}(\pitheta).
     \label{eq:error-def}
 \end{equation}
 Via the Performance Difference Identity~\citep{kakade2002approximately}, this error decomposes as:
 \begin{equation}
-    |\mathrm{Error}(\pitheta)| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piold}\|_{\mathrm{TV}},
+    |\mathrm{Error}(\pitheta)| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}},
     \label{eq:error-decomp}
 \end{equation}
 where
 \begin{equation}
-    g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piold}(c_t, y_t)\big]
+    g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big]
 \end{equation}
 is the expected advantage shift. Classical bounds on \eqref{eq:error-decomp} scale as $O(T^2)$~\citep{kakade2002approximately,
 achiam2017constrained}, which is vacuous for long-horizon LLM tasks ($T>4000$). Recent work~\citep{li2025trm} derives tighter bounds,
@@ -183,7 +193,7 @@ motivates our prefix cumulative IS correction.
 \label{sec:existing-is}
 
 Several methods have been proposed to stabilize policy-gradient updates by constraining the per-token importance ratio $\rho_t$ between the
-training policy $\pitheta$ and the behavior policy $\piold$. We use the per-token log-ratio $r_t = \log \rho_t$ defined in
+training policy $\pitheta$ and the behavior policy $\piroll$. We use the per-token log-ratio $r_t = \log \rho_t$ defined in
 \eqref{eq:log-ratio}.
 
 \begin{table}[ht]
