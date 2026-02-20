@@ -257,14 +257,13 @@ log-ratio magnitude.
 
 \begin{definition}[Prefix Cumulative Ratio Proxy]
 \label{def:prefix-is}
-For a trajectory with action mask $m_t \in \{0,1\}$ and per-token log-ratios $r_t$ defined in \eqref{eq:log-ratio}, define the
+For a response trajectory $y=(y_1,\ldots,y_T)$ with per-token log-ratios $r_t$ defined in \eqref{eq:log-ratio}, define the prefix
 cumulative sums
 \begin{align}
-    L_t &= \sum_{s=1}^{t} r_s \cdot m_s, \qquad P_t = \sum_{s=1}^{t} m_s, \label{eq:prefix-cumsum} \\
-    \bar{r}_t &= \frac{L_t}{P_t}, \qquad \rhoprefix{t} = \exp(\bar{r}_t), \label{eq:prefix-is}
+    L_t &:= \sum_{s=1}^{t} r_s, \label{eq:prefix-cumsum} \\
+    \bar{r}_t &:= \frac{1}{t}L_t, \qquad \rhoprefix{t} := \exp(\bar{r}_t), \label{eq:prefix-is}
 \end{align}
-where $\bar{r}_t$ is defined only for $t$ such that $P_t\ge 1$ (i.e., the prefix contains at least one active action token). The
-statistic $\rhoprefix{t}$ is the geometric mean of per-token importance ratios over active positions up to $t$.
+for $t\in\{1,\ldots,T\}$. The statistic $\rhoprefix{t}$ is the geometric mean of per-token importance ratios over the length-$t$ prefix.
 \end{definition}
 
 \begin{definition}[Prefix Causal Trust Region Mask (Proxy)]
@@ -276,13 +275,6 @@ Given thresholds $[\lambda, \Lambda]$, define the per-position prefix mask
 \end{equation}
 \end{definition}
 
-\begin{remark}[Action-token indexing]
-\label{rem:action-indexing}
-For the theoretical analysis, we may assume (without loss of generality) that we index only over active action-token positions and that the
-trajectory is not padded. In this case, one can take $m_t\equiv 1$ and $P_t=t$. We retain the mask notation to match the batched,
-variable-length implementation.
-\end{remark}
-
 Three structural properties distinguish the prefix-level mask from existing methods:
 
 \textbf{Causality.} $\rhoprefix{t}$ depends only on $\{r_s\}_{s \le t}$, respecting the autoregressive order.
@@ -291,17 +283,17 @@ Three structural properties distinguish the prefix-level mask from existing meth
 
 \begin{lemma}[Stability of prefix averages]
 \label{lem:prefix-stability}
-Fix thresholds $0<\lambda\le 1\le \Lambda$, and define $\bar{r}_t$ as in \eqref{eq:prefix-is}. Suppose $P_t\ge 1$ and
-$\bar{r}_t\in[\log\lambda,\log\Lambda]$. If the next position is active ($m_{t+1}=1$) and satisfies
+Fix thresholds $0<\lambda\le 1\le \Lambda$, and define $\bar{r}_t$ as in \eqref{eq:prefix-is}. Suppose
+$\bar{r}_t\in[\log\lambda,\log\Lambda]$ and
 $r_{t+1}\in[\log\lambda,\log\Lambda]$, then $\bar{r}_{t+1}\in[\log\lambda,\log\Lambda]$.
 \end{lemma}
 
 \begin{proof}
-When $m_{t+1}=1$, we have $L_{t+1}=L_t+r_{t+1}$ and $P_{t+1}=P_t+1$. Therefore
+By definition, $L_{t+1} = L_t + r_{t+1}$, hence
 \begin{equation}
     \bar{r}_{t+1}
-    = \frac{L_{t+1}}{P_{t+1}}
-    = \frac{P_t}{P_t+1}\,\bar{r}_t + \frac{1}{P_t+1}\,r_{t+1}.
+    = \frac{1}{t+1}L_{t+1}
+    = \frac{t}{t+1}\,\bar{r}_t + \frac{1}{t+1}\,r_{t+1}.
 \end{equation}
 The coefficients are nonnegative and sum to one, so $\bar{r}_{t+1}$ is a convex combination of two numbers in
 $[\log\lambda,\log\Lambda]$. Hence $\bar{r}_{t+1}\in[\log\lambda,\log\Lambda]$.
@@ -323,7 +315,7 @@ $0 < \lambda \le 1 \le \Lambda$. Concretely, the sequence-level mask is defined 
 \begin{equation}
     \rhoseq := \exp(\bar{r}),
     \qquad
-    \bar{r} := \frac{1}{P_T}\sum_{s=1}^{T} r_s m_s,
+    \bar{r} := \frac{1}{T}\sum_{s=1}^{T} r_s,
 \end{equation}
 and $M_t^{\mathrm{seq}} := \mathbb{I}[\rhoseq \in [\lambda,\Lambda]]$ for all $t$.
 Assume policy support overlap (\Cref{asm:support}). Then:
@@ -332,14 +324,14 @@ Assume policy support overlap (\Cref{asm:support}). Then:
     \item[(a)] \textbf{Early deviation: the prefix mask rejects a (possibly longer) prefix.} Assume $\rho_1 \notin [\lambda, \Lambda]$ and
     $|r_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
     only position $t=1$, while the prefix mask rejects at least position $t=1$. Moreover, if $r_1>\log\Lambda$ then for every position $t$
-    with $P_t \ge 1$ satisfying
+    satisfying
     \begin{equation}
-        P_t < \frac{r_1+\varepsilon}{\log\Lambda+\varepsilon},
+        t < \frac{r_1+\varepsilon}{\log\Lambda+\varepsilon},
         \label{eq:early-upper-sufficient}
     \end{equation}
-    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $r_1<\log\lambda$ then for every position $t$ with $P_t \ge 1$ satisfying
+    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $r_1<\log\lambda$ then for every position $t$ satisfying
     \begin{equation}
-        P_t < \frac{-r_1+\varepsilon}{|\log\lambda|+\varepsilon},
+        t < \frac{-r_1+\varepsilon}{|\log\lambda|+\varepsilon},
         \label{eq:early-lower-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{prefix}}=0$. In particular, in the early-deviation regime the prefix mask rejects at least as many tokens as
@@ -352,7 +344,7 @@ Assume policy support overlap (\Cref{asm:support}). Then:
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
     \end{equation}
     In contrast, sequence-level masking is all-or-nothing: $|\{t : M_t^{\mathrm{seq}} = 0\}| \in \{0, T\}$. Moreover, in the pure
-    single-spike case $r_{t^*}=L$ and $r_t=0$ for $t\neq t^*$, one has $\frac{L}{P_{t^*}} \ge \frac{L}{P_T}$, so there exist regimes
+    single-spike case $r_{t^*}=L$ and $r_t=0$ for $t\neq t^*$, one has $\frac{L}{t^*} \ge \frac{L}{T}$, so there exist regimes
     where $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by large $T$).
 
     \item[(c)] \textbf{Monotone violation: all methods reject.} If $r_s > \log\Lambda$ for all $s$ (upper violation), or
@@ -365,25 +357,25 @@ Assume policy support overlap (\Cref{asm:support}). Then:
 The full proof is in \Cref{app:prefix-proof}. We highlight the key steps.
 
 \textbf{Part (a).} The $\varepsilon$-bounded condition implies $r_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
-only $t=1$. For the prefix statistic, write $L_t=r_1+\sum_{s=2}^{t}r_s m_s$ and use the bounds
+only $t=1$. For the prefix statistic, write $L_t=r_1+\sum_{s=2}^{t}r_s$ and use the bounds
 \begin{align}
-    \sum_{s=2}^{t}r_s m_s &\ge -(P_t-1)\varepsilon,
+    \sum_{s=2}^{t}r_s &\ge -(t-1)\varepsilon,
     \\
-    \sum_{s=2}^{t}r_s m_s &\le (P_t-1)\varepsilon,
+    \sum_{s=2}^{t}r_s &\le (t-1)\varepsilon,
 \end{align}
 which yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
 \textbf{Part (b).} For $t<t^*$, all active log-ratios in the prefix satisfy $r_s\in[\log\lambda,\log\Lambda]$, so repeated
 application of \Cref{lem:prefix-stability} implies $\bar{r}_t\in[\log\lambda,\log\Lambda]$ and hence
 $M_t^{\mathrm{prefix}}=1$. Therefore masking can only occur at positions $t\ge t^*$, yielding the stated bound. The single-spike
-comparison follows from $P_{t^*}\le P_T$.
+comparison follows from $t^*\le T$.
 
 \textbf{Part (c).} If each $r_s$ is strictly beyond the same threshold, then their running average is also strictly beyond the
 threshold, so both prefix and sequence masks reject all tokens.
 \end{proof}
 
 \begin{remark}[Same-sign but in-bound deviations]
-When all $r_s$ share the same sign but do not all exceed the corresponding threshold, the running average $L_t/P_t$ need not be
+When all $r_s$ share the same sign but do not all exceed the corresponding threshold, the running average $L_t/t$ need not be
 monotone in $t$ and may return within bounds after crossing a threshold. In this regime there is no unconditional dominance ordering
 between prefix masking and token-level masking: token-level methods detect large single-token outliers, while prefix masking detects
 cumulative drift from many moderate deviations.
@@ -433,7 +425,7 @@ Combining the two displays yields \eqref{eq:cumsum-kl}.
 Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level constraint on the prefix average log-ratio:
 \begin{equation}
     \rhoprefix{t} \in [\lambda, \Lambda]
-    \iff \frac{1}{P_t}\sum_{s=1}^{t}r_s m_s \in [\log\lambda, \log\Lambda].
+    \iff \frac{1}{t}\sum_{s=1}^{t}r_s \in [\log\lambda, \log\Lambda].
     \label{eq:threshold-kl}
 \end{equation}
 In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
@@ -450,13 +442,13 @@ without additional assumptions. Separately, Pinsker's inequality relates the pop
 \label{cor:per-position-trust}
 Under prefix Causal Trust Region masking with threshold $[\lambda, \Lambda]$, for all accepted tokens ($M_t^{\mathrm{prefix}} = 1$), the sample-level cumulative log-ratio satisfies:
 \begin{equation}
-    \frac{1}{P_t}\sum_{s=1}^{t} \log\rho_s \cdot m_s \in [\log\lambda, \log\Lambda].
+    \frac{1}{t}\sum_{s=1}^{t} \log\rho_s \in [\log\lambda, \log\Lambda].
 \end{equation}
 This provides a per-position, sample-level trust region constraint analogous to the per-position structure in the Adaptive bound. The constraint operates on individual trajectories; its connection to the population-level KL is through the expectation identity in Eq.~\eqref{eq:cumsum-kl}.
 \end{corollary}
 
 \begin{proof}
-Follows directly from \Cref{def:prefix-is} and Eq.~\eqref{eq:prefix-mask}: $M_t^{\mathrm{prefix}} = 1$ iff $\rhoprefix{t} \in [\lambda, \Lambda]$ iff $L_t/P_t \in [\log\lambda, \log\Lambda]$. Since $L_t = \sum_{s\le t} r_s m_s$ and $r_s=\log\rho_s$, the claim follows.
+Follows directly from \Cref{def:prefix-is} and Eq.~\eqref{eq:prefix-mask}: $M_t^{\mathrm{prefix}} = 1$ iff $\rhoprefix{t} \in [\lambda, \Lambda]$ iff $L_t/t \in [\log\lambda, \log\Lambda]$. Since $L_t = \sum_{s=1}^{t} r_s$ and $r_s=\log\rho_s$, the claim follows.
 \end{proof}
 
 \subsection{The Combined Loss}

@@ -13,6 +13,12 @@ Common sources of mismatch include backend discrepancies (different attention ke
 discontinuities (Top-$K$ routing can flip under small perturbations), and distributed staleness (actor--learner lag between rollout and
 consumption). These effects can compound autoregressively over long horizons and lead to volatile per-token ratios.
 
+\paragraph{Action-token indexing in implementations.}
+In practical training code, a batch element often concatenates prompt and response tokens and may include padding or packing. Frameworks
+therefore use an \emph{action mask} $m_t\in\{0,1\}$ to select the response (action) positions that contribute to the policy-gradient
+objective. In this paper's theoretical development, we index the response as $y=(y_1,\ldots,y_T)$ and write sums as $\sum_{t=1}^{T}(\cdot)$,
+which corresponds to the special case $m_t\equiv 1$ after restricting to action-token positions.
+
 \paragraph{Anchoring and the apparent three-distribution structure.}
 Practical pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
 inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations recompute the
@@ -224,23 +230,18 @@ so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+
         M_t^{\mathrm{seq}}
         := \mathbb{I}\!\big[\bar{r} \in [-\tau_-,\tau_+]\big],
         \qquad
-        \bar{r} := \frac{1}{P_T}\sum_{s=1}^{T}r_s m_s,
+        \bar{r} := \frac{1}{T}\sum_{s=1}^{T}r_s,
     \end{equation}
     for all $t$ (equivalently, $\rhoseq=\exp(\bar{r})$).
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
         M_t^{\mathrm{prefix}}
-        := \mathbb{I}\!\big[L_t/P_t \in [-\tau_-,\tau_+]\big],
+        := \mathbb{I}\!\big[\bar{r}_t \in [-\tau_-,\tau_+]\big],
     \end{equation}
-    where $L_t = \sum_{s\le t}r_s m_s$ and $P_t=\sum_{s\le t}m_s$.
+    where $\bar{r}_t := \frac{1}{t}\sum_{s=1}^{t}r_s$.
 \end{itemize}
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
-\noindent\textbf{Action-token indexing.}
-By \Cref{rem:action-indexing}, we may index only over active action-token positions and assume the trajectory is unpadded. Equivalently,
-we take $m_t\equiv 1$, so $P_t=t$ and $L_t=\sum_{s=1}^{t}r_s$.
-
-\par
 \noindent\textbf{Part (a): Early deviation.}
 Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
@@ -254,27 +255,27 @@ ICEPOP masks only position $t=1$.
 For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because the prefix average at $t=1$ is $\bar{r}_1=r_1 \notin
 [-\tau_-,\tau_+]$. To quantify how long the rejection can persist, write
 \begin{equation}
-    L_t = r_1 + \sum_{s=2}^{t}r_s,
-    \qquad
-    P_t = t.
+    L_t := \sum_{s=1}^{t}r_s = r_1 + \sum_{s=2}^{t}r_s,
 \end{equation}
-If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, so
+so that $\bar{r}_t = L_t/t$. If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, hence
 \begin{equation}
-    L_t \ge r_1 - \varepsilon(P_t-1).
+    L_t \ge r_1 - \varepsilon(t-1).
 \end{equation}
-Therefore, if $P_t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then
+Therefore, if $t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then
 \begin{align}
-    \frac{L_t}{P_t}
-    &\ge \frac{r_1-\varepsilon(P_t-1)}{P_t}
-    = \frac{r_1+\varepsilon}{P_t} - \varepsilon
+    \bar{r}_t
+    = \frac{L_t}{t}
+    &\ge \frac{r_1-\varepsilon(t-1)}{t}
+    = \frac{r_1+\varepsilon}{t} - \varepsilon
     > \tau_+,
 \end{align}
 so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $r_1<-\tau_-$ is symmetric: since $r_s \le \varepsilon$ for $s\ge2$, we have
-$L_t \le r_1 + \varepsilon(P_t-1)$. If $P_t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then
+$L_t \le r_1 + \varepsilon(t-1)$. If $t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then
 \begin{align}
-    \frac{L_t}{P_t}
-    &\le \frac{r_1+\varepsilon(P_t-1)}{P_t}
-    = \frac{r_1-\varepsilon}{P_t} + \varepsilon
+    \bar{r}_t
+    = \frac{L_t}{t}
+    &\le \frac{r_1+\varepsilon(t-1)}{t}
+    = \frac{r_1-\varepsilon}{t} + \varepsilon
     < -(\tau_-+\varepsilon) + \varepsilon
     = -\tau_-,
 \end{align}
@@ -285,7 +286,7 @@ and hence $M_t^{\mathrm{prefix}}=0$. This proves the sufficient conditions in \C
 Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
-Since $L_t/P_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $L_t/P_t \in [-\tau_-,\tau_+]$, and hence
+Since $\bar{r}_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $\bar{r}_t \in [-\tau_-,\tau_+]$, and hence
 $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
 \begin{equation}
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
@@ -293,18 +294,18 @@ $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occ
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
 For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $r_{t^*}=L$ and $r_t=0$
-for $t\neq t^*$. Then $\bar{r} = L/P_T$ and $L_{t^*}/P_{t^*} = L/P_{t^*}$. Since $P_{t^*} \le P_T$, we have $L/P_{t^*} \ge L/P_T$.
+for $t\neq t^*$. Then $\bar{r} = L/T$ and $\bar{r}_{t^*} = L/t^*$. Since $t^* \le T$, we have $L/t^* \ge L/T$.
 Thus whenever
 \begin{equation}
-    \frac{L}{P_{t^*}} > \tau_+
+    \frac{L}{t^*} > \tau_+
     \quad\text{and}\quad
-    \frac{L}{P_T} \le \tau_+,
+    \frac{L}{T} \le \tau_+,
 \end{equation}
 we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
 \par
 \noindent\textbf{Part (c): Monotone violation.}
-If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
+If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\bar{r}_t > \tau_+$, since it is an
 average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
 $\bar{r}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $r_s < -\tau_-$
 is symmetric.
@@ -323,11 +324,9 @@ training policy $\pitheta$. We write the per-token importance ratio and log-rati
 \end{equation}
 We also reuse the prefix cumulative sums from \Cref{def:prefix-is}:
 \begin{equation}
-    L_t := \sum_{s=1}^{t} r_s m_s,
+    L_t := \sum_{s=1}^{t} r_s,
     \qquad
-    P_t := \sum_{s=1}^{t} m_s,
-    \qquad
-    \bar{r}_t := \frac{L_t}{P_t}\quad(P_t\ge 1).
+    \bar{r}_t := \frac{1}{t}L_t.
 \end{equation}
 For thresholds $0<\lambda\le 1 \le \Lambda$, define the log-threshold interval
 \begin{equation}
@@ -338,7 +337,7 @@ For thresholds $0<\lambda\le 1 \le \Lambda$, define the log-threshold interval
     \tau_- := -\log\lambda.
 \end{equation}
 
-\paragraph{Variant B (absorbing prefix-average mask).}
+\paragraph{Variant I (absorbing prefix-average mask).}
 \label{app:variant-b}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
@@ -352,7 +351,7 @@ once a prefix violates the threshold, all subsequent positions are rejected.
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{prefix}}.
 \end{equation}
 
-\paragraph{Variant C (prefix-max mask / max-filtering).}
+\paragraph{Variant II (prefix-max mask / max-filtering).}
 \label{app:variant-c}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
@@ -367,7 +366,7 @@ The corresponding prefix-max statistic and mask are
 \end{equation}
 Equivalently, $M_t^{\mathrm{prefix\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
-\paragraph{Variant D (prefix-score mask / bound-driven).}
+\paragraph{Variant III (prefix-score mask / bound-driven).}
 \label{app:variant-d}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
@@ -385,23 +384,6 @@ and the corresponding mask is
 \end{equation}
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
-
-\paragraph{Variant E (soft, continuous prefix gating).}
-\label{app:variant-e}
-
-Hard masking can be relaxed to a continuous gate $\omega_t\in[0,1]$ constructed from the same prefix statistic $\bar{r}_t$. For example,
-with temperature $\kappa>0$,
-\begin{equation}
-    \omega_t^{\mathrm{soft}}
-    := \mathrm{sigmoid}\!\big(\kappa(\tau_+ - \bar{r}_t)\big)\cdot \mathrm{sigmoid}\!\big(\kappa(\tau_- + \bar{r}_t)\big).
-\end{equation}
-The corresponding soft-gated surrogate loss replaces the binary mask in \eqref{eq:promax-loss}:
-\begin{equation}
-    \mathcal{L}_{\mathrm{soft}}
-    := -\sum_t \omega_t^{\mathrm{soft}} \cdot \mathrm{PPOClip}(\rho_t, \hat{A}_t).
-\end{equation}
-Unlike binary rejection rules, this variant does not implement rejection sampling and is included only as an alternative engineering
-design.
 
 
 \section{Numerical Stability}
