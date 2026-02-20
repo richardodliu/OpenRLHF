@@ -22,7 +22,6 @@ Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ 
 \end{equation}
 
 \subsection{Notation}
-\label{sec:notation}
 
 \textbf{Policies.} We consider:
 \begin{itemize}
@@ -46,13 +45,11 @@ This notation follows long-horizon trust-region analyses for LLM-RL (e.g., \cite
 log-probabilities $\log \piroll(y_t\mid c_t)$; see Appendix~\ref{app:mismatch} for practical mismatch modes and implementation mappings.
 
 \subsection{Divergence Measures}
-\label{sec:divergence}
 
 We use token-level divergence measures between conditional token distributions, following the trust-region literature for long-horizon
 LLM-RL~\citep{li2025trm}. For two policies $\pi$ and $\pi'$, define the token-level total variation and KL divergences at context $c_t$:
 
 \begin{definition}[Token-level divergences]
-\label{def:token-div}
 For a context $c_t = (x, y_{<t})$ and two policies $\pi$ and $\pi'$,
 \begin{align}
     \Dtvtok(c_t;\pi,\pi')
@@ -92,7 +89,6 @@ per-token importance ratio $\rho_t$ in \eqref{eq:ratio} is well-defined, and tha
 \end{assumption}
 
 \begin{assumption}[Bounded Rewards]
-\label{asm:bounded-reward}
 There exists $R_{\max} < \infty$ such that $|R(x, y)| \le R_{\max}$ for all prompt-response pairs $(x, y)$.
 \end{assumption}
 
@@ -130,7 +126,6 @@ The trajectory-level surrogate used in critic-free implementations is
 \end{definition}
 
 \begin{remark}[Per-step surrogate vs.\ implementation surrogate]
-\label{rem:surrogate-approx}
 The per-step advantage $A_t^{\piroll}(c_t,y_t)$ depends on the full future trajectory conditioned on $(c_t,y_t)$, and is generally
 intractable without a learned value function. The surrogate $\tilde{L}_{\piroll}$ in \Cref{def:impl-surrogate} replaces the future
 conditional advantage with a trajectory-wide scalar. Therefore $\tilde{L}_{\piroll}$ should be viewed as an \emph{approximation} rather
@@ -138,7 +133,6 @@ than an equivalent reformulation of $L_{\piroll}$ in \eqref{eq:surrogate}.
 \end{remark}
 
 \begin{remark}[On-policy unbiasedness vs.\ surrogate equivalence]
-\label{rem:onpolicy-unbiasedness}
 When $\piroll=\pitheta$ (on-policy) and $b$ is independent of the sampled trajectory, the REINFORCE identity gives
 \begin{equation}
     \E_{\pitheta}\!\Big[A \cdot \sum_{t=1}^T \nabla_\theta \log \pitheta(y_t \mid c_t)\Big] = \nabla_\theta J(\pitheta),
@@ -152,7 +146,6 @@ loss uses $\tilde{L}_{\piroll}$ as a practical approximation.
 The approximation error of the per-step surrogate is
 \begin{equation}
     \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - L_{\piroll}(\pitheta).
-    \label{eq:error-def}
 \end{equation}
 Via the Performance Difference Identity~\citep{kakade2002approximately}, this error decomposes as:
 \begin{equation}
@@ -170,7 +163,6 @@ including the Pinsker-Marginal bound ($O(T^{3/2})$), the Mixed bound ($O(T)$), a
 The Adaptive bound is particularly relevant to our work:
 \begin{equation}
     B_{\mathrm{Adap}}^{*} = 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big),
-    \label{eq:adaptive-bound}
 \end{equation}
 where $\Dbar_t$ is the expected per-position TV divergence, and $\epsilon,\delta$ are the max token-level divergences from
 \Cref{def:max-div}. This bound operates at per-position granularity and preserves the causal structure of error accumulation, which
@@ -198,7 +190,6 @@ only the token-level loss terms whose prefixes violate the threshold.
 \begin{table}[ht]
 \centering
 \caption{Existing trust-region and IS stabilization methods in critic-free LLM-RL.}
-\label{tab:existing-is}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lllll}
 \toprule
@@ -230,7 +221,6 @@ trust region. A standard (max-based) criterion is
 \begin{equation}
     M(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
-    \label{eq:trm-mask}
 \end{equation}
 Most existing methods in the critic-free LLM-RL setting share a common limitation: they either operate at token granularity (treating each
 position independently) or at sequence granularity (collapsing all positions into a single decision), neither of which explicitly respects

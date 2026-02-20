@@ -21,7 +21,6 @@ motivates viewing prefix masking as a sample-level proxy for Causal Trust Region
 appears in the error decomposition.
 
 \begin{remark}[Heuristic complementarity]
-\label{rem:complementarity-heuristic}
 The discussion above should be interpreted as heuristic rather than as a formal inequality. It highlights that REINFORCE Max targets the
 advantage factor in \eqref{eq:error-decomp}, while REINFORCE Pro targets policy drift between $\piroll$ and $\pitheta$ through sample-level
 prefix filtering.
@@ -29,7 +28,6 @@ Together, they address two distinct sources of instability in the surrogate opti
 \end{remark}
 
 \begin{remark}[Variance Reduction]
-\label{rem:variance-decomp}
 Intuitively, the two components of REINFORCE Pro Max reduce gradient variance through complementary mechanisms. Component~1 (leave-one-out
 baseline + adaptive normalization) reduces the variance of the advantage estimates themselves (\Cref{prop:rloo-variance},
 \Cref{prop:alpha-beta}). Component~2 (prefix-level masking) attenuates high-variance gradient contributions from ratio-outlier tokens
@@ -76,7 +74,7 @@ $\rho_t=\pitheta/\piroll$ in \eqref{eq:ratio} during the subsequent gradient ste
 
 \emph{Adaptive Normalization (Lines~5--6).} The scaling factors $\alpha$ and $\beta$ are computed in closed form from
 Eq.~\eqref{eq:alpha-beta}, enforcing the empirical constraints in \Cref{def:adaptive-norm} on non-zero tokens while preserving the sign
-and relative ordering of advantages (\Cref{prop:gradient-direction}). When all $n$ samples receive the same reward (i.e.,
+and relative ordering of advantages (\Cref{par:adv-sign-preservation}). When all $n$ samples receive the same reward (i.e.,
 $\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), the RLOO baseline yields zero advantages; in this degenerate case,
 normalization is skipped and the optional uniform scale mode (\Cref{app:uniform-scale}) can be used to recover gradient signal.
 
@@ -137,7 +135,7 @@ theoretically principled but sacrifices per-position granularity.
 
 \textbf{REINFORCE Pro Max.} Our method is the only one in this comparison that simultaneously addresses all four dimensions. The RLOO
 baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves gradient direction while enforcing
-zero empirical mean and unit empirical variance on non-zero tokens (\Cref{prop:alpha-beta}, \Cref{prop:gradient-direction}); and prefix
+zero empirical mean and unit empirical variance on non-zero tokens (\Cref{prop:alpha-beta}, \Cref{par:adv-sign-preservation}); and prefix
 cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many
 small mismatches (\Cref{thm:prefix-tighter}). Each design choice targets a specific factor in the error decomposition, and the two
 components are complementary (\Cref{sec:unified}): REINFORCE Max targets the advantage factor while REINFORCE Pro targets the context shift

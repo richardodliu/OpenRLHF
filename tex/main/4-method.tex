@@ -22,7 +22,6 @@ Assume $n \ge 2$. For sample $i$, the baseline and shaped reward are:
 Since the reward is a scalar per response and we use $\gamma = 1.0$ (see \Cref{app:gamma-one} for a formal justification), the token-level advantage is simply the shaped reward itself:
 \begin{equation}
     A_{i,t} = \tilde{r}_i = r_i - b_i, \quad \forall\, t \in \{1, \ldots, T_i\}.
-    \label{eq:token-advantage}
 \end{equation}
 
 \subsection{Adaptive Asymmetric Normalization}
@@ -65,15 +64,12 @@ The normalized advantage is defined by a sign-dependent rescaling:
         \\
         0, & \text{if } A_{i,t} = 0.
     \end{cases}
-    \label{eq:adaptive-norm}
 \end{equation}
 where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} constraints over non-zero tokens:
 \begin{align}
     \frac{1}{|\mathcal{P}| + |\mathcal{N}|}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
-    \label{eq:adaptive-mean}
     \\
     \frac{1}{|\mathcal{P}| + |\mathcal{N}|}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
-    \label{eq:adaptive-var}
 \end{align}
 Equivalently, these constraints can be written as
 \begin{equation}
@@ -118,7 +114,7 @@ specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a uniq
 \end{proof}
 
 \paragraph{Advantage sign preservation.}
-\label{prop:gradient-direction}
+\label{par:adv-sign-preservation}
 The adaptive normalization preserves the sign of the advantage at every token: $\sign(\hat{A}_{i,t}) = \sign(A_{i,t})$ for all $(i,t)$
 with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserved within the positive group $\mathcal{P}$ and within the
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
@@ -160,7 +156,6 @@ $M(x,y)$, yielding a masked surrogate objective of the form
     := \E_{\piroll}\!\left[
         M(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
-    \label{eq:trm-masked-surrogate}
 \end{equation}
 Motivated by the same trust-region perspective for long-horizon generation, we introduce a prefix-level, per-position gate
 $M_t^{\mathrm{prefix}}$ computed from a ratio-based \emph{prefix} statistic and multiply it into the token-level loss. Unlike TRM, which
@@ -172,7 +167,6 @@ surrogate can be written as
     := \E_{\piroll}\!\left[
         A(x,y)\cdot \sum_{t=1}^{T} M_t^{\mathrm{prefix}}\rho_t
     \right],
-    \label{eq:prefix-masked-surrogate}
 \end{equation}
 where the gate is applied at token granularity. Our implementation uses a per-token importance-weighted surrogate with normalized
 advantages; see \Cref{sec:combined-loss} for the exact objective. Importantly, our prefix criterion is a tractable sample-level
@@ -180,7 +174,6 @@ advantages; see \Cref{sec:combined-loss} for the exact objective. Importantly, o
 $\max_t \DKL(c_t)$).
 
 \subsection{Limitations of Existing Methods}
-\label{sec:is-limitations}
 
 \begin{proposition}[Token-Level IS Ignores Causal Structure]
 \label{prop:token-is-fails}
@@ -459,7 +452,6 @@ Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level const
     \rhoprefix{t} \in [\lambda, \Lambda]
     \iff \log\rhoprefix{t} \in [\log\lambda, \log\Lambda]
     \iff \frac{1}{t}\sum_{s=1}^{t}\log\rho_s \in [\log\lambda, \log\Lambda].
-    \label{eq:threshold-kl}
 \end{equation}
 In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for Causal Trust Region filtering rather than a population-level guarantee
@@ -467,7 +459,6 @@ without additional assumptions. Separately, Pinsker's inequality relates the pop
 \begin{equation}
     \|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\|_{\mathrm{TV}}
     \le \sqrt{\frac{\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\pitheta})}{2}}.
-    \label{eq:context-shift-prefix}
 \end{equation}
 \end{remark}
 
