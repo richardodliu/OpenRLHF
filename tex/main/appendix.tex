@@ -50,46 +50,84 @@ The leave-one-out baseline is equivalent to the leave-one-out control variate fr
 \end{remark}
 
 \begin{proof}
-We give a self-contained proof under group sampling; taking the outer expectation over prompts $x \sim P(x)$ yields the statement for the
+We prove all statements conditional on a fixed prompt $x$; taking the outer expectation over $x\sim P(x)$ yields the proposition for the
 full objective $J(\pitheta)$.
 
-\textbf{Unbiasedness.} Since $b_i$ depends only on $\{r_j\}_{j \neq i}$, it is independent of $(y^{(i)}, r_i, f_i)$. Therefore
-\[
-    \E[(r_i - b_i) f_i \mid x] = \E[r_i f_i \mid x] - \E[b_i \mid x]\E[f_i \mid x].
-\]
-By the score-function identity, $\E[f_i \mid x] = \nabla_\theta \E[1 \mid x] = 0$, and $\E[r_i f_i \mid x] = \nabla_\theta \E[r_i \mid x]$.
-Thus $\E[(r_i - b_i) f_i \mid x] = \nabla_\theta \E[r_i \mid x] = \nabla_\theta J_x(\pitheta)$, where $J_x(\pitheta)=\E[R(x,y)\mid x]$.
-Averaging over $i$ and then over $x$ yields $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
+\textbf{(1) Unbiasedness.} Since $b_i$ depends only on $\{r_j\}_{j\neq i}$, it is independent of $(r_i,f_i)$ conditional on $x$. Hence
+\begin{align}
+    \E\!\big[(r_i-b_i)f_i \mid x\big]
+    &= \E\!\big[r_i f_i \mid x\big] - \E\!\big[b_i \mid x\big]\E\!\big[f_i \mid x\big].
+\end{align}
+By the score-function identity,
+\begin{equation}
+    \E\!\big[f_i \mid x\big] = \E\!\big[\nabla_\theta \log P^{\pitheta}(y^{(i)}\mid x)\mid x\big]
+    = \nabla_\theta \E\!\big[1 \mid x\big] = 0,
+\end{equation}
+and
+\begin{equation}
+    \E\!\big[r_i f_i \mid x\big]
+    = \E\!\Big[r_i\,\nabla_\theta \log P^{\pitheta}(y^{(i)}\mid x)\,\Big|\,x\Big]
+    = \nabla_\theta \E[r_i \mid x].
+\end{equation}
+Therefore $\E[(r_i-b_i)f_i\mid x] = \nabla_\theta \E[r_i\mid x]$. Averaging over $i$ yields
+\begin{equation}
+    \E[\hat{g}\mid x] = \nabla_\theta \E[r_1\mid x] = \nabla_\theta J_x(\pitheta),
+    \qquad
+    J_x(\pitheta) := \E_{y\sim \pitheta(\cdot\mid x)}[R(x,y)].
+\end{equation}
+Taking the outer expectation over $x$ gives $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
 
-\textbf{Baseline independence.} The same independence implies $\E[b_i f_i \mid x] = \E[b_i \mid x]\E[f_i \mid x] = 0$, hence
-$\Cov(f_i,b_i)=0$.
+\textbf{(2) Baseline independence.} The same conditional independence implies
+\begin{equation}
+    \E[b_i f_i \mid x] = \E[b_i\mid x]\E[f_i\mid x] = 0,
+\end{equation}
+so $\Cov(f_i,b_i)=0$.
 
-\textbf{Mean-baseline scaling.} Let $b^{\mathrm{mean}} = \frac{1}{n}\sum_{j=1}^{n} r_j$. For each $i$,
-\[
-    b^{\mathrm{mean}} = \frac{r_i}{n} + \frac{n-1}{n} b_i
-    \quad\Longrightarrow\quad
-    r_i - b^{\mathrm{mean}} = \frac{n-1}{n}(r_i - b_i).
-\]
-Summing over $i$ gives $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ deterministically. Taking expectations yields
+\textbf{(3) Mean-baseline scaling.} For each $i$, write
+\begin{align}
+    b^{\mathrm{mean}}
+    &= \frac{1}{n}\sum_{j=1}^{n} r_j
+    = \frac{r_i}{n} + \frac{1}{n}\sum_{j\neq i} r_j
+    = \frac{r_i}{n} + \frac{n-1}{n}\,b_i,
+    \\
+    r_i - b^{\mathrm{mean}}
+    &= r_i - \frac{r_i}{n} - \frac{n-1}{n}\,b_i
+    = \frac{n-1}{n}(r_i-b_i).
+\end{align}
+Summing over $i$ gives the deterministic identity $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$, and taking expectations yields
 $\E[\hat{g}^{\mathrm{mean}}] = \frac{n-1}{n}\nabla_\theta J(\pitheta)$.
 
-\textbf{Second-moment decomposition.} Conditional on $x$, the random variable $b_i$ is the average of $n-1$ i.i.d.\ rewards
-$\{r_j\}_{j\neq i}$, hence $\Var(b_i \mid x) = \sigma^2(x)/(n-1)$. For \eqref{eq:rloo-second-moment}, write
-\[
-    r_i - b_i = (r_i - \mu(x)) - (b_i - \mu(x)).
-\]
-Expanding the square and multiplying by $f_i f_i^\top$ gives
-\[
-    (r_i - b_i)^2 f_i f_i^\top
-    = (r_i - \mu(x))^2 f_i f_i^\top - 2(r_i - \mu(x))(b_i - \mu(x)) f_i f_i^\top + (b_i - \mu(x))^2 f_i f_i^\top.
-\]
-Taking conditional expectation and using independence of $b_i$ from $(r_i,f_i)$ (given $x$), the cross term vanishes:
-\[
-    \E[(r_i - \mu(x))(b_i - \mu(x)) f_i f_i^\top \mid x]
-    = \E[b_i - \mu(x) \mid x]\E[(r_i - \mu(x)) f_i f_i^\top \mid x] = 0.
-\]
-The last term factorizes as $\E[(b_i - \mu(x))^2 f_i f_i^\top \mid x] = \Var(b_i\mid x)\, \E[f_i f_i^\top\mid x]$, which yields
-\eqref{eq:rloo-second-moment}.
+\textbf{(4) Second-moment decomposition.} Conditional on $x$, $b_i$ is the average of $n-1$ i.i.d.\ rewards $\{r_j\}_{j\neq i}$, hence
+\begin{equation}
+    \Var(b_i \mid x) = \frac{\sigma^2(x)}{n-1}.
+\end{equation}
+Write $r_i-b_i = (r_i-\mu(x)) - (b_i-\mu(x))$. Then
+\begin{align}
+    (r_i-b_i)^2
+    &= (r_i-\mu(x))^2 - 2(r_i-\mu(x))(b_i-\mu(x)) + (b_i-\mu(x))^2.
+\end{align}
+Multiplying by $f_i f_i^\top$ and taking conditional expectation gives
+\begin{align}
+    \E\!\big[(r_i-b_i)^2 f_i f_i^\top \mid x\big]
+    &= \E\!\big[(r_i-\mu(x))^2 f_i f_i^\top \mid x\big]
+    - 2\,\E\!\big[(r_i-\mu(x))(b_i-\mu(x)) f_i f_i^\top \mid x\big]
+    \nonumber\\
+    &\quad
+    + \E\!\big[(b_i-\mu(x))^2 f_i f_i^\top \mid x\big].
+\end{align}
+The cross term vanishes by conditional independence and $\E[b_i-\mu(x)\mid x]=0$:
+\begin{align}
+    \E\!\big[(r_i-\mu(x))(b_i-\mu(x)) f_i f_i^\top \mid x\big]
+    &= \E[b_i-\mu(x)\mid x]\;\E\!\big[(r_i-\mu(x)) f_i f_i^\top \mid x\big]
+    = 0.
+\end{align}
+The last term factorizes as
+\begin{align}
+    \E\!\big[(b_i-\mu(x))^2 f_i f_i^\top \mid x\big]
+    &= \E\!\big[(b_i-\mu(x))^2 \mid x\big]\;\E\!\big[f_i f_i^\top \mid x\big]
+    = \Var(b_i\mid x)\,\E[f_i f_i^\top\mid x],
+\end{align}
+which yields \eqref{eq:rloo-second-moment}.
 \end{proof}
 
 
@@ -103,20 +141,28 @@ When the extrinsic reward is sparse (assigned only at the final token), $\gamma 
 
 \begin{proof}
 For the undiscounted objective $J(\pitheta)=\E[R(x,y)]$, the REINFORCE identity gives
-\[
+\begin{equation}
     \nabla_\theta J(\pitheta)
     = \E\!\Big[R(x,y)\sum_{t=1}^{T}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
-\]
-If one instead uses a discounted return with $\gamma<1$ in a sparse terminal-reward setting, the resulting estimator corresponds to
-\[
-    \E\!\Big[R(x,y)\sum_{t=1}^{T}\gamma^{T-t}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big],
-\]
-whose difference from $\nabla_\theta J(\pitheta)$ is
-\[
-    \E\!\Big[R(x,y)\sum_{t=1}^{T-1}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
-\]
-This term is not identically zero in general (e.g., when early-token probabilities affect the terminal reward), hence the estimator is
-biased for any $\gamma<1$. The unique choice that matches the undiscounted objective is $\gamma=1$.
+\end{equation}
+In a sparse terminal-reward setting, using a discounted return with $\gamma<1$ amounts to reweighting earlier score terms, yielding the
+alternative estimator
+\begin{equation}
+    g_\gamma(\theta)
+    := \E\!\Big[R(x,y)\sum_{t=1}^{T}\gamma^{T-t}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
+\end{equation}
+The difference is
+\begin{align}
+    g_\gamma(\theta) - \nabla_\theta J(\pitheta)
+    &= \E\!\Big[R(x,y)\sum_{t=1}^{T}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big]
+    \nonumber\\
+    &= \E\!\Big[R(x,y)\sum_{t=1}^{T-1}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big],
+    \label{eq:gamma-bias-diff}
+\end{align}
+where the last equality uses $\gamma^{T-T}-1=0$ at $t=T$. For any $\gamma<1$, the coefficients satisfy $\gamma^{T-t}-1<0$ for all
+$t\le T-1$. Unless the expectations $\E[R(x,y)\nabla_\theta \log \pitheta(y_t\mid c_t)]$ vanish for all $t\le T-1$ (a degenerate case in
+autoregressive generation), \eqref{eq:gamma-bias-diff} is nonzero, hence the estimator is biased. The only choice of $\gamma$ that
+removes the reweighting for all $t$ is $\gamma=1$.
 \end{proof}
 
 
@@ -124,68 +170,87 @@ biased for any $\gamma<1$. The unique choice that matches the undiscounted objec
 \label{app:prefix-proof}
 
 We provide a complete proof under the definitions in \Cref{sec:prefix-is}. For convenience, write the log-threshold interval as
-\[
-    [\log\lambda, \log\Lambda] = [-\tau_-, \tau_+], \qquad \tau_+ := \log\Lambda,\;\; \tau_- := -\log\lambda,
-\]
-so that $w_t \in [\lambda,\Lambda]$ is equivalent to $\ell_t \in [-\tau_-,\tau_+]$.
+\begin{equation}
+    [\log\lambda, \log\Lambda] = [-\tau_-, \tau_+],
+    \qquad
+    \tau_+ := \log\Lambda,
+    \qquad
+    \tau_- := -\log\lambda,
+\end{equation}
+so that $\rho_t \in [\lambda,\Lambda]$ is equivalent to $r_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
-    \item \textbf{Token-level (ICEPOP):} $M_t^{\mathrm{token}} = \mathbb{I}[w_t \in [\lambda,\Lambda]] = \mathbb{I}[\ell_t \in [-\tau_-,\tau_+]]$.
-    \item \textbf{Sequence-level (seq-mask-tis):} $M_t^{\mathrm{seq}} = \mathbb{I}[\bar{\ell} \in [-\tau_-,\tau_+]]$ for all $t$,
-    where $\bar{\ell} := \frac{1}{P_T}\sum_{s=1}^{T}\ell_s m_s$ is the sequence-level average log-ratio.
+    \item \textbf{Token-level (ICEPOP):} $M_t^{\mathrm{token}} = \mathbb{I}[\rho_t \in [\lambda,\Lambda]] = \mathbb{I}[r_t \in [-\tau_-,\tau_+]]$.
+    \item \textbf{Sequence-level (seq-mask-tis):} $M_t^{\mathrm{seq}} = \mathbb{I}[\bar{r} \in [-\tau_-,\tau_+]]$ for all $t$,
+    where $\bar{r} := \frac{1}{P_T}\sum_{s=1}^{T}r_s m_s$ is the sequence-level average log-ratio.
     \item \textbf{Prefix cumulative:} $M_t^{\mathrm{prefix}} = \mathbb{I}[L_t/P_t \in [-\tau_-,\tau_+]]$, where
-    $L_t = \sum_{s\le t}\ell_s m_s$ and $P_t=\sum_{s\le t}m_s$.
+    $L_t = \sum_{s\le t}r_s m_s$ and $P_t=\sum_{s\le t}m_s$.
 \end{itemize}
 
 \begin{proof}[Proof of \Cref{thm:prefix-tighter}]
-\textbf{Part (a).} Assume $w_1 \notin [\lambda,\Lambda]$ and $|\ell_t| \le \varepsilon$ for all $t>1$, with
+\textbf{Action-token indexing.} By \Cref{rem:action-indexing}, we may index only over active action-token positions and assume the
+trajectory is unpadded. Equivalently, we take $m_t\equiv 1$, so $P_t=t$ and $L_t=\sum_{s=1}^{t}r_s$.
+
+\textbf{Part (a).} Assume $\rho_1 \notin [\lambda,\Lambda]$ and $|r_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
-\[
-    \ell_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
-\]
-so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $w_1 \notin [\lambda,\Lambda]$). Hence token-level
+\begin{equation}
+    r_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
+\end{equation}
+so $M_t^{\mathrm{token}}=1$ for all $t>1$, while $M_1^{\mathrm{token}}=0$ (since $\rho_1 \notin [\lambda,\Lambda]$). Hence token-level
 ICEPOP masks only position $t=1$.
 
-For prefix IS, write (assuming $m_1=1$ for the first action token)
-\[
-    L_t = \ell_1 + \sum_{s=2}^{t}\ell_s m_s, \qquad P_t = 1 + \sum_{s=2}^{t}m_s.
-\]
-If $\ell_1>\tau_+$, then $\ell_s m_s \ge -\varepsilon m_s$ for all $s\ge2$, so
-\[
-    L_t \ge \ell_1 - \varepsilon(P_t-1).
-\]
-Therefore, if $P_t < (\ell_1+\varepsilon)/(\tau_+ + \varepsilon)$ (the condition in \Cref{eq:early-upper-sufficient}), then
-\[
-    \frac{L_t}{P_t} \ge \frac{\ell_1-\varepsilon(P_t-1)}{P_t} > \tau_+,
-\]
-so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $\ell_1<-\tau_-$ is symmetric: since $\ell_s m_s \le \varepsilon m_s$ for $s\ge2$,
-we have $L_t \le \ell_1 + \varepsilon(P_t-1)$, and the condition in \Cref{eq:early-lower-sufficient} implies $L_t/P_t < -\tau_-$, hence
-$M_t^{\mathrm{prefix}}=0$. In particular, prefix IS always masks at least position $t=1$, and under the sufficient conditions masks a
-longer prefix.
+For prefix IS, write
+\begin{equation}
+    L_t = r_1 + \sum_{s=2}^{t}r_s,
+    \qquad
+    P_t = t.
+\end{equation}
+If $r_1>\tau_+$, then $r_s \ge -\varepsilon$ for all $s\ge2$, so
+\begin{equation}
+    L_t \ge r_1 - \varepsilon(P_t-1).
+\end{equation}
+Therefore, if $P_t < (r_1+\varepsilon)/(\tau_+ + \varepsilon)$, then
+\begin{align}
+    \frac{L_t}{P_t}
+    &\ge \frac{r_1-\varepsilon(P_t-1)}{P_t}
+    = \frac{r_1+\varepsilon}{P_t} - \varepsilon
+    > \tau_+,
+\end{align}
+so $M_t^{\mathrm{prefix}}=0$. The lower-violation case $r_1<-\tau_-$ is symmetric: since $r_s \le \varepsilon$ for $s\ge2$, we have
+$L_t \le r_1 + \varepsilon(P_t-1)$. If $P_t < (-r_1+\varepsilon)/(\tau_-+\varepsilon)$, then
+\begin{align}
+    \frac{L_t}{P_t}
+    &\le \frac{r_1+\varepsilon(P_t-1)}{P_t}
+    = \frac{r_1-\varepsilon}{P_t} + \varepsilon
+    < -(\tau_-+\varepsilon) + \varepsilon
+    = -\tau_-,
+\end{align}
+and hence $M_t^{\mathrm{prefix}}=0$. This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
-\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|\ell_t|\le \varepsilon$ for all $t\neq t^*$, with
-$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\ell_s \in [-\tau_-,\tau_+]$.
-Since $L_t/P_t$ is a weighted average of these in-bound values (with weights $m_s/P_t$), it follows that $L_t/P_t \in [-\tau_-,\tau_+]$,
-and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
-\[
+\textbf{Part (b).} Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[\lambda,\Lambda]$ and $|r_t|\le \varepsilon$
+for all $t\neq t^*$, with
+$0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $r_s \in [-\tau_-,\tau_+]$.
+Since $L_t/P_t$ is an average of values in $[-\tau_-,\tau_+]$, it follows that $L_t/P_t \in [-\tau_-,\tau_+]$, and hence
+$M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur for positions $t\ge t^*$, which implies
+\begin{equation}
     \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
-\]
+\end{equation}
 The seq-mask-tis mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
-For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $\ell_{t^*}=L$ and $\ell_t=0$
-for $t\neq t^*$. Then $\bar{\ell} = L/P_T$ and $L_{t^*}/P_{t^*} = L/P_{t^*}$. Since $P_{t^*} \le P_T$, we have $L/P_{t^*} \ge L/P_T$.
+For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case $r_{t^*}=L$ and $r_t=0$
+for $t\neq t^*$. Then $\bar{r} = L/P_T$ and $L_{t^*}/P_{t^*} = L/P_{t^*}$. Since $P_{t^*} \le P_T$, we have $L/P_{t^*} \ge L/P_T$.
 Thus whenever
-\[
+\begin{equation}
     \frac{L}{P_{t^*}} > \tau_+
     \quad\text{and}\quad
     \frac{L}{P_T} \le \tau_+,
-\]
+\end{equation}
 we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
-\textbf{Part (c).} If $\ell_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
+\textbf{Part (c).} If $r_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $L_t/P_t > \tau_+$, since it is an
 average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
-$\bar{\ell}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $\ell_s < -\tau_-$
+$\bar{r}$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $r_s < -\tau_-$
 is symmetric.
 \end{proof}
 
@@ -195,10 +260,15 @@ is symmetric.
 
 The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguards:
 
-\begin{enumerate}
-    \item \textbf{Sum threshold:} If $|S^+| < \epsilon_{\mathrm{num}}$ or $|S^-| < \epsilon_{\mathrm{num}}$ (default $\epsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
+\begin{remark}[Numerical thresholds vs.\ divergence bounds]
+The symbols $\varepsilon_{\mathrm{num}}$ and $\varepsilon_{\mathrm{tol}}$ in this appendix denote implementation hyperparameters used for
+numerical stability and uniform-reward detection. They are unrelated to the divergence upper bound $\epsilon$ in \Cref{def:max-div}.
+\end{remark}
 
-    \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\epsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
+\begin{enumerate}
+    \item \textbf{Sum threshold:} If $|S^+| < \varepsilon_{\mathrm{num}}$ or $|S^-| < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
+
+    \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
 
     \item \textbf{Intermediate overflow protection:} The quantity $(S^+/S^-)^2 Q^-$ is clamped to $10^8$ before computing $\alpha$.
 
@@ -222,7 +292,7 @@ thresholds are heuristic defaults; formal validation is deferred to the experime
 The uniform scale mode is an optional technique to improve sample utilization. When all $n$ samples for a prompt have identical rewards (all correct or all incorrect), the leave-one-out baseline yields $\tilde{r}_i = 0$ for all $i$, eliminating the gradient signal. Uniform scale mode recovers this signal.
 
 \begin{definition}[Uniform Scale]
-For prompt groups where $\mathrm{std}(\{r_1, \ldots, r_n\}) < \epsilon_{\mathrm{tol}}$ (uniform-reward groups), the shaped reward is set to $\tilde{r}_i = r_i / n$, and the adaptive normalization (\Cref{sec:adaptive-norm}) is skipped.
+For prompt groups where $\mathrm{std}(\{r_1, \ldots, r_n\}) < \varepsilon_{\mathrm{tol}}$ (uniform-reward groups), the shaped reward is set to $\tilde{r}_i = r_i / n$, and the adaptive normalization (\Cref{sec:adaptive-norm}) is skipped.
 \end{definition}
 
 \begin{proposition}

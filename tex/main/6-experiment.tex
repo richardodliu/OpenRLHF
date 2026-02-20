@@ -64,16 +64,16 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 \toprule
 \textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{seq-mask-tis (seq)} & \textbf{Prefix (ours)} \\
 \midrule
-Early deviation ($\ell_1{=}10$, else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
-Late deviation ($\ell_{24}{=}50$, else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
-Monotone drift ($\ell_t{=}2$ for all $t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
+Early deviation ($r_1{=}10$, else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
+Late deviation ($r_{24}{=}50$, else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
+Monotone drift ($r_t{=}2$ for all $t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent In the analyzed deviation patterns (where the post-deviation log-ratios remain in-bound), prefix masking rejects a contiguous
 block starting at the first threshold violation of the prefix statistic, preserving positional information that is lost by sequence-level
-masking, and masking more off-policy tokens than token-level masking in the early-deviation regime (as predicted by
+masking, and masking more prefix-drifted tokens than token-level masking in the early-deviation regime (as predicted by
 \Cref{thm:prefix-tighter}).
 
 \subsection{Ablations}

@@ -32,24 +32,49 @@ Standard normalization $\hat{A} = (A - \mu)/\sigma$ applies a uniform scaling to
 
 \begin{definition}[Adaptive Normalization]
 \label{def:adaptive-norm}
-For a prompt group with token-level advantages $\{A_{i,t}\}$, define:
-\begin{equation}
-    \mathcal{P} = \{(i,t) : A_{i,t} > 0\}, \quad \mathcal{N} = \{(i,t) : A_{i,t} < 0\},
-\end{equation}
-\begin{equation}
-    S^+ = \!\sum_{(i,t) \in \mathcal{P}}\! A_{i,t},\; S^- = \!\sum_{(i,t) \in \mathcal{N}}\! A_{i,t},\; Q^+ = \!\sum_{(i,t) \in \mathcal{P}}\! A_{i,t}^2,\; Q^- = \!\sum_{(i,t) \in \mathcal{N}}\! A_{i,t}^2.
-\end{equation}
-Let $N = |\mathcal{P}| + |\mathcal{N}|$ be the count of non-zero tokens. The normalized advantage is:
+Fix a prompt group with token-level advantages $\{A_{i,t}\}$, and exclude zero-advantage positions from the normalization statistics.
+Define the index sets and summary statistics
+\begin{align}
+    \mathcal{P}
+    &:= \{(i,t) : A_{i,t} > 0\},
+    &
+    \mathcal{N}
+    &:= \{(i,t) : A_{i,t} < 0\},
+    \\
+    S^+
+    &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t},
+    &
+    S^-
+    &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t},
+    \\
+    Q^+
+    &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t}^2,
+    &
+    Q^-
+    &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t}^2,
+    \\
+    N
+    &:= |\mathcal{P}| + |\mathcal{N}|.
+\end{align}
+The normalized advantage is defined by a sign-dependent rescaling:
 \begin{equation}
     \hat{A}_{i,t} = \begin{cases} \alpha \cdot A_{i,t} & \text{if } A_{i,t} > 0, \\ \beta \cdot A_{i,t} & \text{if } A_{i,t} < 0, \\ 0 & \text{if } A_{i,t} = 0, \end{cases}
     \label{eq:adaptive-norm}
 \end{equation}
-where $\alpha, \beta > 0$ are chosen to satisfy the \emph{empirical} constraints on non-zero tokens:
+where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} constraints over non-zero tokens:
+\begin{align}
+    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} &= 0,
+    \label{eq:adaptive-mean}
+    \\
+    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
+    \label{eq:adaptive-var}
+\end{align}
+Equivalently, these constraints can be written as
 \begin{equation}
-    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t} = 0, \qquad
-    \frac{1}{N}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 = 1.
+    \alpha S^+ + \beta S^- = 0,
+    \qquad
+    \alpha^2 Q^+ + \beta^2 Q^- = N.
 \end{equation}
-Equivalently, $\alpha S^+ + \beta S^- = 0$ and $\alpha^2 Q^+ + \beta^2 Q^- = N$.
 \end{definition}
 
 \begin{proposition}[Closed-Form Solution]
@@ -62,14 +87,38 @@ Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique
 \end{proposition}
 
 \begin{proof}
-The zero-mean constraint gives $\beta = -\alpha \cdot S^+/S^-$. Substituting into the unit-variance constraint:
-$\alpha^2 Q^+ + \alpha^2 (S^+/S^-)^{2} Q^- = N$,
-yielding $\alpha^2 = N / (Q^+ + (S^+/S^-)^2 Q^-)$. Since $Q^+, Q^-, N > 0$ when both $\mathcal{P}$ and $\mathcal{N}$ are non-empty, $\alpha > 0$. Since $S^+ > 0$ and $S^- < 0$, $\beta = -\alpha S^+/S^- > 0$.
+We solve the two scalar constraints in \Cref{def:adaptive-norm} and then enforce $\alpha,\beta>0$.
+
+\textbf{Step 1 (zero empirical mean).} The constraint $\alpha S^+ + \beta S^- = 0$ implies
+\begin{equation}
+    \beta = -\alpha \cdot \frac{S^+}{S^-}.
+    \label{eq:beta-from-mean}
+\end{equation}
+Since $\mathcal{P}\neq\emptyset$ and $\mathcal{N}\neq\emptyset$, we have $S^+>0$ and $S^-<0$, so $S^-/S^+$ is well-defined.
+
+\textbf{Step 2 (unit empirical second moment).} Substituting \eqref{eq:beta-from-mean} into $\alpha^2 Q^+ + \beta^2 Q^- = N$ yields
+\begin{align}
+    \alpha^2 Q^+ + \beta^2 Q^-
+    &= N,
+    \\
+    \alpha^2 Q^+ + \alpha^2\Big(\frac{S^+}{S^-}\Big)^{\!2} Q^-
+    &= N,
+    \\
+    \alpha^2
+    &= \frac{N}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
+\end{align}
+The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $N>0$ under the same assumption. Taking the positive square root
+gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
+
+\textbf{Uniqueness.} The mean constraint uniquely specifies the ratio $\beta/\alpha$, and the second-moment constraint uniquely
+specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a unique solution.
 \end{proof}
 
 \begin{proposition}[Advantage Sign Preservation]
 \label{prop:gradient-direction}
-The adaptive normalization preserves the sign of the advantage at every token: $\mathrm{sign}(\hat{A}_{i,t}) = \mathrm{sign}(A_{i,t})$ for all $(i,t)$ with $A_{i,t} \neq 0$. The relative ordering of magnitudes within $\mathcal{P}$ and within $\mathcal{N}$ is also preserved. Consequently, the policy gradient update reinforces (or penalizes) the same tokens as the unnormalized advantage.
+The adaptive normalization preserves the sign of the advantage at every token: $\sign(\hat{A}_{i,t}) = \sign(A_{i,t})$ for all $(i,t)$
+with $A_{i,t} \neq 0$. The relative ordering of magnitudes within $\mathcal{P}$ and within $\mathcal{N}$ is also preserved.
+Consequently, the policy gradient update reinforces (or penalizes) the same tokens as the unnormalized advantage.
 \end{proposition}
 
 \begin{proof}
@@ -85,130 +134,219 @@ When all $n$ samples share the same reward, the leave-one-out baseline yields ze
 \end{remark}
 
 
-\section{REINFORCE Pro: Prefix Cumulative IS Correction}
+\section{REINFORCE Pro: Prefix-Cumulative Ratio Masking}
 \label{sec:reinforce-pro}
 
-\subsection{The Off-Policy Correction Problem}
+\subsection{Two-Policy Ratio Setup}
 \label{sec:offpolicy-problem}
 
-The rollout policy $\piroll$ (vLLM) and the actor policy $\piold$ (training framework) differ due to backend discrepancies, MoE routing, and distributed staleness. The per-token IS log-ratio is $\ell_t = \log \piold(y_t|c_t) - \log \piroll(y_t|c_t)$. The corrected loss takes the form:
+We adopt the standard \emph{two-policy} view of PPO-style LLM-RL: samples are generated by a fixed behavior policy $\piold$, and the
+training policy $\pitheta$ is updated from $\piold$ by gradient steps. This matches the trust-region setup in
+\citet{li2025trm}, where $\piold$ plays the role of the rollout policy.
+
+The per-token importance ratio between these two policies is
 \begin{equation}
-    \mathcal{L} = \E_{\piroll}\!\Big[\phi(\ell_1, \ldots, \ell_T) \cdot \mathcal{L}^{\mathrm{PPO}}\Big],
+    \rho_t = \frac{\pitheta(y_t \mid c_t)}{\piold(y_t \mid c_t)},
 \end{equation}
-where $\phi$ is a correction function (detached from the computation graph) and $\mathcal{L}^{\mathrm{PPO}}$ is the standard PPO clipped loss using ratio $\rho_t^{\mathrm{PPO}} = \pitheta(y_t|c_t)/\piold(y_t|c_t)$.
+as defined in \eqref{eq:ratio}. Throughout this section, we restrict attention to masking strategies constructed solely from
+$(\rho_t)_{t=1}^T$ (or equivalently, the log-ratios $r_t=\log\rho_t$ in \eqref{eq:log-ratio}), and we do not introduce additional
+intermediate policies.
 
 \subsection{Limitations of Existing Methods}
 \label{sec:is-limitations}
 
 \begin{proposition}[Token-Level IS Ignores Causal Structure]
 \label{prop:token-is-fails}
-Consider a sequence where $w_1 = \exp(\ell_1) \gg 1$ but $w_t \approx 1$ for $t > 1$. Token-level IS (TIS, ICEPOP) applies correction only at position~1, leaving positions $2, \ldots, T$ uncorrected. However, the context $c_2 = (x, y_1)$ was sampled from $\piroll$, while under $\piold$ the distribution over $y_1$ differs substantially. The entire future trajectory is off-policy, but token-level IS does not detect this.
+Fix thresholds $0<\lambda\le 1\le \Lambda$. Consider a length-$T$ trajectory such that
+\begin{equation}
+    \rho_1 \notin [\lambda,\Lambda],
+    \qquad
+    \rho_t \in [\lambda,\Lambda]\ \text{ for all }\ t\in\{2,\ldots,T\}.
+    \label{eq:token-early-deviation}
+\end{equation}
+Then the token-level ICEPOP mask,
+\begin{equation}
+    M_t^{\mathrm{token}} := \mathbb{I}\!\big[\rho_t \in [\lambda,\Lambda]\big],
+\end{equation}
+masks only the first position. In particular, it does not prevent later positions $t\ge 2$ from contributing gradients even though the
+contexts $(c_t)_{t\ge2}$ are sampled under the behavior distribution induced by $\piold$, which differs from the context distribution that
+would be induced by the updated policy $\pitheta$ when $\rho_1 \neq 1$.
 \end{proposition}
 
 \begin{proof}
-Under ICEPOP, $\mathrm{mask}_t = \mathbb{I}[w_t \in [\lambda, \Lambda]]$. Since $w_t \approx 1$ for $t > 1$, all future tokens pass the filter. Yet the context distribution shift at position $t$ satisfies $\|d_t^{\piold} - d_t^{\piroll}\|_{\mathrm{TV}} > 0$ by the context shift propagation (\Cref{lem:coupling}), so the loss at these positions is computed under a mismatched context.
+By definition, \eqref{eq:token-early-deviation} implies $M_1^{\mathrm{token}}=0$ and $M_t^{\mathrm{token}}=1$ for all $t\ge2$.
+
+On the other hand, since $\rho_1 \neq 1$, we have $\pitheta(y_1\mid c_1) \neq \piold(y_1\mid c_1)$, hence the conditional token
+distributions $\pitheta(\cdot\mid c_1)$ and $\piold(\cdot\mid c_1)$ are not equal. Therefore $\Dtvtok(c_1;\piold,\pitheta)>0$.
+Applying the context-shift propagation lemma (\Cref{lem:coupling}) with $(\pi,\pi')=(\piold,\pitheta)$ and $s=1$ yields
+\begin{equation}
+    \|d_t^{\piold} - d_t^{\pitheta}\|_{\mathrm{TV}} > 0
+    \qquad
+    \text{for all } t \ge 2.
+\end{equation}
+Therefore, even though ICEPOP masks the local deviation at $t=1$, the remaining accepted tokens $t\ge2$ are still evaluated under
+mismatched context visitation distributions, which is precisely the causal mismatch that token-independent masking fails to address.
 \end{proof}
 
 \begin{proposition}[Sequence-Level IS Loses Positional Information]
 \label{prop:seq-is-fails}
-For a sequence of length $T$ where $|\ell_t| \le \varepsilon$ for all $t \neq t^*$ and $|\ell_{t^*}| = L$, the sequence-level geometric mean satisfies:
+Let $\bar{r}$ denote the sequence-level average log-ratio,
 \begin{equation}
-    \exp\!\Big(\frac{1}{T}\sum_{t=1}^T \ell_t\Big) \approx \exp\!\Big(\frac{L}{T}\Big).
+    \bar{r} := \frac{1}{T}\sum_{t=1}^T r_t.
 \end{equation}
-For $T = 4096$ and $L = 3$, this gives $\approx 1.0007$, well within any reasonable threshold, causing the deviation to go undetected.
+Assume there exists $t^*\in\{1,\ldots,T\}$ such that $|r_{t^*}| = L$ and $|r_t|\le \varepsilon$ for all $t\neq t^*$. Then
+\begin{equation}
+    \big|\bar{r} - L/T\big| \le \frac{T-1}{T}\,\varepsilon \le \varepsilon.
+    \label{eq:seq-mean-dilution}
+\end{equation}
+In particular, in the pure single-spike case $r_{t^*}=L$ and $r_t=0$ for $t\neq t^*$, one has $\bar{r}=L/T$, so
+$\exp(\bar{r})=\exp(L/T)\to 1$ as $T\to\infty$ for any fixed $L$.
 \end{proposition}
 
 \begin{proof}
-Under the stated conditions, $|\sum_{t \neq t^*} \ell_t| \le (T-1)\varepsilon$. Thus $\frac{1}{T}\sum_t \ell_t = \frac{L + O((T-1)\varepsilon)}{T} = \frac{L}{T} + O(\varepsilon)$. For $\varepsilon \to 0$, the geometric mean converges to $\exp(L/T)$, which approaches $1$ as $T \to \infty$ regardless of $L$.
+Write
+\begin{equation}
+    \bar{r}
+    = \frac{1}{T}r_{t^*} + \frac{1}{T}\sum_{t\neq t^*}r_t.
+\end{equation}
+By the triangle inequality and the bound $|r_t|\le\varepsilon$ for $t\neq t^*$,
+\begin{equation}
+    \big|\bar{r} - r_{t^*}/T\big|
+    = \frac{1}{T}\Big|\sum_{t\neq t^*}r_t\Big|
+    \le \frac{T-1}{T}\,\varepsilon,
+\end{equation}
+which implies \eqref{eq:seq-mean-dilution}. The single-spike specialization follows by setting $r_t=0$ for $t\neq t^*$.
 \end{proof}
+
+\begin{example}[Numerical dilution at long horizons]
+Consider the pure single-spike case with $T=4096$, $r_{t^*}=3$, and $r_t=0$ for $t\neq t^*$. Then
+\begin{equation}
+    \exp(\bar{r}) = \exp(3/4096) \approx 1.00073,
+\end{equation}
+which can easily fall inside practical acceptance intervals $[\lambda,\Lambda]$ even though the local deviation at $t^*$ is large in
+log-ratio magnitude.
+\end{example}
 
 \subsection{Prefix Cumulative IS: Definition and Properties}
 \label{sec:prefix-is}
 
 \begin{definition}[Prefix Cumulative IS]
 \label{def:prefix-is}
-For each position $t$ with action mask $m_t \in \{0, 1\}$, define:
+For a trajectory with action mask $m_t \in \{0,1\}$ and per-token log-ratios $r_t$ defined in \eqref{eq:log-ratio}, define the
+cumulative sums
 \begin{align}
-    L_t &= \sum_{s=1}^{t} \ell_s \cdot m_s, \qquad P_t = \sum_{s=1}^{t} m_s, \label{eq:prefix-cumsum} \\
-    \mathrm{prefix\_is}(t) &= \exp\!\Big(\frac{L_t}{P_t}\Big), \label{eq:prefix-is}
+    L_t &= \sum_{s=1}^{t} r_s \cdot m_s, \qquad P_t = \sum_{s=1}^{t} m_s, \label{eq:prefix-cumsum} \\
+    \bar{r}_t &= \frac{L_t}{P_t}, \qquad \mathrm{prefix\_is}(t) = \exp(\bar{r}_t), \label{eq:prefix-is}
 \end{align}
-where $P_t \ge 1$. This is the geometric mean of IS ratios over active positions up to $t$.
+where $\bar{r}_t$ is defined only for $t$ such that $P_t\ge 1$ (i.e., the prefix contains at least one active action token). The
+statistic $\mathrm{prefix\_is}(t)$ is the geometric mean of IS ratios over active positions up to $t$.
 \end{definition}
 
-\begin{definition}[Prefix IS Masking and Loss]
+\begin{definition}[Prefix IS Masking]
 Given thresholds $[\lambda, \Lambda]$:
-\begin{align}
-    M_t^{\mathrm{prefix}} &= \mathbb{I}\!\big[\mathrm{prefix\_is}(t) \in [\lambda, \Lambda]\big], \label{eq:prefix-mask} \\
-    \mathcal{L} &= \sum_t M_t^{\mathrm{prefix}} \cdot \exp(\ell_t) \cdot \mathcal{L}_t^{\mathrm{PPO}}, \label{eq:prefix-loss}
-\end{align}
-where $\exp(\ell_t)$ is the detached token-level IS weight and $\mathcal{L}_t^{\mathrm{PPO}}$ is the per-token PPO clipped loss.
+\begin{equation}
+    M_t^{\mathrm{prefix}} := \mathbb{I}\!\big[\mathrm{prefix\_is}(t) \in [\lambda, \Lambda]\big].
+    \label{eq:prefix-mask}
+\end{equation}
 \end{definition}
+
+\begin{remark}[Action-token indexing]
+\label{rem:action-indexing}
+For the theoretical analysis, we may assume (without loss of generality) that we index only over active action-token positions and that the
+trajectory is not padded. In this case, one can take $m_t\equiv 1$ and $P_t=t$. We retain the mask notation to match the batched,
+variable-length implementation.
+\end{remark}
 
 Three structural properties distinguish prefix IS from existing methods:
 
-\textbf{Causality.} $\mathrm{prefix\_is}(t)$ depends only on $\{\ell_s\}_{s \le t}$, respecting the autoregressive order.
+\textbf{Causality.} $\mathrm{prefix\_is}(t)$ depends only on $\{r_s\}_{s \le t}$, respecting the autoregressive order.
 
-\textbf{Stability under in-bound increments.} If $L_t/P_t \in [\log\lambda, \log\Lambda]$ and the next active log-ratio $\ell_{t+1}$
-also lies in $[\log\lambda, \log\Lambda]$, then $L_{t+1}/P_{t+1} \in [\log\lambda, \log\Lambda]$. Hence, once the prefix average
-re-enters the threshold interval, it cannot leave it unless a subsequent per-token log-ratio is itself out of bounds.
+\textbf{Stability under in-bound increments.} The following lemma formalizes a basic stability property of prefix averages.
+
+\begin{lemma}[Stability of prefix averages]
+\label{lem:prefix-stability}
+Fix thresholds $0<\lambda\le 1\le \Lambda$, and define $\bar{r}_t$ as in \eqref{eq:prefix-is}. Suppose $P_t\ge 1$ and
+$\bar{r}_t\in[\log\lambda,\log\Lambda]$. If the next position is active ($m_{t+1}=1$) and satisfies
+$r_{t+1}\in[\log\lambda,\log\Lambda]$, then $\bar{r}_{t+1}\in[\log\lambda,\log\Lambda]$.
+\end{lemma}
+
+\begin{proof}
+When $m_{t+1}=1$, we have $L_{t+1}=L_t+r_{t+1}$ and $P_{t+1}=P_t+1$. Therefore
+\begin{equation}
+    \bar{r}_{t+1}
+    = \frac{L_{t+1}}{P_{t+1}}
+    = \frac{P_t}{P_t+1}\,\bar{r}_t + \frac{1}{P_t+1}\,r_{t+1}.
+\end{equation}
+The coefficients are nonnegative and sum to one, so $\bar{r}_{t+1}$ is a convex combination of two numbers in
+$[\log\lambda,\log\Lambda]$. Hence $\bar{r}_{t+1}\in[\log\lambda,\log\Lambda]$.
+\end{proof}
 
 \textbf{Granularity.} Different tokens in the same sequence are independently masked based on cumulative divergence up to that point.
 
-\noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in \Cref{sec:preliminaries}. In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token log-ratios $\ell_t$.
+\noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in
+\Cref{sec:preliminaries}. In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token
+log-ratios $r_t$.
 
 \begin{theorem}[Causality-Aware Masking with Conditional Dominance]
 \label{thm:prefix-tighter}
 Let $M^{\mathrm{prefix}}_t$, $M^{\mathrm{token}}_t$, and $M^{\mathrm{seq}}_t$ denote the masks produced by prefix cumulative IS, token-level IS (ICEPOP), and sequence-level IS (seq-mask-tis) respectively, all with the same threshold $[\lambda, \Lambda]$ where $0 < \lambda \le 1 \le \Lambda$. Assume policy support overlap (\Cref{asm:support}). Then:
 
 \begin{enumerate}
-    \item[(a)] \textbf{Early deviation: prefix masks a (possibly longer) prefix.} Assume $w_1 \notin [\lambda, \Lambda]$ and
-    $|\ell_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
-    only position $t=1$, while prefix IS masks at least position $t=1$. Moreover, if $\ell_1>\log\Lambda$ then for every position $t$
+    \item[(a)] \textbf{Early deviation: prefix masks a (possibly longer) prefix.} Assume $\rho_1 \notin [\lambda, \Lambda]$ and
+    $|r_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\log\Lambda, |\log\lambda|)$. Then token-level ICEPOP masks
+    only position $t=1$, while prefix IS masks at least position $t=1$. Moreover, if $r_1>\log\Lambda$ then for every position $t$
     with $P_t \ge 1$ satisfying
     \begin{equation}
-        P_t < \frac{\ell_1+\varepsilon}{\log\Lambda+\varepsilon},
+        P_t < \frac{r_1+\varepsilon}{\log\Lambda+\varepsilon},
         \label{eq:early-upper-sufficient}
     \end{equation}
-    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $\ell_1<\log\lambda$ then for every position $t$ with $P_t \ge 1$ satisfying
+    we have $M_t^{\mathrm{prefix}}=0$. Symmetrically, if $r_1<\log\lambda$ then for every position $t$ with $P_t \ge 1$ satisfying
     \begin{equation}
-        P_t < \frac{-\ell_1+\varepsilon}{|\log\lambda|+\varepsilon},
+        P_t < \frac{-r_1+\varepsilon}{|\log\lambda|+\varepsilon},
         \label{eq:early-lower-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{prefix}}=0$. In particular, in the early-deviation regime prefix IS masks at least as many tokens as
     token-level ICEPOP.
 
     \item[(b)] \textbf{Late deviation: prefix is more local than sequence masking.} Suppose there exists $t^*\in\{1,\ldots,T\}$ such that
-    $|\ell_t| \le \varepsilon$ for all $t\neq t^*$ and $w_{t^*}\notin[\lambda,\Lambda]$, where $0 \le \varepsilon \le \min(\log\Lambda,
+    $|r_t| \le \varepsilon$ for all $t\neq t^*$ and $\rho_{t^*}\notin[\lambda,\Lambda]$, where $0 \le \varepsilon \le \min(\log\Lambda,
     |\log\lambda|)$. Then prefix IS can only mask tokens at positions $t \ge t^*$, so
     \begin{equation}
         \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
     \end{equation}
     In contrast, sequence-level masking is all-or-nothing: $|\{t : M_t^{\mathrm{seq}} = 0\}| \in \{0, T\}$. Moreover, in the pure
-    single-spike case $\ell_{t^*}=L$ and $\ell_t=0$ for $t\neq t^*$, one has $\frac{L}{t^*} \ge \frac{L}{T}$, so there exist regimes
+    single-spike case $r_{t^*}=L$ and $r_t=0$ for $t\neq t^*$, one has $\frac{L}{P_{t^*}} \ge \frac{L}{P_T}$, so there exist regimes
     where $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by large $T$).
 
-    \item[(c)] \textbf{Monotone violation: all methods reject.} If $\ell_s > \log\Lambda$ for all $s$ (upper violation), or
-    $\ell_s < \log\lambda$ for all $s$ (lower violation), then $M_t^{\mathrm{prefix}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
+    \item[(c)] \textbf{Monotone violation: all methods reject.} If $r_s > \log\Lambda$ for all $s$ (upper violation), or
+    $r_s < \log\lambda$ for all $s$ (lower violation), then $M_t^{\mathrm{prefix}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
     so both methods reject all $T$ tokens.
 \end{enumerate}
 \end{theorem}
 
-\begin{proof}
-The full proof is in \Cref{app:prefix-proof}. We highlight the main steps.
+\begin{proof}[Proof sketch]
+The full proof is in \Cref{app:prefix-proof}. We highlight the key steps.
 
-\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\ell_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
-only $t=1$. For prefix IS, the bounds $\sum_{s=2}^{t}\ell_s m_s \ge -(P_t-1)\varepsilon$ and $\sum_{s=2}^{t}\ell_s m_s \le (P_t-1)\varepsilon$
-yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
+\textbf{Part (a).} The $\varepsilon$-bounded condition implies $r_t \in [\log\lambda, \log\Lambda]$ for all $t>1$, hence ICEPOP masks
+only $t=1$. For prefix IS, write $L_t=r_1+\sum_{s=2}^{t}r_s m_s$ and use the bounds
+\begin{align}
+    \sum_{s=2}^{t}r_s m_s &\ge -(P_t-1)\varepsilon,
+    \\
+    \sum_{s=2}^{t}r_s m_s &\le (P_t-1)\varepsilon,
+\end{align}
+which yield the sufficient conditions \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
-\textbf{Part (b).} For $t<t^*$, the prefix statistic averages only in-bound log-ratios and stays in-bound, so masking can only occur at
-positions $t\ge t^*$, yielding the stated bound. The single-spike comparison follows from $t^*\le T$.
+\textbf{Part (b).} For $t<t^*$, all active log-ratios in the prefix satisfy $r_s\in[\log\lambda,\log\Lambda]$, so repeated
+application of \Cref{lem:prefix-stability} implies $\bar{r}_t\in[\log\lambda,\log\Lambda]$ and hence
+$M_t^{\mathrm{prefix}}=1$. Therefore masking can only occur at positions $t\ge t^*$, yielding the stated bound. The single-spike
+comparison follows from $P_{t^*}\le P_T$.
 
-\textbf{Part (c).} If each $\ell_s$ is strictly beyond the same threshold, then their running average is also strictly beyond the
+\textbf{Part (c).} If each $r_s$ is strictly beyond the same threshold, then their running average is also strictly beyond the
 threshold, so both prefix and sequence masks reject all tokens.
 \end{proof}
 
 \begin{remark}[Same-sign but in-bound deviations]
-When all $\ell_s$ share the same sign but do not all exceed the corresponding threshold, the running average $L_t/P_t$ need not be
+When all $r_s$ share the same sign but do not all exceed the corresponding threshold, the running average $L_t/P_t$ need not be
 monotone in $t$ and may return within bounds after crossing a threshold. In this regime there is no unconditional dominance ordering
 between prefix masking and token-level masking: token-level methods detect large single-token outliers, while prefix masking detects
 cumulative drift from many moderate deviations.
@@ -218,31 +356,39 @@ cumulative drift from many moderate deviations.
 \label{sec:adaptive-connection}
 
 We relate prefix cumulative IS to the per-position, causal structure that appears in trust-region style error bounds for long-horizon
-LLM-RL~\citep{li2025trm}. This subsection focuses on the rollout/training mismatch $\piold/\piroll$; relating it to $\pitheta$ requires
-additional assumptions on the PPO update and is discussed in \Cref{sec:unified}.
+LLM-RL~\citep{li2025trm}. In our notation, these bounds analyze the policy pair $(\piold,\pitheta)$.
 
 \begin{lemma}[KL chain rule for the cumulative log-ratio]
 \label{lem:cumsum-kl}
 Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, for any $t \le T$,
 \begin{equation}
-    \E_{\piroll}\!\Big[\sum_{s=1}^{t} \ell_s\Big]
-    = -\sum_{s=1}^{t} \E_{c_s \sim d_s^{\piroll}}\!\big[\DKL(\piroll(\cdot|c_s) \| \piold(\cdot|c_s))\big]
-    = -\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\piold}),
+    \E_{\piold}\!\Big[\sum_{s=1}^{t} r_s\Big]
+    = -\sum_{s=1}^{t} \E_{c_s \sim d_s^{\piold}}\!\big[\DKL(\piold(\cdot|c_s) \| \pitheta(\cdot|c_s))\big]
+    = -\DKL(d_{t+1}^{\piold} \| d_{t+1}^{\pitheta}),
     \label{eq:cumsum-kl}
 \end{equation}
 where the final equality is the KL chain rule applied to the joint prefix distributions.
 \end{lemma}
 
 \begin{proof}
-For each context $c_s$, the conditional expectation under $y_s \sim \piroll(\cdot|c_s)$ satisfies
-\[
-    \E[\ell_s \mid c_s]
-    = \sum_{v}\piroll(v|c_s)\log\frac{\piold(v|c_s)}{\piroll(v|c_s)}
-    = -\DKL(\piroll(\cdot|c_s)\|\piold(\cdot|c_s)).
-\]
-Taking expectation over $c_s \sim d_s^{\piroll}$ and summing over $s \le t$ yields the first equality in \eqref{eq:cumsum-kl}. The
-second equality is the KL chain rule for autoregressive factorizations, identifying the sum of per-step conditional KL terms with the
-joint KL between prefix distributions $d_{t+1}^{\piroll}$ and $d_{t+1}^{\piold}$.
+We start from the definition $r_s = \log \pitheta(y_s\mid c_s) - \log \piold(y_s\mid c_s)$ in \eqref{eq:log-ratio}. Conditioning on
+$c_s$ and taking expectation over $y_s\sim \piold(\cdot\mid c_s)$ gives
+\begin{align}
+    \E_{\piold}\!\big[r_s \mid c_s\big]
+    &= \sum_{v} \piold(v\mid c_s)\,\log\frac{\pitheta(v\mid c_s)}{\piold(v\mid c_s)}
+    \\
+    &= - \sum_{v} \piold(v\mid c_s)\,\log\frac{\piold(v\mid c_s)}{\pitheta(v\mid c_s)}
+    \\
+    &= -\DKL\!\big(\piold(\cdot\mid c_s)\,\|\,\pitheta(\cdot\mid c_s)\big).
+\end{align}
+Taking expectation over $c_s\sim d_s^{\piold}$ and summing from $s=1$ to $t$ yields the first equality in \eqref{eq:cumsum-kl}.
+
+For the second equality, apply the KL chain rule to the joint prefix distributions under the autoregressive factorizations:
+\begin{equation}
+    \DKL\!\big(d_{t+1}^{\piold}\,\|\,d_{t+1}^{\pitheta}\big)
+    = \sum_{s=1}^{t}\E_{c_s \sim d_s^{\piold}}\!\Big[\DKL\!\big(\piold(\cdot\mid c_s)\,\|\,\pitheta(\cdot\mid c_s)\big)\Big].
+\end{equation}
+Combining the two displays yields \eqref{eq:cumsum-kl}.
 \end{proof}
 
 \begin{remark}[Prefix filtering as a sample-level proxy]
@@ -250,15 +396,15 @@ joint KL between prefix distributions $d_{t+1}^{\piroll}$ and $d_{t+1}^{\piold}$
 Thresholding $\mathrm{prefix\_is}(t)$ is equivalent to a per-position, sample-level constraint on the prefix average log-ratio:
 \begin{equation}
     \mathrm{prefix\_is}(t) \in [\lambda, \Lambda]
-    \iff \frac{1}{P_t}\sum_{s=1}^{t}\ell_s m_s \in [\log\lambda, \log\Lambda].
+    \iff \frac{1}{P_t}\sum_{s=1}^{t}r_s m_s \in [\log\lambda, \log\Lambda].
     \label{eq:threshold-kl}
 \end{equation}
-In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the rollout distribution. Therefore, the threshold condition
+In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for trust-region style filtering rather than a population-level guarantee
 without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in \eqref{eq:cumsum-kl} to a TV bound:
 \begin{equation}
-    \|d_{t+1}^{\piold} - d_{t+1}^{\piroll}\|_{\mathrm{TV}}
-    \le \sqrt{\frac{\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\piold})}{2}}.
+    \|d_{t+1}^{\pitheta} - d_{t+1}^{\piold}\|_{\mathrm{TV}}
+    \le \sqrt{\frac{\DKL(d_{t+1}^{\piold} \| d_{t+1}^{\pitheta})}{2}}.
     \label{eq:context-shift-prefix}
 \end{equation}
 \end{remark}
@@ -267,7 +413,7 @@ without additional assumptions. Separately, Pinsker's inequality relates the pop
 \label{cor:per-position-trust}
 Under prefix IS masking with threshold $[\lambda, \Lambda]$, for all accepted tokens ($M_t^{\mathrm{prefix}} = 1$), the sample-level cumulative log-ratio satisfies:
 \begin{equation}
-    \frac{1}{P_t}\sum_{s=1}^{t} \big(\log \piold(y_s|c_s) - \log \piroll(y_s|c_s)\big) m_s \in [\log\lambda, \log\Lambda].
+    \frac{1}{P_t}\sum_{s=1}^{t} \big(\log \pitheta(y_s|c_s) - \log \piold(y_s|c_s)\big) m_s \in [\log\lambda, \log\Lambda].
 \end{equation}
 This provides a per-position, sample-level trust region constraint analogous to the per-position structure in the Adaptive bound. The constraint operates on individual trajectories; its connection to the population-level KL is through the expectation identity in Eq.~\eqref{eq:cumsum-kl}.
 \end{corollary}
@@ -279,11 +425,25 @@ Follows directly from \Cref{def:prefix-is} and Eq.~\eqref{eq:prefix-mask}: $M_t^
 \subsection{The Combined Loss}
 \label{sec:combined-loss}
 
-We define the loss as the negative surrogate objective, $\mathcal{L} = -L_{\piroll}(\pitheta)$, so that gradient descent on $\mathcal{L}$ corresponds to maximizing the surrogate. The full REINFORCE Pro Max loss combines both components:
+We define the loss as the negative surrogate objective, $\mathcal{L} = -L_{\piold}(\pitheta)$, so that gradient descent on
+$\mathcal{L}$ corresponds to maximizing the surrogate. We write the per-token PPO clipped surrogate as
 \begin{equation}
-    \mathcal{L}^{\mathrm{ProMax}} = -\sum_t M_t^{\mathrm{prefix}} \cdot \exp(\ell_t) \cdot \min\!\big(\rho_t^{\mathrm{PPO}} \hat{A}_t,\; \mathrm{clip}(\rho_t^{\mathrm{PPO}}, 1\!-\!\epsilon_c, 1\!+\!\epsilon_c)\, \hat{A}_t\big),
+    \mathrm{PPOClip}(\rho_t, \hat{A}_t)
+    := \min\!\Big(
+        \rho_t \hat{A}_t,\;
+        \mathrm{clip}(\rho_t, 1-\epsilon_c, 1+\epsilon_c)\,\hat{A}_t
+    \Big),
+    \label{eq:ppo-clip}
+\end{equation}
+where $\epsilon_c$ is the PPO clipping threshold. The REINFORCE Pro Max loss combines both components as
+\begin{equation}
+    \mathcal{L}^{\mathrm{ProMax}}
+    = -\sum_t M_t^{\mathrm{prefix}} \cdot \mathrm{PPOClip}(\rho_t, \hat{A}_t).
     \label{eq:promax-loss}
 \end{equation}
-where $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-norm}, $M_t^{\mathrm{prefix}}$ is the prefix IS mask, $\exp(\ell_t)$ is the detached token-level IS weight, and $\rho_t^{\mathrm{PPO}} = \pitheta(y_t|c_t)/\piold(y_t|c_t)$ is the standard PPO ratio (which carries gradients). The negative sign ensures that minimizing $\mathcal{L}^{\mathrm{ProMax}}$ maximizes the surrogate objective.
+Here $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-norm}, $M_t^{\mathrm{prefix}}$ is the prefix IS mask,
+$\rho_t$ is the per-token importance ratio defined in \eqref{eq:ratio}.
 
-\textbf{Gradient flow.} Gradients propagate only through $\rho_t^{\mathrm{PPO}}$. The prefix mask $M_t^{\mathrm{prefix}}$, IS weight $\exp(\ell_t)$, and normalized advantage $\hat{A}_t$ are all detached from the computation graph. When $M_t^{\mathrm{prefix}} = 0$, the loss at position $t$ is zero and contributes no gradient.
+\textbf{Gradient flow.} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{prefix}}$ and the normalized advantage
+$\hat{A}_t$ are detached from the computation graph. When $M_t^{\mathrm{prefix}} = 0$, the loss at position $t$ is zero and contributes
+no gradient.
