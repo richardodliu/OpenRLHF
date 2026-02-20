@@ -1,7 +1,7 @@
 # `3-preliminaries.tex` 审稿意见
 
 ## 总评
-本章相较旧版已有实质改进（已补充 surrogate 替换说明与 coupling 引理条件），但仍存在两个核心理论风险：surrogate 化简与性能差分 surrogate 的等价关系未严格闭环、以及 `Context Shift Propagation` 证明链仍有关键前提缺口。
+本章相较旧版已有实质改进（已补充 surrogate 替换说明与 coupling 引理条件），但仍存在两个核心理论风险：surrogate 化简与性能差分 surrogate 的等价关系未严格闭环、以及 `Context Shift Propagation` 的证明链仍有关键论证缺口。
 
 ## 结构不完整
 - 当前未发现未修复问题。
@@ -14,16 +14,10 @@
   建议: 显式拆分两层结论：1) surrogate 近似/替代关系；2) gradient estimator 无偏性；并给出对应条件与推导。
 
 - [P0] 类型: 证明
-  位置: `tex/main/3-preliminaries.tex:94`
-  问题: `Context Shift Propagation` 的证明中，base case 使用了 `d_s^{\pi}(c_s)=d_s^{\pi'}(c_s)`（`tex/main/3-preliminaries.tex:108`），但当前假设只要求“在位置 `s` 的某个可达 context 处 token 分布不同”，并未保证两策略在 `s` 前完全一致。
-  影响: `4-method` 中关于 token-level IS 局限性的理论依托不够稳固。
-  建议: 明确补充“`s` 为首次分歧位置”这类先验条件，或重写 base case（避免依赖该等式）。
-
-- [P1] 类型: 证明
-  位置: `tex/main/3-preliminaries.tex:114`
-  问题: 归纳步由 `d_{s+1}^{\pi}(c_s,v^*) \neq d_{s+1}^{\pi'}(c_s,v^*)` 与“后续乘子均为正”直接推出 `d_t^{\pi}(c_t^*) \neq d_t^{\pi'}(c_t^*)`，但两侧后续乘子本身可以不同，当前论证未排除乘积偶然相等的情形。
-  影响: 归纳链条不完整，导致结论严格性不足。
-  建议: 增加同一路径下的可控比值界/下界构造，或改为基于 Radon-Nikodym 比值递推的证明方式。
+  位置: `tex/main/3-preliminaries.tex:110`
+  问题: `Context Shift Propagation` 的归纳步构造了“一条后续每步两策略取同概率 token 的路径”，并以此让乘积比值化简为 base case 的常数（`tex/main/3-preliminaries.tex:110`-`114`）。但“support overlap / 同词表”并不推出“存在 token 使两分布在该 token 上概率相等”，两分布可以在所有 token 上概率均不同，从而该路径未必存在；因此当前归纳论证不成立。
+  影响: 该引理被 `4-method` 用于论证 token-level IS 忽略因果结构时的“后续 context shift 必然存在”，证明链会被上游断点传导影响。
+  建议: 改为不依赖“逐步概率相等 token”的构造：例如从已知的某个前缀事件在 $t=s+1$ 时概率不同出发，利用“对该前缀的所有长度-$t$ 扩展概率和等于该前缀概率”的守恒关系（两策略在后续同支持下扩展集合一致），推出必存在某个扩展前缀在 $t$ 时仍概率不同，从而 $\|d_t^\pi-d_t^{\pi'}\|_{\mathrm{TV}}>0$。
 
 ## 逻辑问题
 - 当前未发现未修复问题。
@@ -33,5 +27,4 @@
 
 ## 高优先级修改清单（P0/P1/P2）
 1. P0: 为 surrogate 化简补全严格条件与推导，或改回标准逐时刻形式。
-2. P0: 修复 `Context Shift Propagation` base case 的前提缺口（或补充首次分歧假设）。
-3. P1: 补齐归纳步中的不等式链，避免“正乘子下差异必保留”的跳步推理。
+2. P0: 修复 `Context Shift Propagation` 归纳步的构造漏洞，给出不依赖“逐步概率相等 token”的严格证明。

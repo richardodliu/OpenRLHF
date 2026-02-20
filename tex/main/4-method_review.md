@@ -1,23 +1,17 @@
 # `4-method.tex` 审稿意见
 
 ## 总评
-本章近期已修复多处关键问题（包括 Part (a) 非对称阈值推导、Part (c) strict-violation 情形下与 sequence-level 的计数冲突、以及 `eq:threshold-kl`/Corollary 的 mask 一致性）。当前剩余问题主要有两处：Part (b) 证明条件与定理条件仍未完全同构，以及 `\pi_{old}` 与 `\pi_\theta` 的桥接仍停留在“引用后续章节说明”层面。
+本章近期已修复多处关键问题（包括 Part (a) 非对称阈值推导、Part (b) 条件双边化、Part (c) strict-violation 情形下与 sequence-level 的计数冲突、以及 `eq:threshold-kl`/Corollary 的 mask 一致性）。当前剩余风险主要集中在 “prefix IS 与 Adaptive bound 的连接” 这一段仍存在从 sample-level 过滤到 population-level KL/TV 约束的严格性缺口，容易被读者误解为已给出可直接用于误差界的定理化结论。
 
 ## 结构不完整
 - 当前未发现未修复问题。
 
 ## 证明不严谨
 - [P1] 类型: 证明
-  位置: `tex/main/4-method.tex:179`
-  问题: Part (b) 证明在早期 token 的通过条件写为 `M_t^{\mathrm{prefix}} = 1` when `\epsilon < \log\Lambda`，未与定理假设 `0 \le \epsilon \le \min(\log\Lambda, |\log\lambda|)` 完整同构；缺少 `|\log\lambda|` 一侧的对应论证。
-  影响: 证明文本的适用域小于定理陈述域，严格性不足。
-  建议: 将 Part (b) 的通过条件改为双边阈值版本（或分上下侧分别证明），确保与定理假设一一对应。
-
-- [P1] 类型: 证明
-  位置: `tex/main/4-method.tex:196`
-  问题: `thm:prefix-adaptive` 已将 context shift 写为 `\|d_t^{\piold} - d_t^{\piroll}\|_{TV}`，并在括号中引用 `\Cref{sec:unified}` 说明 `\piold \to \pitheta` 的 gap；但该处仍缺本章内可检验的传递界或明确“仅控制 `\piold/\piroll`”的作用域定理化表述。
-  影响: 本章 theorem 与全局误差分解目标项（涉及 `\pitheta`）之间仍存在形式化衔接缺口。
-  建议: 在本章补充显式 bridge 引理（含 PPO clip/step-size 条件），或把 theorem 结论明确限定为 `\piold` 层面的控制结论。
+  位置: `tex/main/4-method.tex:208`
+  问题: `thm:prefix-adaptive` 将 “prefix IS 的 sample-level 阈值过滤” 与 “population-level 的 KL/TV 量（KL chain rule + Pinsker）” 放在同一证明链中叙述，且出现了 “On the accepted subset ... applying Pinsker to the population-level KL yields ...” 这类表述。严格来说，逐轨迹的约束 $|L_t|/P_t\\in[\\log\\lambda,\\log\\Lambda]$ 并不推出 $\\DKL(d_{t+1}^{\\piroll}\\|d_{t+1}^{\\piold})$ 或 $\\|d_{t+1}^{\\piold}-d_{t+1}^{\\piroll}\\|_{\\mathrm{TV}}$ 在全分布意义下变小；而对 “过滤后的有效训练分布” 也未形式化定义其对应的 KL/TV 量与可检验上界。
+  影响: “与 Adaptive bound 的连接” 容易被读者误读为已给出严格的误差界控制结论，进而抬高摘要/引言中关于 proxy 的主张强度。
+  建议: 将 Part (c) 收敛为严格可证的两点：1) 期望恒等式（KL chain rule）；2) sample-level 过滤等价于对 $L_t/P_t$ 的区间约束。关于“过滤后有效分布的 KL/TV 被控制”的部分，建议改写为讨论性 remark，或显式引入并证明关于条件分布/截断分布的界（需额外假设，如接受概率下界或对数似然比上界）。
 
 ## 逻辑问题
 - 当前未发现未修复问题。
@@ -26,5 +20,4 @@
 - 当前未发现未修复问题。
 
 ## 高优先级修改清单（P0/P1/P2）
-1. P1: 对齐 Part (b) 证明条件与定理条件（补全 `|\log\lambda|` 侧约束）。
-2. P1: 补齐 `\pi_{old}\rightarrow\pi_\theta` 的形式化桥接，或收紧 theorem 作用域表述。
+1. P1: 重新收敛 `thm:prefix-adaptive` 的可证内容，避免 sample-level 过滤与 population-level KL/TV 量混用造成的“定理强度过度解读”。

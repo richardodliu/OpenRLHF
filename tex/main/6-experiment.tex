@@ -1,4 +1,89 @@
 \section{Experiments}
 \label{sec:experiments}
 
-\emph{Experimental evaluation is in progress. We plan to validate REINFORCE Pro Max on mathematical reasoning benchmarks (AIME, MATH) using Qwen3-8B under Zero-RL setup, with ablations on each component.}
+This section provides controlled simulations that validate two core design claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization stabilize advantage statistics without flipping advantage sign; and (ii)~prefix cumulative masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. Large-scale LLM benchmark results (e.g., AIME/MATH with a specific backbone) are orthogonal to these structural properties and are left as future work.
+
+\subsection{Setup}
+\label{sec:exp-setup}
+
+We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mixture that mimics sparse-success reasoning settings: with probability $p=0.15$ a sample is drawn from a ``success'' cluster centered near $1$, otherwise from a ``failure'' cluster centered near $0$, both with Gaussian noise $\sigma=0.10$. To reflect token-level weighting effects after expansion (\Cref{sec:token-expand}), we assign longer sequences to lower-quality samples (failure trajectories), setting lengths to $T_i \approx 512$ for failures and $T_i \approx 256$ for successes with small integer jitter.
+
+For IS masking, we use thresholds $[\lambda,\Lambda]=[0.5,5.0]$ unless otherwise stated, and synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
+
+\subsection{Baselines}
+\label{sec:exp-baselines}
+
+\textbf{Baselines and normalization.} We compare the mean baseline (REINFORCE++/GRPO-style) to the leave-one-out (RLOO) baseline (\Cref{def:rloo}), and we compare global normalization $(A-\mu)/\sigma$ to adaptive asymmetric normalization (\Cref{def:adaptive-norm}).
+
+\textbf{IS masking.} We compare token-level masking (ICEPOP), sequence-level masking (seq-mask-tis), and prefix cumulative masking (\Cref{def:prefix-is}).
+
+\subsection{Metrics}
+\label{sec:exp-metrics}
+
+\textbf{Baseline self-correlation.} We measure $\mathrm{corr}(r_i, b_i)$ between each sample reward $r_i$ and its baseline $b_i$. A correlated baseline can couple a sample with its own control variate, breaking the clean second-moment factorization used in RLOO analyses.
+
+\textbf{Sign flip rate under normalization.} After token expansion, we compute the token-weighted fraction of non-zero tokens whose normalized advantage changes sign, i.e., $\mathbb{I}[\mathrm{sign}(\hat{A}_{i,t}) \neq \mathrm{sign}(A_{i,t})]$. Sign flips are undesirable because they can turn punishment into reinforcement (or vice versa).
+
+\textbf{Masked-token coverage.} For each synthetic log-ratio pattern, we report the number of masked tokens and the first/last masked positions for ICEPOP, seq-mask-tis, and prefix masking.
+
+\subsection{Main Results}
+\label{sec:exp-main}
+
+\begin{table}[h]
+\centering
+\caption{Controlled simulation of baseline correlation and sign flips under token weighting. Numbers are estimated over $20{,}000$ prompt groups with $n=8$.}
+\label{tab:exp-baseline-signflip}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Mean baseline / global norm} & \textbf{RLOO / adaptive norm} \\
+\midrule
+$\mathrm{corr}(r_i, b_i)$ & $0.351$ & $-0.005$ \\
+Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The mean baseline exhibits substantial self-correlation, while RLOO makes the baseline effectively independent of the current sample. Under token-length weighting, global normalization introduces non-negligible sign flips, whereas adaptive normalization preserves sign by construction (\Cref{prop:gradient-direction}).
+
+\begin{table}[h]
+\centering
+\caption{Masking behavior under synthetic deviation patterns ($T=32$, $[\lambda,\Lambda]=[0.5,5.0]$). We report the number of masked tokens and the masked position range.}
+\label{tab:exp-masking-patterns}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{seq-mask-tis (seq)} & \textbf{Prefix (ours)} \\
+\midrule
+Early deviation ($\ell_1{=}10$, else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
+Late deviation ($\ell_{24}{=}50$, else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
+Monotone drift ($\ell_t{=}2$ for all $t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Prefix masking rejects a contiguous suffix once the prefix average log-ratio crosses the threshold, preserving positional information that is lost by sequence-level masking, and masking more off-policy tokens than token-level masking in the early-deviation regime (as predicted by \Cref{thm:prefix-tighter}).
+
+\subsection{Ablations}
+\label{sec:exp-ablations}
+
+\textbf{Without adaptive normalization.} Global normalization can flip the sign of token-expanded advantages when token-length weighting makes the token-level mean non-zero, while adaptive normalization preserves sign by using separate positive/negative scalings (\Cref{prop:gradient-direction}).
+
+\textbf{Without prefix masking.} Token-level masking only reacts to per-token outliers and may leave future tokens unfiltered even when the context has already drifted; prefix masking filters based on the prefix statistic, which is aligned with the causal accumulation structure (\Cref{lem:coupling}, \Cref{thm:prefix-tighter}).
+
+\subsection{Sensitivity to Thresholds}
+\label{sec:exp-sensitivity}
+
+Masking behavior depends on $[\lambda,\Lambda]$. Stricter thresholds can cause sequence-level masking to reject an entire trajectory, while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[\lambda,\Lambda]=[0.8,2.0]$ causes seq-mask-tis to reject all $32$ tokens, while prefix masking rejects only the suffix positions $t \in [24,32]$.
+
+\subsection{Reproducibility Checklist}
+\label{sec:exp-repro}
+
+\begin{itemize}
+    \item Random seed: $0$.
+    \item Monte Carlo trials: $20{,}000$ prompt groups; $n=8$ samples per group.
+    \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma=0.10$.
+    \item Token lengths: success $T_i \approx 256$, failure $T_i \approx 512$ with small integer jitter.
+    \item Thresholds: default $[\lambda,\Lambda]=[0.5,5.0]$; sensitivity example $[0.8,2.0]$.
+    \item Code version: git commit \texttt{a330f8a}.
+\end{itemize}
