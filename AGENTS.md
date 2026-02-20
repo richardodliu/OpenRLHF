@@ -348,6 +348,7 @@ loss = vllm_is * loss
 - **PPO ratio**: `exp(log_probs - old_log_probs)` = `π_current / π_old` - 用于 PPO clipping
 - **TIS vllm_is**: `exp(old_log_probs - rollout_log_probs)` = `π_old / π_rollout` - 用于 off-policy 校正
 
+
 **三种校正模式** (`--vllm_is_correction_type`):
 
 | 模式 | 实现 | 效果 | 适用场景 |
