@@ -8,30 +8,28 @@ Modern LLM-RL pipelines decouple inference from training: rollouts are produced 
 rollout policy $\piroll$, while gradient updates are computed in a separate training stack under the training policy $\pitheta$. This
 architectural separation can introduce off-policy mismatch even when parameters are nominally aligned.
 
-\paragraph{Backend discrepancies.}
-Inference and training stacks often differ in attention kernels, precision, and parallel reduction order. Since floating-point addition is
-non-associative, small numerical differences in normalization constants can compound autoregressively over long horizons.
+\paragraph{Mismatch sources.}
+Common sources of mismatch include backend discrepancies (different attention kernels, precision formats, or reduction order), MoE routing
+discontinuities (Top-$K$ routing can flip under small perturbations), and distributed staleness (actor--learner lag between rollout and
+consumption). These effects can compound autoregressively over long horizons and lead to volatile per-token ratios.
 
-\paragraph{MoE routing discontinuities.}
-For Mixture-of-Experts models, the Top-$K$ routing operator is discontinuous. Small perturbations to router logits can change the selected
-experts, producing large local deviations in token probabilities and hence large importance ratios $\rho_t$.
-
-\paragraph{Distributed staleness.}
-Actor--learner architectures generate rollouts with a lagging snapshot while the learner continues to update parameters, so $\piroll$ can
-differ from $\pitheta$ even when inference and training implementations are otherwise identical.
-
-\paragraph{Anchoring.}
+\paragraph{Anchoring and the apparent three-distribution structure.}
 Practical pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
 inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations recompute the
 behavior log-probabilities inside the training stack, yielding a recomputed anchor that can differ from the true rollout distribution even
-when parameters are identical.
-Following~\citet{qi2026rethinkingtrustregionllm}, the trust-region anchor (and hence the importance ratio) must be tied to the original
-rollout distribution that generated the data, which we denote by $\piroll$. Accordingly, we compute $\rho_t$ using rollout-time cached
-log-probabilities under $\piroll$.
+when parameters are identical. Importantly, this third object is not an additional policy in our theory; it is an alternative
+implementation-time anchor for the denominator of $\rho_t$.
+
+Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the importance ratio) must be anchored to the original rollout
+distribution that generated the data, which we denote by $\piroll$. Accordingly, we define $\rho_t := \pitheta(y_t\mid c_t) /
+\piroll(y_t\mid c_t)$ and assume access to rollout-time cached log-probabilities $\log \piroll(y_t\mid c_t)$. The theoretical development
+therefore involves only the policy pair $(\piroll,\pitheta)$, consistent with long-horizon trust-region analyses for LLM-RL (e.g.,
+\citet{li2025trm}).
 
 \paragraph{Notation mapping (PPO-style $\piold$).}
 In PPO-style implementations, the rollout snapshot used to generate data is often denoted by $\piold$; within a single policy update, this
-snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation).
+snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation). We use $\piold$ only for
+implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
 
 \section{Proof of Leave-One-Out Baseline Properties}
 \label{app:rloo-proof}
