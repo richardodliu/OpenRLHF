@@ -99,14 +99,18 @@ mask requires one cumulative sum over the sequence,
 which is $O(T)$ per sample. All components are computed from cached rollout log-probabilities and current-policy log-probabilities,
 requiring no additional model evaluations beyond those already used to compute $\log\pitheta$.
 
-\subsection{Comparison with Existing Methods}
+\subsection{Comparison with Other Advantage Estimation Methods}
 
 We compare REINFORCE Pro Max with existing critic-free LLM-RL methods along four dimensions: baseline type, advantage normalization
-strategy, IS correction granularity, and whether the IS correction preserves the causal structure of autoregressive generation. These
-dimensions correspond to the key design choices that affect the two factors in the error decomposition (\Cref{eq:error-decomp}): the
-advantage factor (targeted by baseline and normalization) and the context shift factor (targeted by IS correction).
+strategy, IS correction granularity, and whether the IS correction preserves the causal structure of autoregressive generation. We
+organize the comparison into two parts: (i) baseline and normalization choices (this subsection) and (ii) IS correction mechanisms (the
+next subsection). These dimensions correspond to the key design choices that affect the two factors in the error decomposition
+(\Cref{eq:error-decomp}): the advantage factor (targeted by baseline and normalization) and the context shift factor (targeted by IS
+correction).
 
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
+
+\subsection{Comparison with Other IS Correction Methods}
 
 \textbf{IS correction methods.} Token-level corrections (TIS, IcePop) operate directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$
 to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded weight at every position. IcePop instead masks out tokens whose
@@ -119,7 +123,8 @@ sequence-level rewards but loses positional information and can dilute isolated 
 TRM~\citep{li2025trm} applies a binary sequence gate (e.g., a max-KL trust-region criterion) and rejects entire trajectories, which is
 theoretically principled but sacrifices per-position granularity.
 
-\textbf{REINFORCE Pro Max.} REINFORCE Pro Max targets all four dimensions discussed above. The RLOO
+\textbf{REINFORCE Pro Max.} Taken together with the advantage-estimation choices discussed above, REINFORCE Pro Max targets all four
+dimensions discussed above. The RLOO
 baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves advantage sign while enforcing
 zero empirical mean and unit empirical variance on non-zero tokens (\Cref{eq:alpha-beta}, \Cref{par:adv-sign-preservation}); and prefix
 cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many
