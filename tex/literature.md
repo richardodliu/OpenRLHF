@@ -71,7 +71,7 @@
 
 一个关键提醒（对齐 OpenRLHF 实现很重要）：
 
-- “PPO ratio”通常指 $\pi_{\mathrm{current}} / \pi_{\mathrm{old}}$（用于 clip）
+- “PPO ratio”通常指 $\pi_\theta / \pi_{\mathrm{old}}$（用于 clip）
 - “mismatch correction ratio”通常指 $\pi_{\mathrm{old}} / \pi_{\mathrm{roll}}$（用于纠正 rollout backend 与训练 backend 的不一致）
 这两种 ratio 在实现里往往同时存在，不能混为一谈。
 
