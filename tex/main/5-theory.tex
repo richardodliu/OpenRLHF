@@ -94,7 +94,8 @@ $\mathcal{L}$ maximizes the surrogate objective.
 
 \emph{Computational overhead.} Compared to standard PPO implementations that cache rollout-time log-probabilities, REINFORCE Pro Max adds
 only lightweight arithmetic overhead. The RLOO baseline requires $O(n)$ arithmetic operations per prompt group. Adaptive normalization
-computes four partial sums ($S^+, S^-, Q^+, Q^-$) in a single pass. The prefix-level mask requires one cumulative sum over the sequence,
+computes the required first- and second-moment aggregates over positive and negative advantage tokens in a single pass. The prefix-level
+mask requires one cumulative sum over the sequence,
 which is $O(T)$ per sample. All components are computed from cached rollout log-probabilities and current-policy log-probabilities,
 requiring no additional model evaluations beyond those already used to compute $\log\pitheta$.
 

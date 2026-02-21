@@ -38,21 +38,6 @@ Define the index sets
     \qquad
     \mathcal{N} := \{(i,t) : A_{i,t} < 0\},
 \end{equation}
-and the summary statistics
-\begin{align}
-    S^+
-    &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t},
-    &
-    S^-
-    &:= -\sum_{(i,t) \in \mathcal{N}} A_{i,t}
-    = \sum_{(i,t) \in \mathcal{N}} |A_{i,t}|,
-    \\
-    Q^+
-    &:= \sum_{(i,t) \in \mathcal{P}} A_{i,t}^2,
-    &
-    Q^-
-    &:= \sum_{(i,t) \in \mathcal{N}} A_{i,t}^2,
-\end{align}
 The normalized advantage is defined by a sign-dependent rescaling:
 \begin{equation}
     \hat{A}_{i,t}
@@ -73,19 +58,41 @@ where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} cons
 \end{align}
 Equivalently, these constraints can be written as
 \begin{equation}
-    \alpha S^+ = \beta S^-,
-    \qquad
-    \alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|.
+    \begin{aligned}
+        \alpha \sum_{(i,t)\in\mathcal{P}} A_{i,t}
+        &=
+        \beta \left(-\sum_{(i,t)\in\mathcal{N}} A_{i,t}\right),
+        \\
+        \alpha^2 \sum_{(i,t)\in\mathcal{P}} A_{i,t}^2
+        + \beta^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2
+        &=
+        |\mathcal{P}| + |\mathcal{N}|.
+    \end{aligned}
 \end{equation}
 \end{definition}
 
 When $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$, solving the constraints in \Cref{def:adaptive-norm} yields the
 closed-form scaling factors:
 \begin{equation}
-    \alpha = \sqrt{\frac{|\mathcal{P}| + |\mathcal{N}|}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}},
-    \qquad
-    \beta = \alpha \cdot \frac{S^+}{S^-}.
     \label{eq:alpha-beta}
+    \begin{aligned}
+        \alpha
+        &=
+        \sqrt{
+            \frac{|\mathcal{P}| + |\mathcal{N}|}{
+                \sum_{(i,t)\in\mathcal{P}} A_{i,t}^2
+                +
+                \left(
+                \frac{\sum_{(i,t)\in\mathcal{P}} A_{i,t}}{-\sum_{(i,t)\in\mathcal{N}} A_{i,t}}
+                \right)^{\!2}
+                \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2
+            }
+        },
+        \\
+        \beta
+        &=
+        \alpha \cdot \frac{\sum_{(i,t)\in\mathcal{P}} A_{i,t}}{-\sum_{(i,t)\in\mathcal{N}} A_{i,t}}.
+    \end{aligned}
 \end{equation}
 
 \paragraph{Advantage sign preservation.}

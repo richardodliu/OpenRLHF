@@ -355,11 +355,15 @@ numerical stability and uniform-reward detection. They are unrelated to the dive
 \end{remark}
 
 \begin{enumerate}
-    \item \textbf{Sum threshold:} If $S^+ < \varepsilon_{\mathrm{num}}$ or $S^- < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is skipped and the original advantages are returned.
+    \item \textbf{Sum threshold:} If $\sum_{(i,t)\in\mathcal{P}} A_{i,t} < \varepsilon_{\mathrm{num}}$ or
+    $-\sum_{(i,t)\in\mathcal{N}} A_{i,t} < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is
+    skipped and the original advantages are returned.
 
     \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
 
-    \item \textbf{Intermediate overflow protection:} The quantity $(S^+/S^-)^2 Q^-$ is clamped to $10^8$ before computing $\alpha$.
+    \item \textbf{Intermediate overflow protection:} The quantity
+    $\left(\frac{\sum_{(i,t)\in\mathcal{P}} A_{i,t}}{-\sum_{(i,t)\in\mathcal{N}} A_{i,t}}\right)^{\!2}
+    \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2$ is clamped to $10^8$ before computing $\alpha$.
 
     \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
 \end{enumerate}
