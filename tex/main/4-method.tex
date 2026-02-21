@@ -124,6 +124,39 @@ positive-token mass to negative-token mass within the same prompt group, which i
 This is the sense in which the advantage scaling implicitly incorporates response-length information, rather than implementing any form of
 ratio clipping.
 
+This length dependence can be beneficial in long-horizon reasoning settings, where token-level expansion makes each response contribute
+roughly in proportion to its length. When success is rare, most tokens in a prompt group come from incorrect responses; without additional
+balancing, the negative-token mass can dominate the effective gradient budget. The sign-dependent scaling $(\alpha,\beta)$ adapts to this
+imbalance by reweighting positive and negative token groups based on their empirical token mass, stabilizing the relative strength of
+reinforcement versus punishment signals within each prompt group.
+
+To make this effect explicit, consider an idealized prompt group where $\tilde r_i\in\{+1,-1\}$ and hence $A_{i,t}=\tilde r_i$ for all
+$t\in\{1,\ldots,T_i\}$. Then
+\[
+\sum_{(i,t)\in\mathcal P} A_{i,t}^2 = |\mathcal P|,
+\qquad
+\sum_{(i,t)\in\mathcal N} A_{i,t}^2 = |\mathcal N|,
+\qquad
+\kappa = \frac{|\mathcal P|}{|\mathcal N|}.
+\]
+Substituting into \eqref{eq:alpha-beta} yields
+\[
+\alpha
+=
+\sqrt{\frac{|\mathcal P|+|\mathcal N|}{|\mathcal P|+\kappa^2|\mathcal N|}},
+\qquad
+\beta=\alpha\kappa.
+\]
+In the sparse-success regime $|\mathcal P|\ll|\mathcal N|$, this implies $\alpha\approx\sqrt{|\mathcal N|/|\mathcal P|}$ while
+$\beta\approx\sqrt{|\mathcal P|/|\mathcal N|}$: positive tokens are amplified and abundant negative tokens are attenuated in a way that
+automatically compensates for length-induced imbalance.
+
+This balancing is particularly helpful when long candidate solutions are more likely to be truncated and judged incorrect. Such
+trajectories can contribute a large negative-token mass (large $T_i$ with $\tilde r_i<0$), which would otherwise impose an outsized
+penalty under token-level expansion. By shrinking the negative scaling factor $\beta$ when negative-token mass dominates, adaptive
+normalization can mitigate over-penalization of long-horizon exploration induced by truncation-driven failures. This does not correct
+reward mislabeling; it only addresses the induced gradient imbalance under token-level training.
+
 \paragraph{Uniform scale mode.}
 When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
 \emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
