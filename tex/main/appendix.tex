@@ -81,12 +81,13 @@ Such spikes reflect implementation-level divergence and can induce a massive, er
 when $\hat{A}_t<0$. This motivates using a detached trust-region mask to discard mismatched tokens or trajectories rather than relying on a
 token-level clipping heuristic.
 
-\section{Proof of Leave-One-Out Baseline Properties}
+\section{Leave-One-Out Baseline Properties (Summary)}
 \label{app:rloo-proof}
 
-We provide a rigorous analysis of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}.
+We summarize standard properties of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}; see
+\citet{ahmadian2024back} for a detailed treatment.
 
-\begin{proposition}[Properties of the Leave-One-Out Baseline]
+\begin{remark}[Properties of the Leave-One-Out Baseline (prior work)]
 \label{prop:rloo-variance}
 Fix a prompt $x$ and draw $n \ge 2$ i.i.d.\ responses $\{y^{(1)}, \ldots, y^{(n)}\} \sim \pitheta(\cdot|x)$ with rewards
 $r_i = R(x, y^{(i)})$. Let
@@ -114,7 +115,7 @@ satisfies:
         \label{eq:rloo-second-moment}
     \end{equation}
 \end{enumerate}
-\end{proposition}
+\end{remark}
 
 \begin{remark}[Relationship between the two estimators]
 The deterministic proportionality $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ implies that the mean-baseline estimator is a
@@ -128,120 +129,18 @@ that arise when the baseline depends on $r_i$.
 The leave-one-out baseline is equivalent to the leave-one-out control variate from the classical REINFORCE literature~\citep{williams1992simple}. In the LLM-RL setting with $n$ samples per prompt, each sample's baseline is independent of its own trajectory, making it particularly well-suited for group-based sampling strategies.
 \end{remark}
 
-\begin{proof}
-We prove all statements conditional on a fixed prompt $x$; taking the outer expectation over $x\sim P(x)$ yields the proposition for the
-full objective $J(\pitheta)$.
+\noindent Proofs are omitted; see \citet{ahmadian2024back}.
 
-\textbf{(1) Unbiasedness.} Since $b_i$ depends only on $\{r_j\}_{j\neq i}$, it is independent of $(r_i,f_i)$ conditional on $x$. Hence
-\begin{align}
-    \E\!\big[(r_i-b_i)f_i \mid x\big]
-    &= \E\!\big[r_i f_i \mid x\big] - \E\!\big[b_i \mid x\big]\E\!\big[f_i \mid x\big].
-\end{align}
-By the score-function identity,
-\begin{equation}
-    \E\!\big[f_i \mid x\big] = \E\!\big[\nabla_\theta \log P^{\pitheta}(y^{(i)}\mid x)\mid x\big]
-    = \nabla_\theta \E\!\big[1 \mid x\big] = 0,
-\end{equation}
-and
-\begin{equation}
-    \E\!\big[r_i f_i \mid x\big]
-    = \E\!\Big[r_i\,\nabla_\theta \log P^{\pitheta}(y^{(i)}\mid x)\,\Big|\,x\Big]
-    = \nabla_\theta \E[r_i \mid x].
-\end{equation}
-Therefore $\E[(r_i-b_i)f_i\mid x] = \nabla_\theta \E[r_i\mid x]$. Averaging over $i$ yields
-\begin{equation}
-    \E[\hat{g}\mid x] = \nabla_\theta \E[r_1\mid x] = \nabla_\theta J_x(\pitheta),
-    \qquad
-    J_x(\pitheta) := \E_{y\sim \pitheta(\cdot\mid x)}[R(x,y)].
-\end{equation}
-Taking the outer expectation over $x$ gives $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
-
-\textbf{(2) Baseline independence.} The same conditional independence implies
-\begin{equation}
-    \E[b_i f_i \mid x] = \E[b_i\mid x]\E[f_i\mid x] = 0,
-\end{equation}
-so $\Cov(f_i,b_i)=0$.
-
-\textbf{(3) Mean-baseline scaling.} For each $i$, write
-\begin{align}
-    b^{\mathrm{mean}}
-    &= \frac{1}{n}\sum_{j=1}^{n} r_j
-    = \frac{r_i}{n} + \frac{1}{n}\sum_{j\neq i} r_j
-    = \frac{r_i}{n} + \frac{n-1}{n}\,b_i,
-    \\
-    r_i - b^{\mathrm{mean}}
-    &= r_i - \frac{r_i}{n} - \frac{n-1}{n}\,b_i
-    = \frac{n-1}{n}(r_i-b_i).
-\end{align}
-Summing over $i$ gives the deterministic identity $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$, and taking expectations yields
-$\E[\hat{g}^{\mathrm{mean}}] = \frac{n-1}{n}\nabla_\theta J(\pitheta)$.
-
-\textbf{(4) Second-moment decomposition.} Conditional on $x$, $b_i$ is the average of $n-1$ i.i.d.\ rewards $\{r_j\}_{j\neq i}$, hence
-\begin{equation}
-    \Var(b_i \mid x) = \frac{\sigma^2(x)}{n-1}.
-\end{equation}
-Write $r_i-b_i = (r_i-\mu(x)) - (b_i-\mu(x))$. Then
-\begin{align}
-    (r_i-b_i)^2
-    &= (r_i-\mu(x))^2 - 2(r_i-\mu(x))(b_i-\mu(x)) + (b_i-\mu(x))^2.
-\end{align}
-Multiplying by $f_i f_i^\top$ and taking conditional expectation gives
-\begin{align}
-    \E\!\big[(r_i-b_i)^2 f_i f_i^\top \mid x\big]
-    &= \E\!\big[(r_i-\mu(x))^2 f_i f_i^\top \mid x\big]
-    - 2\,\E\!\big[(r_i-\mu(x))(b_i-\mu(x)) f_i f_i^\top \mid x\big]
-    \nonumber\\
-    &\quad
-    + \E\!\big[(b_i-\mu(x))^2 f_i f_i^\top \mid x\big].
-\end{align}
-The cross term vanishes by conditional independence and $\E[b_i-\mu(x)\mid x]=0$:
-\begin{align}
-    \E\!\big[(r_i-\mu(x))(b_i-\mu(x)) f_i f_i^\top \mid x\big]
-    &= \E[b_i-\mu(x)\mid x]\;\E\!\big[(r_i-\mu(x)) f_i f_i^\top \mid x\big]
-    = 0.
-\end{align}
-The last term factorizes as
-\begin{align}
-    \E\!\big[(b_i-\mu(x))^2 f_i f_i^\top \mid x\big]
-    &= \E\!\big[(b_i-\mu(x))^2 \mid x\big]\;\E\!\big[f_i f_i^\top \mid x\big]
-    = \Var(b_i\mid x)\,\E[f_i f_i^\top\mid x],
-\end{align}
-which yields \eqref{eq:rloo-second-moment}.
-\end{proof}
 
 
 \section{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
-\begin{proposition}[Optimality of $\gamma = 1.0$]
-When the extrinsic reward is sparse (assigned only at the final token), $\gamma = 1.0$ is the unique discount factor that preserves unbiasedness of the REINFORCE gradient estimator for the undiscounted objective $J(\pitheta) = \E[R(x,y)]$.
-\end{proposition}
-
-\begin{proof}
-For the undiscounted objective $J(\pitheta)=\E[R(x,y)]$, the REINFORCE identity gives
-\begin{equation}
-    \nabla_\theta J(\pitheta)
-    = \E\!\Big[R(x,y)\sum_{t=1}^{T}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
-\end{equation}
-In a sparse terminal-reward setting, using a discounted return with $\gamma<1$ amounts to reweighting earlier score terms, yielding the
-alternative estimator
-\begin{equation}
-    g_\gamma(\theta)
-    := \E\!\Big[R(x,y)\sum_{t=1}^{T}\gamma^{T-t}\nabla_\theta \log \pitheta(y_t \mid c_t)\Big].
-\end{equation}
-The difference is
-\begin{align}
-    g_\gamma(\theta) - \nabla_\theta J(\pitheta)
-    &= \E\!\Big[R(x,y)\sum_{t=1}^{T}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big]
-    \nonumber\\
-    &= \E\!\Big[R(x,y)\sum_{t=1}^{T-1}\big(\gamma^{T-t}-1\big)\nabla_\theta \log \pitheta(y_t \mid c_t)\Big],
-    \label{eq:gamma-bias-diff}
-\end{align}
-where the last equality uses $\gamma^{T-T}-1=0$ at $t=T$. For any $\gamma<1$, the coefficients satisfy $\gamma^{T-t}-1<0$ for all
-$t\le T-1$. Unless the expectations $\E[R(x,y)\nabla_\theta \log \pitheta(y_t\mid c_t)]$ vanish for all $t\le T-1$ (a degenerate case in
-autoregressive generation), \eqref{eq:gamma-bias-diff} is nonzero, hence the estimator is biased. The only choice of $\gamma$ that
-removes the reweighting for all $t$ is $\gamma=1$.
-\end{proof}
+\begin{remark}[Optimality of $\gamma = 1.0$ (standard)]
+When the extrinsic reward is sparse (assigned only at the final token), $\gamma = 1.0$ is the unique discount factor that preserves
+unbiasedness of the REINFORCE gradient estimator for the undiscounted objective $J(\pitheta) = \E[R(x,y)]$; see
+\citet{williams1992simple} for background.
+\end{remark}
 
 
 \section{Proof of Theorem~\ref{thm:prefix-tighter}}

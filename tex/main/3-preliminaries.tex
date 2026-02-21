@@ -230,25 +230,9 @@ Most existing methods in the critic-free LLM-RL setting share a common limitatio
 position independently) or at sequence granularity (collapsing all positions into a single decision), neither of which explicitly respects
 the prefix-causal structure of autoregressive generation.
 
-\begin{lemma}[Context Shift Propagation]
+\begin{remark}[Context Shift Propagation (standard)]
 \label{lem:coupling}
 Let $s$ be the \emph{first} position at which two policies $\pi$ and $\pi'$ differ: $\pi(\cdot|c_{s'}) = \pi'(\cdot|c_{s'})$ for all reachable $c_{s'}$ with $s' < s$, and $\Dtvtok(c_s) > 0$ for some context $c_s$ satisfying $d_s^{\pi}(c_s) > 0$. If for all subsequent positions $t > s$ the policies assign positive probability to all tokens reachable under either policy (i.e., $\pi(y_t|c_t) > 0 \iff \pi'(y_t|c_t) > 0$ for all reachable $c_t$), then for all $t > s$, the context visitation distributions satisfy $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. That is, a token-level divergence at the first point of disagreement propagates to all future context distributions.
-\end{lemma}
-
-\begin{proof}
-By definition, $d_t^{\pi}(c_t) = P(x)\prod_{s'=1}^{t-1}\pi(y_{s'}|c_{s'})$. We proceed by explicit construction.
-
-\emph{Base case ($t = s+1$).} Since $\Dtvtok(c_s) > 0$, there exists a token $v^*$ such that $\pi(v^*|c_s) \neq \pi'(v^*|c_s)$. Consider the context $c_{s+1} = (c_s, v^*)$. By the product structure of the visitation distribution:
-\begin{equation*}
-    d_{s+1}^{\pi}(c_s, v^*) = d_s^{\pi}(c_s) \cdot \pi(v^*|c_s), \qquad d_{s+1}^{\pi'}(c_s, v^*) = d_s^{\pi}(c_s) \cdot \pi'(v^*|c_s),
-\end{equation*}
-where $d_s^{\pi}(c_s) = d_s^{\pi'}(c_s)$ holds because $s$ is the first position of disagreement, so $\pi(\cdot|c_{s'}) = \pi'(\cdot|c_{s'})$ for all reachable $c_{s'}$ with $s' < s$, and hence the two policies induce identical prefix distributions up to position $s$. Since $d_s^{\pi}(c_s) > 0$ and $\pi(v^*|c_s) \neq \pi'(v^*|c_s)$, we have $d_{s+1}^{\pi}(c_s, v^*) \neq d_{s+1}^{\pi'}(c_s, v^*)$, and therefore $\|d_{s+1}^{\pi} - d_{s+1}^{\pi'}\|_{\mathrm{TV}} > 0$.
-
-\emph{Inductive step ($t > s+1$).} Assume that for some $t \ge s+1$ there exists a context $\tilde{c}_t$ such that $d_t^{\pi}(\tilde{c}_t) \neq d_t^{\pi'}(\tilde{c}_t)$. Consider its one-step extensions $\tilde{c}_{t+1} = (\tilde{c}_t, v)$ for tokens $v$ in the vocabulary. If $d_{t+1}^{\pi}(\tilde{c}_t, v) = d_{t+1}^{\pi'}(\tilde{c}_t, v)$ held for all $v$, then summing over $v$ would imply:
-\begin{equation*}
-    d_t^{\pi}(\tilde{c}_t) = \sum_{v} d_{t+1}^{\pi}(\tilde{c}_t, v) = \sum_{v} d_{t+1}^{\pi'}(\tilde{c}_t, v) = d_t^{\pi'}(\tilde{c}_t),
-\end{equation*}
-contradicting the induction hypothesis. Therefore there exists a token $v_t$ such that $d_{t+1}^{\pi}(\tilde{c}_t, v_t) \neq d_{t+1}^{\pi'}(\tilde{c}_t, v_t)$, and hence $\|d_{t+1}^{\pi} - d_{t+1}^{\pi'}\|_{\mathrm{TV}} > 0$.
-
-Starting from the base case at $t=s+1$, this inductive step implies that for all $t > s$, there exists at least one context at which the visitation distributions differ. Quantitative bounds on context shift are discussed in \Cref{sec:adaptive-connection}.
-\end{proof}
+\par
+\noindent This propagation property is standard in autoregressive generation; see, e.g., \citet{li2025trm}.
+\end{remark}
