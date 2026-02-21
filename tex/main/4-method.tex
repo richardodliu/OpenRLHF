@@ -102,8 +102,8 @@ negative group $\mathcal{N}$. This follows immediately because the normalization
 $\beta>0$ on $\mathcal{N}$ (\Cref{eq:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
 \paragraph{Connection to response length.}
-Adaptive normalization is not related to PPO's asymmetric clipping, which modifies the importance ratio. Our asymmetry comes from
-sign-dependent rescaling of advantages under the token-level expansion and the empirical constraints in \Cref{def:adaptive-norm}.
+Our asymmetry comes from sign-dependent rescaling of advantages under the token-level expansion and the empirical constraints in
+\Cref{def:adaptive-norm}.
 Since \Cref{sec:token-expand} uses $A_{i,t}=\tilde r_i$ for all $t\in\{1,\ldots,T_i\}$, the prompt-group statistics in
 \Cref{def:adaptive-norm} are implicitly length-weighted. In particular, the positive/negative token index sets satisfy
 \[
