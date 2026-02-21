@@ -111,7 +111,7 @@ REINFORCE++ & Mean & Global $\mu/\sigma$ & None & --- \\
 GRPO & Mean & Global $\mu/\sigma$ & None & --- \\
 RLOO & Leave-one-out & None & None & --- \\
 DAPO\footnote{DAPO: Decoupled Alignment via Policy Optimization~\citep{yu2025dapo}.} + TIS & Mean & Global $\mu/\sigma$ & Token clip ($\rho_t$) & No \\
-DAPO + ICEPOP & Mean & Global $\mu/\sigma$ & Token mask ($\rho_t$) & No \\
+DAPO + IcePop & Mean & Global $\mu/\sigma$ & Token mask ($\rho_t$) & No \\
 GSPO & Mean & Global $\mu/\sigma$ & Seq clip ($\rhoseq$) & No \\
 GRPO + TRM & Mean & Global $\mu/\sigma$ & Seq mask (max-KL) & No \\
 \midrule
@@ -122,8 +122,8 @@ GRPO + TRM & Mean & Global $\mu/\sigma$ & Seq mask (max-KL) & No \\
 
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
 
-\textbf{IS correction methods.} Token-level corrections (TIS, ICEPOP) operate directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$
-to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded weight at every position. ICEPOP instead masks out tokens whose
+\textbf{IS correction methods.} Token-level corrections (TIS, IcePop) operate directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$
+to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded weight at every position. IcePop instead masks out tokens whose
 ratio falls outside the interval, eliminating extreme-weight bias at the cost of discarding gradient signal. Both treat positions
 independently and therefore cannot correct the downstream context shift caused by an early deviation (\Cref{prop:token-is-fails}).
 

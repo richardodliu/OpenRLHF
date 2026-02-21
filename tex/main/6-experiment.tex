@@ -28,7 +28,7 @@ Finally, we construct synthetic log-ratio patterns with $T=32$ to directly insta
 
 \textbf{Baselines and normalization.} We compare the mean baseline (REINFORCE++/GRPO-style) to the leave-one-out (RLOO) baseline (\Cref{def:rloo}), and we compare global normalization $(A-\mu)/\sigma$ to adaptive asymmetric normalization (\Cref{def:adaptive-norm}).
 
-\textbf{IS masking.} We compare token-level masking (ICEPOP), sequence-level masking (GSPO-style, based on $\rhoseq$), and prefix-level
+\textbf{IS masking.} We compare token-level masking (IcePop), sequence-level masking (GSPO-style, based on $\rhoseq$), and prefix-level
 masking based on the prefix proxy in \Cref{def:prefix-is}.
 
 \subsection{Metrics}
@@ -40,7 +40,7 @@ correlated baseline can couple a sample with its own control variate, complicati
 \textbf{Sign flip rate under normalization.} After token expansion, we compute the token-weighted fraction of non-zero tokens whose normalized advantage changes sign, i.e., $\mathbb{I}[\mathrm{sign}(\hat{A}_{i,t}) \neq \mathrm{sign}(A_{i,t})]$. Sign flips are undesirable because they can turn punishment into reinforcement (or vice versa).
 
 \textbf{Masked-token coverage.} For each synthetic log-ratio pattern, we report the number of masked tokens and the first/last masked
-positions for ICEPOP, sequence-level IS masking, and prefix masking.
+positions for IcePop, sequence-level IS masking, and prefix masking.
 
 \subsection{Main Results}
 
@@ -66,7 +66,7 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{Seq (GSPO-style)} & \textbf{Prefix (ours)} \\
+\textbf{Pattern} & \textbf{IcePop (token)} & \textbf{Seq (GSPO-style)} & \textbf{Prefix (ours)} \\
 \midrule
 Early ($\log\rho_1{=}8\tau_+$; else $0$) & $1$ ($[1,1]$) & $0$ (---) & $7$ ($[1,7]$) \\
 Late ($\log\rho_{24}{=}32\tau_+$; else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
@@ -78,7 +78,7 @@ Drift ($\log\rho_t{=}2\tau_+,\ \forall t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) &
 \noindent The early and late patterns instantiate \Cref{thm:prefix-tighter}(a,b) in the simplest form with $\varepsilon=0$ (all non-spike
 tokens satisfy $\rho_t=1$ and hence lie within the trust-region interval).
 \par
-\noindent\textbf{Early deviation.} ICEPOP reacts only to the local outlier at $t=1$ and therefore masks a single token. Sequence-level
+\noindent\textbf{Early deviation.} IcePop reacts only to the local outlier at $t=1$ and therefore masks a single token. Sequence-level
 masking aggregates over the full horizon and dilutes the violation. Prefix masking, in contrast, propagates the early mismatch forward by
 masking a short prefix:
 \[

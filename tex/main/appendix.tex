@@ -260,7 +260,7 @@ so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\
 
 \paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
-    \item \textbf{Token-level (ICEPOP / token-level ratio mask):}
+    \item \textbf{Token-level (IcePop / token-level ratio mask):}
     \begin{equation}
         M_t^{\mathrm{tok}}
         := \mathbb{I}\!\big[\rho_t \in [1-\epslow,1+\epshigh]\big]
@@ -291,7 +291,7 @@ $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
     \log\rho_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
 \end{equation}
 so $M_t^{\mathrm{tok}}=1$ for all $t>1$, while $M_1^{\mathrm{tok}}=0$ (since $\rho_1 \notin [1-\epslow,1+\epshigh]$). Hence token-level
-ICEPOP masks only position $t=1$.
+IcePop masks only position $t=1$.
 
 \smallskip
 For the prefix mask, note first that $M_1^{\mathrm{pre}}=0$ because $\rhoprefix{1}=\rho_1\notin[1-\epslow,1+\epshigh]$. To quantify how

@@ -192,7 +192,7 @@ Consider a length-$T$ trajectory such that
     \rho_t \in [1-\epslow,1+\epshigh]\ \text{ for all }\ t\in\{2,\ldots,T\}.
     \label{eq:token-early-deviation}
 \end{equation}
-Then the token-level ICEPOP mask,
+Then the token-level IcePop mask,
 \begin{equation}
     M_t^{\mathrm{tok}} := \mathbb{I}\!\big[\rho_t \in [1-\epslow,1+\epshigh]\big],
 \end{equation}
@@ -212,7 +212,7 @@ Applying the context-shift propagation lemma (\Cref{lem:coupling}) with $(\pi,\p
     \qquad
     \text{for all } t \ge 2.
 \end{equation}
-Therefore, even though ICEPOP masks the local deviation at $t=1$, the remaining accepted tokens $t\ge2$ are still evaluated under
+Therefore, even though IcePop masks the local deviation at $t=1$, the remaining accepted tokens $t\ge2$ are still evaluated under
 mismatched context visitation distributions, which is precisely the causal mismatch that token-independent masking fails to address.
 \end{proof}
 
@@ -343,7 +343,7 @@ In the deviation-pattern analysis below, we use $\varepsilon$ to denote a unifor
 \begin{theorem}[Causality-Aware Masking with Conditional Dominance]
 \label{thm:prefix-tighter}
 Let $M^{\mathrm{pre}}_t$, $M^{\mathrm{tok}}_t$, and $M^{\mathrm{seq}}_t$ denote the prefix-level mask
-(\Cref{def:prefix-trm-proxy}), the token-level ICEPOP mask, and a sequence-level (GSPO-style) mask respectively, all with the same
+(\Cref{def:prefix-trm-proxy}), the token-level IcePop mask, and a sequence-level (GSPO-style) mask respectively, all with the same
 acceptance interval $[1-\epslow, 1+\epshigh]$ for some $\epslow\in(0,1)$ and $\epshigh>0$.
 Concretely, the sequence-level mask is defined by a single statistic
 \begin{equation}
@@ -356,7 +356,7 @@ Assume policy support overlap (\Cref{asm:support}). Then:
 
 \begin{enumerate}
     \item[(a)] \textbf{Early deviation: the prefix mask rejects a (possibly longer) prefix.} Assume $\rho_1 \notin [1-\epslow,1+\epshigh]$ and
-    $|\log\rho_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then token-level ICEPOP masks
+    $|\log\rho_t| \le \varepsilon$ for all $t>1$, where $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then token-level IcePop masks
     only position $t=1$, while the prefix mask rejects at least position $t=1$. Moreover, if $\log\rho_1>\tau_+$ then for every position $t$
     satisfying
     \begin{equation}
@@ -369,7 +369,7 @@ Assume policy support overlap (\Cref{asm:support}). Then:
         \label{eq:early-lower-sufficient}
     \end{equation}
     we have $M_t^{\mathrm{pre}}=0$. In particular, in the early-deviation regime the prefix mask rejects at least as many tokens as
-    token-level ICEPOP.
+    token-level IcePop.
 
     \item[(b)] \textbf{Late deviation: the prefix mask is more local than sequence masking.} Suppose there exists $t^*\in\{1,\ldots,T\}$ such that
     $|\log\rho_t| \le \varepsilon$ for all $t\neq t^*$ and $\rho_{t^*}\notin[1-\epslow,1+\epshigh]$, where $0 \le \varepsilon \le \min(\tau_+,
@@ -394,7 +394,7 @@ Assume policy support overlap (\Cref{asm:support}). Then:
 \begin{proof}[Proof sketch]
 The full proof is in \Cref{app:prefix-proof}. We highlight the key steps.
 
-\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\log\rho_t \in [-\tau_-, \tau_+]$ for all $t>1$, hence ICEPOP masks
+\textbf{Part (a).} The $\varepsilon$-bounded condition implies $\log\rho_t \in [-\tau_-, \tau_+]$ for all $t>1$, hence IcePop masks
 only $t=1$. For the prefix statistic, note that
 \begin{equation}
     \log\rhoprefix{t}
