@@ -101,29 +101,10 @@ requiring no additional model evaluations beyond those already used to compute $
 
 \subsection{Comparison with Existing Methods}
 
-\Cref{tab:comparison} compares REINFORCE Pro Max with existing critic-free LLM-RL methods along four dimensions: baseline type, advantage normalization strategy, IS correction granularity, and whether the IS correction preserves the causal structure of autoregressive generation. These dimensions correspond to the key design choices that affect the two factors in the error decomposition (\Cref{eq:error-decomp}): the advantage factor (targeted by baseline and normalization) and the context shift factor (targeted by IS correction).
-
-\begin{table}[ht]
-\centering
-\caption{Comparison of critic-free LLM-RL methods.}
-\label{tab:comparison}
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Method} & \textbf{Baseline} & \textbf{Normalization} & \textbf{IS Correction} & \textbf{Causal IS} \\
-\midrule
-REINFORCE++ & Mean & Global $\mu/\sigma$ & None & --- \\
-GRPO & Mean & Global $\mu/\sigma$ & None & --- \\
-RLOO & Leave-one-out & None & None & --- \\
-DAPO\footnote{DAPO: Decoupled Alignment via Policy Optimization~\citep{yu2025dapo}.} + TIS & Mean & Global $\mu/\sigma$ & Token clip ($\rho_t$) & No \\
-DAPO + IcePop & Mean & Global $\mu/\sigma$ & Token mask ($\rho_t$) & No \\
-GSPO & Mean & Global $\mu/\sigma$ & Seq clip ($\rhoseq$) & No \\
-GRPO + TRM & Mean & Global $\mu/\sigma$ & Seq mask (max-KL) & No \\
-\midrule
-\textbf{Pro Max} & \textbf{RLOO} & \textbf{Adaptive $\alpha/\beta$} & \textbf{Prefix mask ($\rhoprefix{t}$)} & \textbf{Yes} \\
-\bottomrule
-\end{tabular}
-\end{table}
+We compare REINFORCE Pro Max with existing critic-free LLM-RL methods along four dimensions: baseline type, advantage normalization
+strategy, IS correction granularity, and whether the IS correction preserves the causal structure of autoregressive generation. These
+dimensions correspond to the key design choices that affect the two factors in the error decomposition (\Cref{eq:error-decomp}): the
+advantage factor (targeted by baseline and normalization) and the context shift factor (targeted by IS correction).
 
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
 
@@ -138,7 +119,7 @@ sequence-level rewards but loses positional information and can dilute isolated 
 TRM~\citep{li2025trm} applies a binary sequence gate (e.g., a max-KL trust-region criterion) and rejects entire trajectories, which is
 theoretically principled but sacrifices per-position granularity.
 
-\textbf{REINFORCE Pro Max.} REINFORCE Pro Max targets all four dimensions in \Cref{tab:comparison}. The RLOO
+\textbf{REINFORCE Pro Max.} REINFORCE Pro Max targets all four dimensions discussed above. The RLOO
 baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves advantage sign while enforcing
 zero empirical mean and unit empirical variance on non-zero tokens (\Cref{eq:alpha-beta}, \Cref{par:adv-sign-preservation}); and prefix
 cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many
