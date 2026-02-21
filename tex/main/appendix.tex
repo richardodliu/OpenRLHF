@@ -13,12 +13,6 @@ Common sources of mismatch include backend discrepancies (different attention ke
 discontinuities (Top-$K$ routing can flip under small perturbations), and distributed staleness (actor--learner lag between rollout and
 consumption). These effects can compound autoregressively over long horizons and lead to volatile per-token ratios.
 
-\paragraph{Action-token indexing in implementations.}
-In practical training code, each sample typically concatenates prompt and response tokens and may include padding or packing. Our theory
-therefore adopts the convention that $y=(y_1,\ldots,y_T)$ indexes only the response (action) tokens, and sums such as
-$\sum_{t=1}^{T}(\cdot)$ are understood to range over these action positions. This matches the standard implementation behavior of
-selecting response-token positions (e.g., via an action mask) while omitting prompt tokens from the policy-gradient objective.
-
 \paragraph{Anchoring and the apparent three-distribution structure.}
 Practical pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
 inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations recompute the
@@ -379,7 +373,7 @@ For thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the log-threshold inte
     \tau_- := -\log(1-\epslow).
 \end{equation}
 
-\paragraph{Variant B (absorbing prefix-average mask).}
+\paragraph{Variant I (absorbing prefix-average mask).}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
 once a prefix violates the threshold, all subsequent positions are rejected.
@@ -392,7 +386,7 @@ once a prefix violates the threshold, all subsequent positions are rejected.
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{pre}}.
 \end{equation}
 
-\paragraph{Variant C (prefix-max mask / max-filtering).}
+\paragraph{Variant II (prefix-max mask / max-filtering).}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
 \begin{equation}
@@ -406,7 +400,7 @@ The corresponding prefix-max statistic and mask are
 \end{equation}
 Equivalently, $M_t^{\mathrm{pre\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
-\paragraph{Variant D (prefix-score mask / bound-driven).}
+\paragraph{Variant III (prefix-score mask / bound-driven).}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
 \begin{equation}
@@ -424,7 +418,7 @@ and the corresponding mask is
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
 
-\paragraph{Variant E (prefix average $k_3$ / KL-proxy).}
+\paragraph{Variant IV (prefix average $k_3$ / KL-proxy).}
 
 TRM~\citep{li2025trm} advocates the sample-based proxy
 \begin{equation}

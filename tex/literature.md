@@ -112,7 +112,7 @@
 ### 证据链（在哪些文件里能直接看到这些定义）
 
 - TRM 的 gate 与 masked surrogate：
-  - `tex/literature/TRM/main_arxiv.tex` 的 `\section{Trust Region Masking}` 中直接给出 `M(x,y)` 的定义、$L_masked$ 形式、Algorithm 与 TRM Guarantee（见该节的 “The Masked Surrogate Objective / Masking Criterion and Implementation / Theoretical Guarantee”）。
+  - `tex/literature/TRM/main_arxiv.tex` 的 `\section{Trust Region Masking}` 中直接给出 $M(x,y)$ 的定义、$L_masked$ 形式、Algorithm 与 TRM Guarantee（见该节的 “The Masked Surrogate Objective / Masking Criterion and Implementation / Theoretical Guarantee”）。
 - Seq-MIS 与 Geo-Mask 的定义与动机：
   - `tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md` 中有
     - “Definition: Sequence-Level Masked IS (Seq-MIS)”
@@ -196,7 +196,7 @@
 
 #### 问题设定
 
-- 目标：控制 long-horizon 下 surrogate 与真目标之间的误差 `|Error|`，并让 bound 不随 $T^2$ 爆炸到 vacuous。
+- 目标：控制 long-horizon 下 surrogate 与真目标之间的误差 $|\mathrm{Error}|$，并让 bound 不随 $T^2$ 爆炸到 vacuous。
 - 关键现实问题：现代系统里 $\pi_{\mathrm{roll}} \ne \pi_\theta$（backend discrepancy、MoE routing discontinuity、distributed staleness），导致 off-policy mismatch 不是可选项。
 
 #### 承重公式
@@ -211,7 +211,7 @@
 
 #### 算法步骤
 
-1. 用 $\pi_{\mathrm{roll}}$ rollout 得到 `(x,y)`，并记录必要的统计量（至少要能在每个 token 位置估计 $D_{\mathrm{KL}}(\pi_{\mathrm{roll}}(\cdot|c_t) || \pi_\theta(\cdot|c_t))$ 或其 proxy）。
+1. 用 $\pi_{\mathrm{roll}}$ rollout 得到 $(x,y)$，并记录必要的统计量（至少要能在每个 token 位置估计 $D_{\mathrm{KL}}(\pi_{\mathrm{roll}}(\cdot|c_t) || \pi_\theta(\cdot|c_t))$ 或其 proxy）。
 2. 在训练端计算/近似 per-token divergence，并取 worst-case：$max_t D_{\mathrm{KL}}(...)$。
 3. 构造 sequence gate：若 $max_t D_{\mathrm{KL}} <= \delta$ 则 $M(x,y)=1$，否则拒绝该序列（$M=0$）。
 4. 用 $L_masked$ 做更新：只让被接受序列对梯度有贡献，并按 batch size 做归一化以稳定 step size。
@@ -226,7 +226,7 @@
 #### 理论结论与证明过程入口
 
 - 证明路线（把它当作你自己写证明时的模板）：
-  1. 从 PDI 写出 `Error` 的逐步差分形式。
+  1. 从 PDI 写出 $\mathrm{Error}$ 的逐步差分形式。
   2. 用 $|E_P[f]-E_Q[f]| <= 2||f||_\infty D_{\mathrm{TV}}(P,Q)$ 把每项拆成 “advantage 上界 \times context shift 上界”。
   3. 分别建立 $||g_t||_\infty$ 的上界（由 token divergence 控制）与 $||d_t^{\pi_\theta}-d_t^{\pi_{\mathrm{roll}}}||_TV$ 的上界（coupling / Pinsker / data processing / seq-level divergence 等路径）。
   4. 组合得到不同 bound 家族，并取 $min{...}$ 形成 unified bound。
@@ -256,7 +256,7 @@
 
 #### 算法步骤
 
-1. 对每个 query $x$，从 $\pi_{\mathrm{old}}$ 采样一组 responses ${y_i}_{i=1}^G$，得到 sequence-level rewards `r(x,y_i)`。
+1. 对每个 query $x$，从 $\pi_{\mathrm{old}}$ 采样一组 responses ${y_i}_{i=1}^G$，得到 sequence-level rewards $r(x,y_i)$。
 2. 用 group baseline 构造 sequence advantage（常见是 group mean/std 归一化的 $\hat{A}_i$）。
 3. 计算 sequence ratio 的几何均值 $s_i(\theta)$（等价于平均 log-ratio 的指数化）。
 4. 用 sequence-level clipping 对 $s_i(\theta)$ 做截断，并对整条序列的 token 梯度做同一个权重缩放（而不是 token-wise 不等权缩放）。
@@ -711,7 +711,7 @@
 
 #### 问题设定
 
-- 给定 prompt `x~D`，每个 $x$ 对应一个 teacher policy $\pi_{T(x)}$。
+- 给定 prompt $x\sim D$，每个 $x$ 对应一个 teacher policy $\pi_{T(x)}$。
 - 目标：最小化 $\mathrm{KL}(\pi_\theta(\cdot|x) || \pi_{T(x)}(\cdot|x))$（reverse KL），等价于最大化一个 entropy-regularized 的序列级回报。
 
 #### 承重公式
