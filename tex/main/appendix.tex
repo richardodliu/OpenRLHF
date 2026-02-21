@@ -418,22 +418,29 @@ and the corresponding mask is
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
 
-\paragraph{Variant IV (prefix average $k_3$ / KL-proxy).}
+\paragraph{Variant IV (prefix abnormal-token rate / TRM-style).}
 
-TRM~\citep{li2025trm} advocates the sample-based proxy
+TRM~\citep{li2025trm} uses per-token divergence estimates (or their sample-based proxies) to decide whether a trajectory lies inside a
+trust region. We can adapt this idea to a prefix-level gate by counting \emph{abnormal} tokens in the prefix. Concretely, define the
+abnormal-token indicator
 \begin{equation}
-    k_3(\rho) := \rho - 1 - \log\rho,
+    B_t := \mathbb{I}\!\big[\Dkltok(c_t;\piroll,\pitheta) > \delta_{\mathrm{TRM}}\big],
 \end{equation}
-which satisfies $\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition
-$\rho_t=\pitheta/\piroll$ and support overlap. This motivates a prefix-average KL-proxy mask:
+and the prefix abnormal count and rate
 \begin{equation}
-    \overline{k}_{3,t}
-    := \frac{1}{t}\sum_{s=1}^{t} k_3(\rho_s),
+    N_t := \sum_{s=1}^{t} B_s,
     \qquad
-    M_t^{\mathrm{pre\text{-}k3}} := \mathbb{I}\!\big[\overline{k}_{3,t} \le \delta_{k3}\big].
+    \widehat{p}_t := \frac{N_t}{t}.
 \end{equation}
-Unlike ratio-interval thresholding, this variant targets a prefix-level \emph{average} KL proxy and can be interpreted as a causal
-refinement of average-based trust-region criteria.
+Given a rate threshold $\xi\in[0,1]$, the corresponding prefix mask is
+\begin{equation}
+    M_t^{\mathrm{pre\text{-}anom}}
+    := \mathbb{I}\!\big[\widehat{p}_t \le \xi\big].
+\end{equation}
+In practice, one may instantiate $B_t$ using TRM's computation method for $\Dkltok(c_t;\piroll,\pitheta)$; for example, via the
+sample-based proxy $k_3(\rho):=\rho-1-\log\rho$, which satisfies
+$\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition
+$\rho_t=\pitheta/\piroll$ and support overlap.
 
 
 \section{Numerical Stability}
