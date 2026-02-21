@@ -5,6 +5,8 @@
 # Notes:
 # - Default behavior is to commit and push all repo changes (not only `tex/`).
 # - Set `PUSH=0` to disable git commit/push (compile-only dry run).
+# - By default, the generated `tex/main.pdf` is NOT committed. Set `COMMIT_PDF=1`
+#   to include it in the git commit.
 
 set -euo pipefail
 
@@ -15,6 +17,7 @@ MAIN="main"
 # Allow disabling push for local debugging.
 PUSH="${PUSH:-1}"
 COMMIT_MSG="${COMMIT_MSG:-update}"
+COMMIT_PDF="${COMMIT_PDF:-0}"
 
 # TeX cache paths (avoid permission errors when mktexpk tries writing under /root).
 TEX_CACHE_ROOT="${TEX_CACHE_ROOT:-/tmp/openrlhf_tex_cache}"
@@ -134,6 +137,10 @@ if [[ "${PUSH}" == "1" ]]; then
   cd "${SCRIPT_DIR}"
 
   git add -A
+  if [[ "${COMMIT_PDF}" != "1" ]]; then
+    # Keep the PDF artifact updated locally, but don't commit it by default.
+    git reset -q tex/main.pdf || true
+  fi
   if git diff --cached --quiet; then
     echo "No changes to commit."
   else
