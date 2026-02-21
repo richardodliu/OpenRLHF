@@ -362,7 +362,8 @@ numerical stability and uniform-reward detection. They are unrelated to the dive
     \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
 
     \item \textbf{Intermediate overflow protection:} The quantity
-    $\kappa^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2$ is clamped to $10^8$ before computing $\alpha$.
+    $\kappa^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2$ (where $\kappa$ is defined in \Cref{def:adaptive-norm}) is clamped to $10^8$ before
+    computing $\alpha$.
 
     \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
 \end{enumerate}

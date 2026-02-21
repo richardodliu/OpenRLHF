@@ -56,12 +56,14 @@ where $\alpha,\beta>0$ are chosen to satisfy the following \emph{empirical} cons
     \\
     \frac{1}{|\mathcal{P}| + |\mathcal{N}|}\sum_{(i,t)\in\mathcal{P}\cup\mathcal{N}}\hat{A}_{i,t}^2 &= 1.
 \end{align}
+When $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$, define the ratio
+\begin{equation}
+    \kappa := \frac{\sum_{(i,t)\in\mathcal{P}} A_{i,t}}{-\sum_{(i,t)\in\mathcal{N}} A_{i,t}}.
+\end{equation}
 Equivalently, these constraints can be written as
 \begin{equation}
     \begin{aligned}
-        \alpha \sum_{(i,t)\in\mathcal{P}} A_{i,t}
-        &=
-        \beta \left(-\sum_{(i,t)\in\mathcal{N}} A_{i,t}\right),
+        \beta &= \alpha \kappa,
         \\
         \alpha^2 \sum_{(i,t)\in\mathcal{P}} A_{i,t}^2
         + \beta^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2
@@ -76,10 +78,6 @@ closed-form scaling factors:
 \begin{equation}
     \label{eq:alpha-beta}
     \begin{aligned}
-        \kappa
-        &:=
-        \frac{\sum_{(i,t)\in\mathcal{P}} A_{i,t}}{-\sum_{(i,t)\in\mathcal{N}} A_{i,t}},
-        \\
         \alpha
         &=
         \sqrt{
