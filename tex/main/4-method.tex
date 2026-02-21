@@ -156,7 +156,7 @@ intermediate policies.
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
 $M^{\mathrm{TRM}}(x,y)$, yielding a masked surrogate objective of the form
 \begin{equation}
-    \mathcal{L}_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
+    L_{\mathrm{masked}}^{\mathrm{TRM}}(\pitheta)
     := \E_{\piroll}\!\left[
         M^{\mathrm{TRM}}(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
@@ -167,7 +167,7 @@ accepts or rejects an entire trajectory via a single gate $M^{\mathrm{TRM}}(x,y)
 threshold, thereby retaining positional granularity while respecting the autoregressive order. For comparison, a prefix-level masked
 surrogate can be written as
 \begin{equation}
-    \mathcal{L}_{\mathrm{masked}}^{\mathrm{prefix}}(\pitheta)
+    L_{\mathrm{masked}}^{\mathrm{prefix}}(\pitheta)
     := \E_{\piroll}\!\left[
         A(x,y)\cdot \sum_{t=1}^{T} M_t^{\mathrm{prefix}}\rho_t
     \right],

@@ -30,7 +30,7 @@ joint benefit is discussed in \Cref{sec:unified}. Our contributions are:
     \item \textbf{Prefix Causal Trust Region masking with causal structure (\Cref{sec:prefix-is}):} We propose a prefix-cumulative masking
     strategy constructed from the per-token ratio $\rho_t=\pitheta/\piroll$. Motivated by long-horizon trust-region analyses for LLM-RL
     (e.g., TRM~\citep{li2025trm}), we apply a per-position prefix gate to the token-level loss, respecting the autoregressive causal
-    structure. This differs from TRM, which uses a sequence-level acceptance gate $M(x,y)$ to discard entire trajectories.
+    structure. This differs from TRM, which uses a sequence-level acceptance gate $M^{\mathrm{TRM}}(x,y)$ to discard entire trajectories.
     Under the explicit sufficient conditions in Theorem~\ref{thm:prefix-tighter}, prefix masking can provide tighter filtering (i.e., mask at
     least as many ratio-violating tokens) than token-level methods (which ignore causal dependencies) and sequence-level methods (which lose
     positional information) in three analyzed deviation patterns (early deviation, late deviation, and monotone drift).

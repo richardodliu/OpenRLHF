@@ -19,7 +19,7 @@ by the maximum token-level divergence (e.g., $\max_t \Dkltok(c_t;\piroll,\pithet
 sequence-level importance ratio coefficient (the geometric-mean ratio $\rhoseq$) and applies it uniformly across the sequence.
 \par
 \noindent\textbf{Prefix-level refinement.} Our REINFORCE Pro component can be viewed as a prefix-level refinement of TRM's rejection
-mechanism: instead of a single sequence gate $M(x,y)$, we compute a per-position mask $M_t^{\mathrm{prefix}}$ from a ratio-based prefix
+mechanism: instead of a single sequence gate $M^{\mathrm{TRM}}(x,y)$, we compute a per-position mask $M_t^{\mathrm{prefix}}$ from a ratio-based prefix
 statistic and multiply it into the token-level loss, masking only the positions whose prefixes violate a proxy trust region. This retains
 per-position granularity while preserving the causal order of autoregressive generation.
 

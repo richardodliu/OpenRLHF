@@ -14,7 +14,15 @@ We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mi
     \qquad u_i \sim \mathrm{Unif}\{-32,\ldots,32\}.
 \]
 
-For IS masking, we use the acceptance interval $[1-\epslow,1+\epshigh]=[0.5,5.0]$ unless otherwise stated (i.e., $\epslow=0.5$ and $\epshigh=4.0$), and synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
+For IS masking, we use the acceptance interval $[1-\epslow,1+\epshigh]=[0.9,1.1]$ unless otherwise stated (i.e., $\epslow=\epshigh=0.1$).
+We also define the corresponding log-thresholds
+\[
+    \tau_+ := \log(1+\epshigh),
+    \qquad
+    \tau_- := -\log(1-\epslow),
+\]
+so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
+Finally, we construct synthetic log-ratio patterns with $T=32$ to directly instantiate the three regimes in \Cref{thm:prefix-tighter}.
 
 \subsection{Baselines}
 
@@ -54,23 +62,37 @@ Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
 
 \begin{table}[ht]
 \centering
-\caption{Masking behavior under synthetic deviation patterns ($T=32$, $[1-\epslow,1+\epshigh]=[0.5,5.0]$). We report the number of masked tokens and the masked position range.}
+\caption{Masking behavior under synthetic deviation patterns ($T=32$, $[1-\epslow,1+\epshigh]=[0.9,1.1]$). We report the number of masked tokens and the masked position range.}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Pattern} & \textbf{ICEPOP (token)} & \textbf{Seq (GSPO-style)} & \textbf{Prefix (ours)} \\
 \midrule
-Early ($\log\rho_1{=}10$; else $0$) & $1$ ($[1,1]$) & $0$ (---) & $6$ ($[1,6]$) \\
-Late ($\log\rho_{24}{=}50$; else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
-Drift ($\log\rho_t{=}2,\ \forall t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
+Early ($\log\rho_1{=}8\tau_+$; else $0$) & $1$ ($[1,1]$) & $0$ (---) & $7$ ($[1,7]$) \\
+Late ($\log\rho_{24}{=}32\tau_+$; else $0$) & $1$ ($[24,24]$) & $0$ (---) & $8$ ($[24,31]$) \\
+Drift ($\log\rho_t{=}2\tau_+,\ \forall t$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) & $32$ ($[1,32]$) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent In the analyzed deviation patterns (where the post-deviation log-ratios remain in-bound), prefix masking rejects a contiguous
-block starting at the first threshold violation of the prefix statistic, preserving positional information that is lost by sequence-level
-masking, and masking more prefix-drifted tokens than token-level masking in the early-deviation regime (as predicted by
-\Cref{thm:prefix-tighter}).
+\noindent The early and late patterns instantiate \Cref{thm:prefix-tighter}(a,b) in the simplest form with $\varepsilon=0$ (all non-spike
+tokens satisfy $\rho_t=1$ and hence lie within the trust-region interval).
+\par
+\noindent\textbf{Early deviation.} ICEPOP reacts only to the local outlier at $t=1$ and therefore masks a single token. Sequence-level
+masking aggregates over the full horizon and dilutes the violation. Prefix masking, in contrast, propagates the early mismatch forward by
+masking a short prefix:
+\[
+    \log\rhoprefix{t} = \frac{1}{t}\log\rho_1 = \frac{8}{t}\tau_+,
+    \qquad
+    \log\rhoseq = \frac{1}{T}\log\rho_1 = \frac{1}{4}\tau_+,
+    \qquad (T=32).
+\]
+Thus $\log\rhoprefix{t}>\tau_+$ for $t\in\{1,\ldots,7\}$, while $\log\rhoseq$ remains in-bound.
+\par
+\noindent\textbf{Late deviation.} For a single spike at $t^*=24$, prefix masking is strictly suffix-local (it can only start at $t\ge t^*$),
+while sequence-level masking remains all-or-nothing. With $\log\rho_{24}=32\tau_+$ and $\log\rho_t=0$ otherwise, the sequence statistic
+satisfies $\log\rhoseq=\tau_+$ and is accepted, but the prefix average exceeds $\tau_+$ for $t\in\{24,\ldots,31\}$, yielding a localized
+masked suffix. These behaviors align with the regimes in \Cref{thm:prefix-tighter}.
 
 \subsection{Ablations}
 
@@ -81,8 +103,10 @@ masking, and masking more prefix-drifted tokens than token-level masking in the 
 \subsection{Sensitivity to Thresholds}
 
 Masking behavior depends on $[1-\epslow,1+\epshigh]$. Stricter thresholds can cause sequence-level IS masking to reject an entire trajectory,
-while prefix masking remains localized in position. For example, in the late-deviation pattern above, using $[1-\epslow,1+\epshigh]=[0.8,2.0]$
-causes the sequence-level mask to reject all $32$ tokens, while prefix masking rejects only the suffix positions $t \in [24,32]$.
+while prefix masking remains localized in position. For example, in the late-deviation pattern above, the sequence statistic satisfies
+$\rhoseq=1+\epshigh=1.1$ under the default thresholds. If we instead use the stricter symmetric interval $[1-\epslow,1+\epshigh]=[0.95,1.05]$
+(i.e., $\epslow=\epshigh=0.05$), then $\rhoseq>1.05$ and the sequence-level mask rejects all $32$ tokens, while prefix masking still rejects only
+suffix positions starting at $t=24$.
 
 \subsection{Reproducibility Checklist}
 
@@ -91,6 +115,6 @@ causes the sequence-level mask to reject all $32$ tokens, while prefix masking r
     \item Monte Carlo trials: $20{,}000$ prompt groups; $n=8$ samples per group.
     \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma_{\mathrm{rew}}=0.10$.
     \item Token lengths: success $T_i = 256 + u_i$, failure $T_i = 512 + u_i$, $u_i \sim \mathrm{Unif}\{-32,\ldots,32\}$.
-    \item Thresholds: default $[1-\epslow,1+\epshigh]=[0.5,5.0]$; sensitivity example $[0.8,2.0]$.
+    \item Thresholds: default $(\epslow,\epshigh)=(0.1,0.1)$ (i.e., $[1-\epslow,1+\epshigh]=[0.9,1.1]$); sensitivity example $(\epslow,\epshigh)=(0.05,0.05)$ (i.e., $[0.95,1.05]$).
     \item Code version: git commit \texttt{9a3879e}.
 \end{itemize}
