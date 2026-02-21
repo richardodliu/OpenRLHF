@@ -31,6 +31,7 @@
 | IcePop（博客稿）                                  | tech report `.md` | MoE mismatch，IcePop objective 与直觉                            | 中                    | `tex/literature/IcePop.md`                                                                   |
 | Policy Gradient Intro（LLM reasoning）         | tech report `.md` | policy gradient theorem，surrogate objective（autodiff 实现）     | 中-高（含 theorem/推导）    | `tex/literature/Brief Introduction of Policy Gradient In LLM Reasoning.md`                   |
 | On-Policy Distillation (OPD)                 | tech report `.md` | OPD = reverse KL，等价 entropy-regularized RL，policy gradient   | 高（含 theorem + proof） | `tex/literature/Theory of On-Policy Distillation.md`                                         |
+| Policy Entropy Convergence Note              | tech report `.md` | NPG/KL-regularized update 下策略熵变化，协方差表达式与直觉解释 | 中（推导为主）             | `tex/literature/how does rl policy entropy converge during iteration.md`                     |
 | Theory Part 1                                | tech report `.md` | SGA lemma，bias vs variance，TV vs chi^2，TRPO 连接               | 高                    | `tex/literature/Theory/1-Why Off-Policy Breaks RL An SGA Analysis Framework.md`              |
 | Theory Part 2                                | tech report `.md` | Seq-IS/Token-IS 的系统性 bias-variance 分析                        | 高                    | `tex/literature/Theory/2-Applying the SGA Framework Token v.s. Sequence-level Correction.md` |
 | Theory Part 3                                | tech report `.md` | Seq-MIS，Geo-Mask，hard trust region via masking               | 高                    | `tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md`                  |
@@ -49,6 +50,7 @@
 7. `tex/literature/IcePop/main.tex` 与 `tex/literature/IcePop.md`：看 token-level filtering 在 MoE mismatch 下的具体形式与理论化表达。
 8. `tex/literature/Brief Introduction of Policy Gradient In LLM Reasoning.md`：如果需要从零把 policy gradient/surrogate objective 写清楚，这份笔记可直接复用定理与推导。
 9. `tex/literature/Theory of On-Policy Distillation.md`：如果论文里涉及“蒸馏视角/OPD”，用这份笔记快速对齐目标函数与 policy gradient 形式。
+10. `tex/literature/how does rl policy entropy converge during iteration.md`：如果你需要解释“为什么/何时 policy entropy 会下降或上升”，用这里的协方差表达式给出一阶近似的定量直觉（与 NPG/KL-regularized 更新对齐）。
 
 ---
 
@@ -528,3 +530,39 @@
 2. 用 log-derivative trick 得到 `E[ advantage * ∇ log π_θ ]` 结构。
 3. 通过条件期望/塔式性质把 “未来 log ratio” 与 “未来 KL” 联系起来，得到多种等价 advantage 形式。
 4. 说明 baseline 不改变期望梯度（经典 `E[b(s)∇logπ]=0`）。
+
+---
+
+### how does rl policy entropy converge during iteration：策略熵随迭代如何变化（NPG/KL-regularized 更新）
+
+入口：`tex/literature/how does rl policy entropy converge during iteration.md`
+
+这份笔记回答一个很具体的问题：**在策略迭代/梯度迭代过程中，什么时候 entropy 会下降，什么时候 entropy 可能上升？**
+它不是一篇完整 paper，但给了一个在写作与分析时很实用的“承重结论”：entropy 的一阶变化可以写成一个协方差。
+
+#### 设置（它在讨论什么算法）
+
+- 离散动作空间，softmax policy（非 neural softmax，只讨论最简形态）。
+- 用 KL-regularized 的 per-state update 解释 Natural Policy Gradient (NPG)：
+  - `π_{k+1}(·|s) = argmax_p E_{a~p}[Q^{π_k}(s,a)] - (1/η) KL(p, π_k(·|s))`
+  - 等价形式：`π_{k+1}(a|s) ∝ π_k(a|s) exp(η A^{π_k}(s,a))`
+- 一句与 RLHF 的对齐：在 bandit/单步设置下，上述更新就是 “reward 直接当 advantage” 的单步 NPG（笔记里也点明了这点）。
+
+#### 承重公式（entropy 变化的协方差表达式）
+
+把 `H(π(·|s))` 视为参数 `θ` 的函数，做一阶近似：
+
+- 一般 softmax 参数更新：
+  - `H(θ^{k+1}|s) - H(θ^k|s) ≈ -Cov_{a~π_k(·|s)}( log π_k(a|s), θ^{k+1}_{s,a} - θ^k_{s,a} )`
+- 代入 NPG 更新 `Δθ = η A`：
+  - `H(θ^{k+1}|s) - H(θ^k|s) ≈ -η · Cov_{a~π_k(·|s)}( log π_k(a|s), A^{π_k}(s,a) )`
+
+#### 直觉解释（什么时候熵减/熵增）
+
+- 如果“高概率动作”恰好也有“高 advantage”，那么 `log π` 与 `A` 正相关，协方差为正，entropy 一阶变化为负，熵倾向下降（更确定、更 exploit）。
+- 反过来，如果高 advantage 的动作当前概率低（需要把概率质量从头部分配到尾部），协方差可能变小甚至为负，熵下降会被抑制，甚至出现熵上升（更随机、更 explore）。
+
+#### Proof/推导在哪里
+
+- 这份笔记本身就是推导：从 entropy 定义出发算 `∇_θ H`，再与参数更新方向做内积，最后整理成协方差形式。
+- 它引用的理论背景是 NPG/PG 理论（Agarwal et al. 2021）以及 TRPO 的“occupancy shift 是二阶项”的直觉（Schulman et al. 2015），但核心推导不依赖额外 lemma。
