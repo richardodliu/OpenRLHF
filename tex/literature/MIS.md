@@ -1,5 +1,7 @@
 # When Speed Kills Stability: Demystifying RL Collapse from the Training-Inference Mismatch
 
+Authors:    [Jiacai Liu](https://www.jiacailiu.cn/)    [Yingru Li](http://richardli.xyz)    Yuqian Fu    Jiawei Wang    Qian Liu    Yu Shen
+
 ## **TL;DR:**
 
 The relentless push for faster inference has created a dangerous "training-inference mismatch" that can silently kill reinforcement learning with LLMs. Our investigation reveals a vicious cycle that is particularly acute in modern reasoning and agentic RL:
