@@ -24,7 +24,7 @@
 | TRM (Trust Region Masking)                   | paper `.tex`      | 长序列下 trust region bound 非空化，sequence-level masking           | 高                    | `tex/literature/TRM/main_arxiv.tex`                                                          |
 | GSPO (Group Sequence Policy Optimization)    | paper `.tex`      | sequence likelihood ratio，sequence-level clipping，与 GRPO 的差异 | 中                    | `tex/literature/GSPO/colm2024_conference.tex`                                                |
 | IcePop (Every Step Evolves / Ring-1T report) | paper `.tex`      | training-inference mismatch，token-level filtering/校正         | 中（附录有定理+证明）          | `tex/literature/IcePop/main.tex`                                                             |
-| CISPO (MiniMax-M1 report, 含 `\\method{}`)    | paper `.tex`      | 重要性权重截断、工程化的 RL scaling 配方                                   | 低-中（更偏 recipe）       | `tex/literature/CISPO/main.tex`                                                              |
+| CISPO (MiniMax-M1 report, 含 `\method{}`)    | paper `.tex`      | 重要性权重截断、工程化的 RL scaling 配方                                   | 低-中（更偏 recipe）       | `tex/literature/CISPO/main.tex`                                                              |
 | DPPO (Divergence PPO)                        | paper `.tex`      | 用分布散度替代 ratio clip 的 trust region，Binary/Top-K divergence 近似 | 中-高（含 theorem + proof） | `tex/literature/DPPO/example_paper.tex`                                                      |
 | TIS（off-policy mismatch + truncated IS）      | tech report `.md` | sampler/learner mismatch，TIS 修正项                             | 中                    | `tex/literature/TIS.md`                                                                      |
 | MIS（mismatch -> collapse + 序列级修正观点）          | tech report `.md` | token-level bias、seq-level 修正、MIS                            | 中                    | `tex/literature/MIS.md`                                                                      |
@@ -63,16 +63,16 @@
 - `x`：prompt / query
 - `y = (y_1,...,y_T)`：response（token 序列）
 - `c_t = (x, y_{<t})`：prefix/context（LLM 生成的 state）
-- 行为策略 / 采样策略：`μ` 或 `π_roll`（rollout policy / sampler policy）
-- 目标策略 / 训练策略：`π` 或 `π_θ`（learner policy / training policy）
-- per-token ratio：`ρ_t = π(y_t|c_t) / μ(y_t|c_t)`
-- sequence ratio：`ρ(y) = π(y|x) / μ(y|x) = ∏_t ρ_t`
-- geometric mean ratio（长度归一）：`ρ_geo(y) = ρ(y)^{1/T} = exp( (1/T)∑_t log ρ_t )`
+- 行为策略 / 采样策略：`\mu` 或 `\pi_roll`（rollout policy / sampler policy）
+- 目标策略 / 训练策略：$\pi$ 或 `\pi_\theta`（learner policy / training policy）
+- per-token ratio：`\rho_t = \pi(y_t|c_t) / \mu(y_t|c_t)`
+- sequence ratio：`\rho(y) = \pi(y|x) / \mu(y|x) = \prod_t \rho_t`
+- geometric mean ratio（长度归一）：`\rho_geo(y) = \rho(y)^{1/T} = exp( (1/T)\sum_t log \rho_t )`
 
 一个关键提醒（对齐 OpenRLHF 实现很重要）：
 
-- “PPO ratio”通常指 `π_current / π_old`（用于 clip）
-- “mismatch correction ratio”通常指 `π_old / π_rollout`（用于纠正 rollout backend 与训练 backend 的不一致）
+- “PPO ratio”通常指 `\pi_current / \pi_old`（用于 clip）
+- “mismatch correction ratio”通常指 `\pi_old / \pi_rollout`（用于纠正 rollout backend 与训练 backend 的不一致）
 这两种 ratio 在实现里往往同时存在，不能混为一谈。
 
 ---
@@ -85,12 +85,12 @@
 
 - TRM 与 (Seq-)MIS 都属于“hard trust region / rejection/masking”家族：当样本被判定为不可信时直接丢弃（梯度贡献为 0）。
 - 它们不等价，核心差异在于 gate 统计量的选择：
-  - TRM：用 `max_t D_KL(π_roll(·|c_t) || π_θ(·|c_t))` 这类 **worst-case token divergence** 做 gate（`tex/literature/TRM/main_arxiv.tex` 的 TRM 定义与 Algorithm）。
-  - Seq-MIS：用序列重要性比 `ρ(y)` 是否超过阈值 `C` 做 gate（`tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md` 的 Seq-MIS 定义）。
-  - Geo-Mask：用 `ρ_geo(y)`（几何均值/平均 log-ratio）做 length-invariant gate（同一个 Theory Part 3 文档的 Geo-Mask 定义）。
+  - TRM：用 `max_t D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t))` 这类 **worst-case token divergence** 做 gate（`tex/literature/TRM/main_arxiv.tex` 的 TRM 定义与 Algorithm）。
+  - Seq-MIS：用序列重要性比 $\rho(y)$ 是否超过阈值 `C` 做 gate（`tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md` 的 Seq-MIS 定义）。
+  - Geo-Mask：用 $\rho_geo(y)$（几何均值/平均 log-ratio）做 length-invariant gate（同一个 Theory Part 3 文档的 Geo-Mask 定义）。
 - 从“长序列可用性”的角度：
-  - TRM 的阈值 `δ` 是 length-invariant（不依赖 `T`），这是它的显式设计目标之一。
-  - Seq-MIS 的 `ρ(y)=∏ρ_t` 是 extensive quantity，会天然随 `T` 指数级漂移，导致结构性长度偏置；Theory Part 3 专门引入 Geo-Mask 来修正这一点。
+  - TRM 的阈值 $\delta$ 是 length-invariant（不依赖 `T`），这是它的显式设计目标之一。
+  - Seq-MIS 的 `\rho(y)=\prod\rho_t` 是 extensive quantity，会天然随 `T` 指数级漂移，导致结构性长度偏置；Theory Part 3 专门引入 Geo-Mask 来修正这一点。
   - 因而“TRM vs MIS”更准确的关系是：TRM 与 Geo-Mask 在“length-invariant trust region gate”的方向更一致，而 Seq-MIS 是 hard gate 但存在 length bias 需要额外处理。
 
 ### 方法对照表（家族图谱）
@@ -98,15 +98,15 @@
 
 | 方法                               | Gate 粒度       | Gate 统计量                              | 是否 length-invariant | 是否乘 IS 权重  | 主要控制/解决的问题                                   |
 | -------------------------------- | ------------- | ------------------------------------- | ------------------- | ---------- | -------------------------------------------- |
-| Token-TIS                        | token         | `ρ_t` 截断/clip                         | 是（逐 token）          | 是          | 缓解方差爆炸，但不处理 state distribution mismatch      |
-| IcePop                           | token         | `ρ_t` 超界则置 0（或保留系数）                   | 是（逐 token）          | 是/系数式      | 丢弃“不健康 token 更新”，抑制 mismatch 噪声              |
-| Seq-IS                           | sequence      | `ρ(y)`                                | 否（extensive）        | 是          | 理论无偏，但长序列方差指数爆炸                              |
-| Seq-TIS                          | sequence      | `ρ(y)` 截断                             | 否（extensive）        | 是          | 在无偏与方差之间折中（仍有 length bias）                   |
-| Seq-MIS                          | sequence      | `ρ(y)` gate（拒绝）                       | 否（extensive）        | 是          | Hard trust region via rejection，过滤 OOD 高权重样本 |
-| Geo-Mask                         | sequence(样本级) | `ρ_geo(y)` gate（双侧）                   | 是（按平均/几何均值）         | 否（纯过滤）     | 长序列下的 length-invariant hard trust region     |
-| DPPO                             | token         | `D(μ(·|c_t) || π(·|c_t))` gate + PPO 方向性 | 是（逐 token）          | 是          | 用 divergence 做 trust region，避免 ratio clip 的长尾词表病态 |
-| TRM                              | sequence      | `max_t D_KL(π_roll(·|c_t) || π_θ(·|c_t))` gate | 是（阈值不随 T）          | 是          | 用 max-divergence gate 保证 bound 非空化           |
-| Prefix gate（本仓库 `reinforce_pro`） | token(前缀因果)   | prefix 几何均值 `exp(mean_{s≤t} log ρ_s)` | 是（按前缀平均）            | 是（token 级） | 在因果结构下做“前缀过滤”，更细粒度的 gate                     |
+| Token-TIS                        | token         | `\rho_t` 截断/clip                         | 是（逐 token）          | 是          | 缓解方差爆炸，但不处理 state distribution mismatch      |
+| IcePop                           | token         | `\rho_t` 超界则置 0（或保留系数）                   | 是（逐 token）          | 是/系数式      | 丢弃“不健康 token 更新”，抑制 mismatch 噪声              |
+| Seq-IS                           | sequence      | `\rho(y)`                                | 否（extensive）        | 是          | 理论无偏，但长序列方差指数爆炸                              |
+| Seq-TIS                          | sequence      | `\rho(y)` 截断                             | 否（extensive）        | 是          | 在无偏与方差之间折中（仍有 length bias）                   |
+| Seq-MIS                          | sequence      | `\rho(y)` gate（拒绝）                       | 否（extensive）        | 是          | Hard trust region via rejection，过滤 OOD 高权重样本 |
+| Geo-Mask                         | sequence(样本级) | `\rho_geo(y)` gate（双侧）                   | 是（按平均/几何均值）         | 否（纯过滤）     | 长序列下的 length-invariant hard trust region     |
+| DPPO                             | token         | `D(\mu(\cdot|c_t) || \pi(\cdot|c_t))` gate + PPO 方向性 | 是（逐 token）          | 是          | 用 divergence 做 trust region，避免 ratio clip 的长尾词表病态 |
+| TRM                              | sequence      | `max_t D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t))` gate | 是（阈值不随 T）          | 是          | 用 max-divergence gate 保证 bound 非空化           |
+| Prefix gate（本仓库 `reinforce_pro`） | token(前缀因果)   | prefix 几何均值 `exp(mean_{s\leqt} log \rho_s)` | 是（按前缀平均）            | 是（token 级） | 在因果结构下做“前缀过滤”，更细粒度的 gate                     |
 
 
 ### 证据链（在哪些文件里能直接看到这些定义）
@@ -117,7 +117,7 @@
   - `tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md` 中有
     - “Definition: Sequence-Level Masked IS (Seq-MIS)”
     - “Definition: Geometric Sequence Masking (Geo-Mask)”
-    - 以及为什么 `ρ(y)` 会导致 length-dependent rejection bias 的分析。
+    - 以及为什么 `\rho(y)` 会导致 length-dependent rejection bias 的分析。
 - MIS.md 的 “MIS” 叙述（与 Theory Part 3 一致）：
   - `tex/literature/MIS.md` 中有 “Masked Importance Sampling (MIS)” 与 token-level vs sequence-level 的对照。
 
@@ -127,15 +127,15 @@
 
 - 维度 1：**gate 用的统计量是什么**
   - TRM：worst-case token divergence（max-KL / max-TV），目标是直接控制 bound 里出现的 `D^{tok,max}`。
-  - Seq-MIS：sequence ratio `ρ(y)`（本质是 `∑ log ρ_t` 的指数化），更像“用 IS 权重大小作为 OOD 指示器”。
-  - Geo-Mask：`ρ_geo`（平均 log-ratio 的指数化），把 extensive quantity 变成 per-token 的 intensive quantity。
+  - Seq-MIS：sequence ratio `\rho(y)`（本质是 `\sum log \rho_t` 的指数化），更像“用 IS 权重大小作为 OOD 指示器”。
+  - Geo-Mask：`\rho_geo`（平均 log-ratio 的指数化），把 extensive quantity 变成 per-token 的 intensive quantity。
 - 维度 2：**是否天然 length-invariant**
   - TRM：是（阈值按设计不依赖 `T`）。
-  - Seq-MIS：不是（`ρ(y)` 是乘积，长度越长越容易被拒）。
+  - Seq-MIS：不是（`\rho(y)` 是乘积，长度越长越容易被拒）。
   - Geo-Mask：是（平均/几何均值消掉长度）。
 - 维度 3：**实现时需要访问哪些概率信息**
-  - TRM：理想形态需要 full-vocab logits 才能算每个位置的 `D_KL(π_roll||π_θ)`；文中也给了 sample-based proxy（`k_2/k_3`）但仍要定义好 max/avg 约束如何计算。
-  - Seq-MIS / Geo-Mask：只需要 sampled token 的 logprob 就能构造 `log ρ_t` 与其前缀/序列统计量（更贴近现有高吞吐 RL 系统的可用信息）。
+  - TRM：理想形态需要 full-vocab logits 才能算每个位置的 `D_KL(\pi_roll||\pi_\theta)`；文中也给了 sample-based proxy（`k_2/k_3`）但仍要定义好 max/avg 约束如何计算。
+  - Seq-MIS / Geo-Mask：只需要 sampled token 的 logprob 就能构造 `log \rho_t` 与其前缀/序列统计量（更贴近现有高吞吐 RL 系统的可用信息）。
 
 ---
 
@@ -164,10 +164,10 @@
 在 `openrlhf/models/loss.py` 的 `PolicyLoss.forward()`（关键行号）：
 
 - PPO/GSPO 的 surrogate 与 ratio 定义：
-  - PPO：`ratio = exp(log_probs - old_log_probs)`（`π_current / π_old`，见 `openrlhf/models/loss.py:122`）
+  - PPO：`ratio = exp(log_probs - old_log_probs)`（`\pi_current / \pi_old`，见 `openrlhf/models/loss.py:122`）
   - GSPO：`ratio = exp(mean_t (log_probs - old/rollout))` 并广播到 token（sequence-level geometric mean ratio，见 `openrlhf/models/loss.py:125`）
 - vLLM mismatch 的 IS correction（只在 `policy_loss_type == "ppo"` 时生效）：
-  - `log_ratio = old_log_probs - rollout_log_probs`（`π_old / π_rollout`，见 `openrlhf/models/loss.py:152` 起）
+  - `log_ratio = old_log_probs - rollout_log_probs`（`\pi_old / \pi_rollout`，见 `openrlhf/models/loss.py:152` 起）
   - `tis`：token-level clamp
   - `icepop`：token-level filter（超阈值置 0）
   - `seq-mask-tis`：先用 `seq_is = exp(mean_t log_ratio)` 做 **sequence gate**，再乘 token-level `exp(log_ratio)`
@@ -180,11 +180,11 @@
 - TIS（token-level truncated IS） -> `--enable_vllm_is_correction --vllm_is_correction_type tis`
 - IcePop（token-level filtering） -> `--enable_vllm_is_correction --vllm_is_correction_type icepop`
 - Geo-Mask-Token-IS 的混合形态 -> `--enable_vllm_is_correction --vllm_is_correction_type seq-mask-tis`
-  - 解释：`seq-mask-tis` 的 gate 统计量是 `seq_is = exp(mean log_ratio)`，就是 `ρ_geo` 风格；然后仍保留 token-level IS 系数。
+  - 解释：`seq-mask-tis` 的 gate 统计量是 `seq_is = exp(mean log_ratio)`，就是 `\rho_geo` 风格；然后仍保留 token-level IS 系数。
 - GSPO（sequence-level ratio/clipping） -> `--policy_loss_type gspo`
 - TRM（max-KL gate）：
   - 本仓库当前的 `seq-mask-tis` 不是 TRM 的 max-KL gate（它是 geometric-mean gate）。
-  - 若要实现 TRM，需要能计算或近似 `max_t D_KL(π_roll(·|c_t) || π_θ(·|c_t))` 这类统计量；当前 `vllm_is` 路径主要使用 sampled-token logprob 的 log-ratio，而不是 full-vocab KL。
+  - 若要实现 TRM，需要能计算或近似 `max_t D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t))` 这类统计量；当前 `vllm_is` 路径主要使用 sampled-token logprob 的 log-ratio，而不是 full-vocab KL。
 
 ---
 
@@ -197,23 +197,23 @@
 #### 问题设定
 
 - 目标：控制 long-horizon 下 surrogate 与真目标之间的误差 `|Error|`，并让 bound 不随 `T^2` 爆炸到 vacuous。
-- 关键现实问题：现代系统里 `π_roll != π_θ`（backend discrepancy、MoE routing discontinuity、distributed staleness），导致 off-policy mismatch 不是可选项。
+- 关键现实问题：现代系统里 `\pi_roll != \pi_\theta`（backend discrepancy、MoE routing discontinuity、distributed staleness），导致 off-policy mismatch 不是可选项。
 
 #### 承重公式
 
 - divergence 记号（在 `main_arxiv.tex` 的 divergence 定义块与 `\section{Theoretical Analysis}` 开头）：
-  - `ε = D_TV^{tok,max}`，`δ = D_KL^{tok,max}`，以及 `D_KL^{seq}` / `D_TV^{seq}` / `\bar{D}_t`
+  - `\epsilon = D_TV^{tok,max}`，`\delta = D_KL^{tok,max}`，以及 `D_KL^{seq}` / `D_TV^{seq}` / `\bar{D}_t`
 - Error 的 PDI 分解（承重起点，后续所有 bound 都从这里出发）：
-  - `Error = Σ_t ( E_{d_t^{πθ}}[g_t] - E_{d_t^{πroll}}[g_t] )`
+  - `Error = \sum_t ( E_{d_t^{\pi\theta}}[g_t] - E_{d_t^{\piroll}}[g_t] )`
 - TRM 的 gate 与 masked surrogate（在 `\section{Trust Region Masking}`）：
-  - `M(x,y) = I[ max_t D_KL(π_roll(·|c_t) || π_θ(·|c_t)) <= δ ]`
-  - `L_masked = E_{(x,y)~π_roll}[ M(x,y) · A(x,y) · Σ_t ρ_t ]`（被拒样本梯度贡献为 0）
+  - `M(x,y) = I[ max_t D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t)) <= \delta ]`
+  - `L_masked = E_{(x,y)~\pi_roll}[ M(x,y) \cdot A(x,y) \cdot \sum_t \rho_t ]`（被拒样本梯度贡献为 0）
 
 #### 算法步骤
 
-1. 用 `π_roll` rollout 得到 `(x,y)`，并记录必要的统计量（至少要能在每个 token 位置估计 `D_KL(π_roll(·|c_t) || π_θ(·|c_t))` 或其 proxy）。
+1. 用 `\pi_roll` rollout 得到 `(x,y)`，并记录必要的统计量（至少要能在每个 token 位置估计 `D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t))` 或其 proxy）。
 2. 在训练端计算/近似 per-token divergence，并取 worst-case：`max_t D_KL(...)`。
-3. 构造 sequence gate：若 `max_t D_KL <= δ` 则 `M(x,y)=1`，否则拒绝该序列（`M=0`）。
+3. 构造 sequence gate：若 `max_t D_KL <= \delta` 则 `M(x,y)=1`，否则拒绝该序列（`M=0`）。
 4. 用 `L_masked` 做更新：只让被接受序列对梯度有贡献，并按 batch size 做归一化以稳定 step size。
 
 #### 关键定理
@@ -227,15 +227,15 @@
 
 - 证明路线（把它当作你自己写证明时的模板）：
   1. 从 PDI 写出 `Error` 的逐步差分形式。
-  2. 用 `|E_P[f]-E_Q[f]| <= 2||f||_∞ D_TV(P,Q)` 把每项拆成 “advantage 上界 × context shift 上界”。
-  3. 分别建立 `||g_t||_∞` 的上界（由 token divergence 控制）与 `||d_t^{πθ}-d_t^{πroll}||_TV` 的上界（coupling / Pinsker / data processing / seq-level divergence 等路径）。
+  2. 用 `|E_P[f]-E_Q[f]| <= 2||f||_∞ D_TV(P,Q)` 把每项拆成 “advantage 上界 \times context shift 上界”。
+  3. 分别建立 `||g_t||_∞` 的上界（由 token divergence 控制）与 `||d_t^{\pi\theta}-d_t^{\piroll}||_TV` 的上界（coupling / Pinsker / data processing / seq-level divergence 等路径）。
   4. 组合得到不同 bound 家族，并取 `min{...}` 形成 unified bound。
 - 证明入口：`main_arxiv.tex` 后半部分直接包含 “Proofs of Foundational Lemmas / Proofs of Main Theorems / Proof of the Adaptive Bound / Sample-Based Estimators” 等章节。
 
 #### 与 OpenRLHF 映射（可选）
 
 - OpenRLHF 当前的 `seq-mask-tis` 是 geometric-mean gate（基于 `exp(mean log_ratio)`），不等价于 TRM 的 max-KL gate。
-- 若要在本仓库落地 TRM：核心是新增一个可计算/可近似的 `max_t D_KL(π_roll(·|c_t) || π_θ(·|c_t))` gate（通常需要 full-vocab logits 或论文中提到的 proxy 统计量）。
+- 若要在本仓库落地 TRM：核心是新增一个可计算/可近似的 `max_t D_KL(\pi_roll(\cdot|c_t) || \pi_\theta(\cdot|c_t))` gate（通常需要 full-vocab logits 或论文中提到的 proxy 统计量）。
 
 ---
 
@@ -250,16 +250,16 @@
 
 #### 承重公式
 
-- GSPO objective：`J_GSPO(θ) = E[ (1/G) Σ_i min( s_i(θ) Â_i, clip(s_i(θ)) Â_i ) ]`
-- sequence ratio（几何均值）：`s_i(θ) = ( π_θ(y_i|x) / π_old(y_i|x) )^{1/|y_i|} = exp( (1/|y_i|) Σ_t log π_θ/π_old )`
-- gradient analysis（对比 GRPO）：GSPO 的 token 梯度被同一个 `s_i(θ)` 等权重缩放，而 GRPO 是 token-wise 不等权缩放。
+- GSPO objective：`J_GSPO(\theta) = E[ (1/G) \sum_i min( s_i(\theta) Â_i, clip(s_i(\theta)) Â_i ) ]`
+- sequence ratio（几何均值）：`s_i(\theta) = ( \pi_\theta(y_i|x) / \pi_old(y_i|x) )^{1/|y_i|} = exp( (1/|y_i|) \sum_t log \pi_\theta/\pi_old )`
+- gradient analysis（对比 GRPO）：GSPO 的 token 梯度被同一个 `s_i(\theta)` 等权重缩放，而 GRPO 是 token-wise 不等权缩放。
 
 #### 算法步骤
 
-1. 对每个 query `x`，从 `π_old` 采样一组 responses `{y_i}_{i=1}^G`，得到 sequence-level rewards `r(x,y_i)`。
+1. 对每个 query `x`，从 `\pi_old` 采样一组 responses `{y_i}_{i=1}^G`，得到 sequence-level rewards `r(x,y_i)`。
 2. 用 group baseline 构造 sequence advantage（常见是 group mean/std 归一化的 `Â_i`）。
-3. 计算 sequence ratio 的几何均值 `s_i(θ)`（等价于平均 log-ratio 的指数化）。
-4. 用 sequence-level clipping 对 `s_i(θ)` 做截断，并对整条序列的 token 梯度做同一个权重缩放（而不是 token-wise 不等权缩放）。
+3. 计算 sequence ratio 的几何均值 `s_i(\theta)`（等价于平均 log-ratio 的指数化）。
+4. 用 sequence-level clipping 对 `s_i(\theta)` 做截断，并对整条序列的 token 梯度做同一个权重缩放（而不是 token-wise 不等权缩放）。
 
 #### 关键定理
 
@@ -269,13 +269,13 @@
 
 - 关键推导入口：`tex/literature/GSPO/colm2024_conference.tex` 的 `\subsection{Gradient Analysis}`。
 - 建议关注两件事：
-  - GSPO 的梯度形式里，整条序列的 token log-likelihood 梯度共享同一个缩放系数 `s_i(θ)`。
-  - GRPO 的梯度形式里，每个 token 被各自的 `w_{i,t}(θ)` 缩放，从而引入更高的 token-level 噪声与累积不稳定性。
+  - GSPO 的梯度形式里，整条序列的 token log-likelihood 梯度共享同一个缩放系数 `s_i(\theta)`。
+  - GRPO 的梯度形式里，每个 token 被各自的 `w_{i,t}(\theta)` 缩放，从而引入更高的 token-level 噪声与累积不稳定性。
 
 #### 与 OpenRLHF 映射（可选）
 
 - `--policy_loss_type gspo` 会走 `openrlhf/models/loss.py` 的 GSPO 分支：`ratio = exp(mean_t log_ratio)`（sequence geometric mean ratio）并广播到 token。
-- 注意 OpenRLHF 里 GSPO 的 `log_ratio` 在启用 vLLM correction 时可能取 `log_probs - rollout_log_probs`（即把 behavior policy 视为 rollout policy），这与 paper 的 `π_old`/`π_current` 视角有关，使用时需要明确你把谁当 behavior。
+- 注意 OpenRLHF 里 GSPO 的 `log_ratio` 在启用 vLLM correction 时可能取 `log_probs - rollout_log_probs`（即把 behavior policy 视为 rollout policy），这与 paper 的 `\pi_old`/`\pi_current` 视角有关，使用时需要明确你把谁当 behavior。
 
 ---
 
@@ -293,21 +293,21 @@
 
 #### 承重公式
 
-- IcePop 的核心是一个 token-level 的过滤/校正因子（双侧阈值 `[α, β]`），常用写法是对 mismatch ratio 做 gate：
-  - `v = π_train(old) / π_infer(old)`（或等价的 “training vs inference” 的校准 ratio）
-  - `\mathcal{M}(v; α, β)` 用于丢弃/抑制超界 token 的梯度贡献
-- 目标函数形态入口：`tex/literature/IcePop/sections/method/rl-algo.tex`（`J_IcePop(θ)` 在 GRPO/PPO 的 token surrogate 外乘 `\mathcal{M}(\cdot;α,β)`）。
+- IcePop 的核心是一个 token-level 的过滤/校正因子（双侧阈值 `[\alpha, \beta]`），常用写法是对 mismatch ratio 做 gate：
+  - `v = \pi_train(old) / \pi_infer(old)`（或等价的 “training vs inference” 的校准 ratio）
+  - `\mathcal{M}(v; \alpha, \beta)` 用于丢弃/抑制超界 token 的梯度贡献
+- 目标函数形态入口：`tex/literature/IcePop/sections/method/rl-algo.tex`（`J_IcePop(\theta)` 在 GRPO/PPO 的 token surrogate 外乘 `\mathcal{M}(\cdot;\alpha,\beta)`）。
 
 #### 算法步骤
 
-1. rollout 侧用 inference engine 生成数据（隐含行为策略 `π_infer(old)`）。
-2. 训练侧对同一序列用 training backend 重新计算（或对齐得到）所需概率量（隐含 `π_train(old)`）。
-3. 对每个 token 计算 mismatch ratio `v`，并用阈值 `[α,β]` 得到 mask/系数 `\mathcal{M}(v;α,β)`。
+1. rollout 侧用 inference engine 生成数据（隐含行为策略 `\pi_infer(old)`）。
+2. 训练侧对同一序列用 training backend 重新计算（或对齐得到）所需概率量（隐含 `\pi_train(old)`）。
+3. 对每个 token 计算 mismatch ratio `v`，并用阈值 `[\alpha,\beta]` 得到 mask/系数 `\mathcal{M}(v;\alpha,\beta)`。
 4. 在 token-level surrogate 上乘以该 mask/系数，超界 token 的梯度贡献为 0（或被显著抑制），从而降低 mismatch 噪声的复利式累积。
 
 #### 关键定理
 
-- “Compounding probability discrepancy” 类定理：在一组局部条件下 mismatch（例如 KL）会按 `(1 + const*μ)` 形式增长，解释了为什么 mismatch 会自激放大并导致崩溃风险上升。
+- “Compounding probability discrepancy” 类定理：在一组局部条件下 mismatch（例如 KL）会按 `(1 + const*\mu)` 形式增长，解释了为什么 mismatch 会自激放大并导致崩溃风险上升。
 
 #### 理论结论与证明过程入口
 
@@ -321,7 +321,7 @@
 
 ---
 
-### CISPO（MiniMax-M1 report，含 `\\method{}`）
+### CISPO（MiniMax-M1 report，含 `\method{}`）
 
 入口：`tex/literature/CISPO/main.tex`（主要内容在 `intro.tex`、`cpt.tex` 等 `\input{...}` 文件）
 
@@ -333,18 +333,18 @@
 #### 承重公式
 
 - `tex/literature/CISPO/cpt.tex` 给出从 REINFORCE 出发的 offline-corrected 形式（Eq.~`eq:reinforce`）：
-  - `J_REINFORCE(θ) = E_{o~π_old}[ Σ_t sg(r_{i,t}(θ)) · Â_{i,t} · log π_θ(o_{i,t}|...) ]`
+  - `J_REINFORCE(\theta) = E_{o~\pi_old}[ \sum_t sg(r_{i,t}(\theta)) \cdot Â_{i,t} \cdot log \pi_\theta(o_{i,t}|...) ]`
 - CISPO 的核心 objective（Eq.~`eq:CISPO`）：
-  - `J_CISPO(θ) = E[ Σ_{i,t} sg( \hat{r}_{i,t}(θ) ) · Â_{i,t} · log π_θ(o_{i,t}|...) ]`
-  - 其中 `\hat{r}_{i,t}(θ) = clip(r_{i,t}(θ), 1-ε_low^{IS}, 1+ε_high^{IS})`（IS weight clipping，而不是 token update clipping）
+  - `J_CISPO(\theta) = E[ \sum_{i,t} sg( \hat{r}_{i,t}(\theta) ) \cdot Â_{i,t} \cdot log \pi_\theta(o_{i,t}|...) ]`
+  - 其中 `\hat{r}_{i,t}(\theta) = clip(r_{i,t}(\theta), 1-\epsilon_low^{IS}, 1+\epsilon_high^{IS})`（IS weight clipping，而不是 token update clipping）
 - 统一视角（Eq.~`eq:unify`）：把 token-wise mask `M_{i,t}` 显式写进来，可表示 PPO-style mask 与 CISPO-style weight clipping 在同一框架下的差异。
 
 #### 算法步骤
 
-1. 用 `π_old` 采样一组 responses（通常是 group 采样），并计算 group-based advantage（沿用 GRPO/DAPO 的优势估计习惯）。
-2. 对每个 token 计算 importance ratio `r_{i,t}(θ)`，并使用 stop-gradient `sg(·)` 固定权重数值，避免引入额外梯度项。
+1. 用 `\pi_old` 采样一组 responses（通常是 group 采样），并计算 group-based advantage（沿用 GRPO/DAPO 的优势估计习惯）。
+2. 对每个 token 计算 importance ratio `r_{i,t}(\theta)`，并使用 stop-gradient `sg(\cdot)` 固定权重数值，避免引入额外梯度项。
 3. 对 IS weight 做截断：`r_{i,t} -> \hat{r}_{i,t} = clip(r_{i,t}, low, high)`。
-4. 用 `sg(\hat{r}_{i,t}) · Â_{i,t} · log π_θ` 累加所有 token 的梯度贡献（关键点：不 drop token）。
+4. 用 `sg(\hat{r}_{i,t}) \cdot Â_{i,t} \cdot log \pi_\theta` 累加所有 token 的梯度贡献（关键点：不 drop token）。
 
 #### 关键定理
 
@@ -384,20 +384,20 @@
 #### 承重公式
 
 - TV 与 ratio 的精确关系（把 PPO clip 解释成 “约束 TV 的单样本估计”）：
-  - `D_TV(μ(·|s_t) || π(·|s_t)) = (1/2) E_{a~μ}[ |r_t - 1| ]`（`method.tex` 的 Eq.~(tv_as_expectation)）。
+  - `D_TV(\mu(\cdot|s_t) || \pi(\cdot|s_t)) = (1/2) E_{a~\mu}[ |r_t - 1| ]`（`method.tex` 的 Eq.~(tv_as_expectation)）。
 - DPPO objective（仍是 PPO 风格的 per-token surrogate，但把 clip 换成 divergence gate）：
-  - `L^{DPPO}_μ(π) = E_{y~μ}[ Σ_t M_t^{DPPO} · r_t · Â_t ]`（`method.tex` 的 Eq.~(dppo_obj)）。
+  - `L^{DPPO}_\mu(\pi) = E_{y~\mu}[ \sum_t M_t^{DPPO} \cdot r_t \cdot Â_t ]`（`method.tex` 的 Eq.~(dppo_obj)）。
 - DPPO mask（只在“朝远离 trust region 的方向”且 divergence 超阈值时屏蔽更新，保留 PPO 的非对称结构）：
-  - `M_t^{DPPO} = 0` 当 `(Â_t>0 ∧ r_t>1 ∧ D>δ)` 或 `(Â_t<0 ∧ r_t<1 ∧ D>δ)`，否则为 1（`method.tex` 的 Eq.~(dppo_mask)）。
+  - `M_t^{DPPO} = 0` 当 `(Â_t>0 ∧ r_t>1 ∧ D>\delta)` 或 `(Â_t<0 ∧ r_t<1 ∧ D>\delta)`，否则为 1（`method.tex` 的 Eq.~(dppo_mask)）。
 - divergence 近似的理论定位：Binary/Top-K divergence 是 true divergence 的 lower bound（`app.tex` 的 `app:divergence_lower_bounds`）。
 
 #### 算法步骤
 
-1. 用 `μ=π_roll` 采样序列，并在每个 token 位置保留必要概率信息（至少是 sampled token 的 `μ(a_t|c_t)` 与训练端的 `π(a_t|c_t)`；Top-K 版本还需要 top-K logprob）。
-2. 在每个 token 位置估计/近似 divergence `D(μ(·|c_t) || π(·|c_t))`：
+1. 用 `\mu=\pi_roll` 采样序列，并在每个 token 位置保留必要概率信息（至少是 sampled token 的 `\mu(a_t|c_t)` 与训练端的 `\pi(a_t|c_t)`；Top-K 版本还需要 top-K logprob）。
+2. 在每个 token 位置估计/近似 divergence `D(\mu(\cdot|c_t) || \pi(\cdot|c_t))`：
   - Binary：把 vocab 分成 `{a_t}` 与 “other”，用两点分布计算 TV/KL（`method.tex` 的 Binary 小节）。
-  - Top-K：把 vocab 压缩成 `TopK(μ) ∪ {a_t} ∪ {other}` 再算 divergence（`method.tex` 的 Top-K 小节）。
-3. 用 DPPO 的方向性规则构造 `M_t^{DPPO}`：只在 “会把 ratio 推得更远且 divergence>δ” 的 token 上屏蔽更新（`method.tex` 的 `dppo_mask`）。
+  - Top-K：把 vocab 压缩成 `TopK(\mu) ∪ {a_t} ∪ {other}` 再算 divergence（`method.tex` 的 Top-K 小节）。
+3. 用 DPPO 的方向性规则构造 `M_t^{DPPO}`：只在 “会把 ratio 推得更远且 divergence>\delta” 的 token 上屏蔽更新（`method.tex` 的 `dppo_mask`）。
 4. 用 `L^{DPPO}` 做更新：本质上是 “divergence-gated 的 PPO surrogate”，但 gate 统计量来自分布层面而不是单样本 ratio。
 
 #### 关键定理
@@ -409,7 +409,7 @@
 #### 理论结论与证明过程入口
 
 1. LLM trust region 理论入口：`tex/literature/DPPO/paper/llm_bound.tex`
-  - surrogate `L'_μ(π)`（Eq.~(llm_surrogate)）
+  - surrogate `L'_\mu(\pi)`（Eq.~(llm_surrogate)）
   - bound 主结论（Eq.~(llm-tv-bound)，label `thm:llm_tr_bound`）
 2. proofs 入口：`tex/literature/DPPO/paper/app.tex`
   - `\section{Trust Region in LLMs}`（label `app:llm_tr_proof`）
@@ -420,7 +420,7 @@
 
 - OpenRLHF 当前实现的是 ratio-based 的 vLLM mismatch correction（`tis/icepop/seq-mask-tis/reinforce_pro`），没有 DPPO 这种 “divergence-gated PPO”。
 - 若要落地 DPPO：
-  - Binary-TV/KL 只需要 sampled token 的 `(μ(a_t|c_t), π(a_t|c_t))`，可以在现有 “rollout 保存 logprob + train 重算 logprob” 的管线里实现。
+  - Binary-TV/KL 只需要 sampled token 的 `(\mu(a_t|c_t), \pi(a_t|c_t))`，可以在现有 “rollout 保存 logprob + train 重算 logprob” 的管线里实现。
   - Top-K 需要两侧 top-K logprob；论文提到 vLLM 常见限制 `K<=20`，这会直接约束可用的 Top-K divergence 精度。
 
 ---
@@ -433,7 +433,7 @@
 
 #### 问题设定
 
-- 讨论对象：当行为策略 `μ` 与目标策略 `π` 不一致（off-policy）时，为什么 RL 训练会出现崩溃/停滞。
+- 讨论对象：当行为策略 `\mu` 与目标策略 `\pi` 不一致（off-policy）时，为什么 RL 训练会出现崩溃/停滞。
 - 核心框架：把“算法好不好”先抽象成 “你喂给优化器的随机梯度估计器 ĝ 的性质”，再用一个通用的 SGA Lemma 分解单步进展。
 - 结论导向：off-policy 的失败不是单一原因，而是两条独立失败链路：Bias（方向错）与 Variance（噪声大）。
 
@@ -442,13 +442,13 @@
 - SGA Lemma（承重结构是三项分解）：单步期望进展 = True progress + Bias term + Noise penalty（文档 `## 2. The SGA Lemma`）。
 - 指标对齐（承重度量工具）：
   - Bias 的量级通常用 TV distance 控制（期望差上界）。
-  - Variance 的量级通常由 IS 二阶矩主导，可用 `χ^2`-divergence 表达（`E[ρ^2]` 量级）。
+  - Variance 的量级通常由 IS 二阶矩主导，可用 `\chi^2`-divergence 表达（`E[\rho^2]` 量级）。
 
 #### 算法步骤
 
-1. 把你的算法写成 “用行为分布 `μ` 的样本估计目标 `J(π)` 的梯度”的形式：明确 estimator 是什么（是否用了 IS、是否 truncation、是否 normalization）。
+1. 把你的算法写成 “用行为分布 `\mu` 的样本估计目标 `J(\pi)` 的梯度”的形式：明确 estimator 是什么（是否用了 IS、是否 truncation、是否 normalization）。
 2. 套用 SGA Lemma：把单步进展拆成三项，并把你关心的失败模式落在 Bias 或 Variance 上。
-3. 用 TV/`χ^2` 两个工具分别界住 Bias/Variance：回答“偏差会不会把方向推错”“方差会不会迫使学习率变小到训练停滞”。
+3. 用 TV/`\chi^2` 两个工具分别界住 Bias/Variance：回答“偏差会不会把方向推错”“方差会不会迫使学习率变小到训练停滞”。
 
 #### 关键定理
 
@@ -475,22 +475,22 @@
 
 #### 承重公式
 
-- 把目标统一成：`g = E_π[f(y)]`，而你真正能做的是在 `y~μ` 下构造 estimator `ĝ` 来近似 `g`。
-- Seq-IS estimator：`ĝ_seq = ρ(y) · f(y)`，其中 `ρ(y)=π(y)/μ(y)`。
-- Token-IS / PPO 范式：把 `ρ(y)=∏_t ρ_t` 打断成 token-wise 权重，避免 `E_μ[ρ(y)^2]` 指数爆炸，但会引入 state occupancy mismatch 的 bias（通过 Simulation Lemma / hybrid argument 体现）。
+- 把目标统一成：`g = E_\pi[f(y)]`，而你真正能做的是在 `y~\mu` 下构造 estimator `ĝ` 来近似 `g`。
+- Seq-IS estimator：`ĝ_seq = \rho(y) \cdot f(y)`，其中 `\rho(y)=\pi(y)/\mu(y)`。
+- Token-IS / PPO 范式：把 `\rho(y)=\prod_t \rho_t` 打断成 token-wise 权重，避免 `E_\mu[\rho(y)^2]` 指数爆炸，但会引入 state occupancy mismatch 的 bias（通过 Simulation Lemma / hybrid argument 体现）。
 
 #### 算法步骤
 
-1. 列出要比较的 estimator（Seq-IS / SNIS / Token-IS / Token-TIS / Seq-TIS 等），明确其权重统计量（`ρ(y)` 还是 `ρ_t`，以及是否 truncation）。
+1. 列出要比较的 estimator（Seq-IS / SNIS / Token-IS / Token-TIS / Seq-TIS 等），明确其权重统计量（`\rho(y)` 还是 `\rho_t`，以及是否 truncation）。
 2. 对每个 estimator 用 SGA Lemma 分析 Bias（Term B）与 Variance（Term C）：
-  - Bias：看 `E_μ[ĝ] - E_π[f]` 如何由 state distribution mismatch 累积出来。
-  - Variance：看 `E_μ[ρ^2]`（或等价的 `χ^2`）如何随 `T` 放大。
+  - Bias：看 `E_\mu[ĝ] - E_\pi[f]` 如何由 state distribution mismatch 累积出来。
+  - Variance：看 `E_\mu[\rho^2]`（或等价的 `\chi^2`）如何随 `T` 放大。
 3. 得出一张“不可同时兼得”的 tradeoff 图：要么无偏但方差灾难（Seq-IS），要么可训练但有结构性 bias（Token-IS / PPO 风格）。
 
 #### 关键定理
 
-- Simulation Lemma / hybrid argument（在文档中用来证明 “state occupancy mismatch 误差会按 `O(T·Δ_max)` 累积”）：它是 token-level 修正无法消除 bias 的数学根源之一。
-- tower property / 条件期望展开：用于把 `E_μ[ρ(y)^2]` 展开成 per-token 的连乘，得到长序列下的指数级上界（解释 Seq-IS 方差灾难）。
+- Simulation Lemma / hybrid argument（在文档中用来证明 “state occupancy mismatch 误差会按 `O(T\cdot\Delta_max)` 累积”）：它是 token-level 修正无法消除 bias 的数学根源之一。
+- tower property / 条件期望展开：用于把 `E_\mu[\rho(y)^2]` 展开成 per-token 的连乘，得到长序列下的指数级上界（解释 Seq-IS 方差灾难）。
 
 #### 理论结论与证明过程入口
 
@@ -510,36 +510,36 @@
 #### 问题设定
 
 - 目标：解释并修复长序列/LLM-RL 场景下 “soft trust region（clipping）不够用” 的两类病态：
-  - OOD high-weight samples：`ρ(y)` 极大时，clipping 仍保留样本但把权重截到 `C`，仍会污染梯度。
-  - length-dependent rejection bias：`ρ(y)=∏_t ρ_t` 随长度指数漂移，导致长序列系统性更容易被拒绝。
+  - OOD high-weight samples：`\rho(y)` 极大时，clipping 仍保留样本但把权重截到 `C`，仍会污染梯度。
+  - length-dependent rejection bias：`\rho(y)=\prod_t \rho_t` 随长度指数漂移，导致长序列系统性更容易被拒绝。
 
 #### 承重公式
 
-- Seq-MIS（hard trust region via rejection）：用 gate `I(ρ(y) <= C)` 直接丢弃 OOD 样本（文档 `Definition: Sequence-Level Masked IS (Seq-MIS)`）。
-- 关键诊断：sequence ratio `ρ(y)=∏_t ρ_t` 是 extensive quantity，长度越长越容易越界。
-- Geo-Mask（几何均值 gate，length-invariant）：`ρ_geo(y) = exp(mean_t log ρ_t)`，并用双侧阈值得到 hard gate（文档 `Definition: Geometric Sequence Masking (Geo-Mask)`）。
-- 连接到 divergence：文档 `### Mathematical Foundation: Connection to Per-Token KL Divergence` 给出 `ρ_geo` 与 per-token KL 约束的联系（把 gate 从 ratio 解释回 trust region）。
+- Seq-MIS（hard trust region via rejection）：用 gate `I(\rho(y) <= C)` 直接丢弃 OOD 样本（文档 `Definition: Sequence-Level Masked IS (Seq-MIS)`）。
+- 关键诊断：sequence ratio `\rho(y)=\prod_t \rho_t` 是 extensive quantity，长度越长越容易越界。
+- Geo-Mask（几何均值 gate，length-invariant）：`\rho_geo(y) = exp(mean_t log \rho_t)`，并用双侧阈值得到 hard gate（文档 `Definition: Geometric Sequence Masking (Geo-Mask)`）。
+- 连接到 divergence：文档 `### Mathematical Foundation: Connection to Per-Token KL Divergence` 给出 `\rho_geo` 与 per-token KL 约束的联系（把 gate 从 ratio 解释回 trust region）。
 
 #### 算法步骤
 
 1. 从 trust region 框架出发：承认 surrogate 只在信任域内是有效近似，因此要对 OOD 样本做硬约束（hard reject）。
-2. 构造 Seq-MIS：当 `ρ(y)` 超过阈值 `C` 时拒绝整个序列，从而避免 “clip 仍更新 OOD” 的问题。
-3. 识别 Seq-MIS 的长度偏置：`ρ(y)` 的乘积结构导致长序列更易被拒绝。
-4. 用 Geo-Mask 修正：改用 `ρ_geo`（平均 log-ratio 的指数化）做 gate，使阈值不随 `T` 漂移。
+2. 构造 Seq-MIS：当 `\rho(y)` 超过阈值 `C` 时拒绝整个序列，从而避免 “clip 仍更新 OOD” 的问题。
+3. 识别 Seq-MIS 的长度偏置：`\rho(y)` 的乘积结构导致长序列更易被拒绝。
+4. 用 Geo-Mask 修正：改用 `\rho_geo`（平均 log-ratio 的指数化）做 gate，使阈值不随 `T` 漂移。
 5.（可选）将 Geo-Mask 与 token-level truncated IS 组合，形成 “过滤 + 校正” 的 hybrid estimator（文档 `Definition: Geo-Mask-Token-TIS`）。
 
 #### 关键定理
 
 - 无单一“主定理”，但有三组关键定义/推导链路共同承重：
   - Seq-MIS 与 Geo-Mask 的定义（hard gate 的统计量选择）。
-  - length bias 的数学解释（为什么 `ρ(y)` 会系统性拒绝长序列）。
-  - `ρ_geo` 与 per-token KL 的联系（把 heuristic gate 拉回 trust region 语义）。
+  - length bias 的数学解释（为什么 `\rho(y)` 会系统性拒绝长序列）。
+  - `\rho_geo` 与 per-token KL 的联系（把 heuristic gate 拉回 trust region 语义）。
 
 #### 理论结论与证明过程入口
 
 - 读法建议（按病态 -> 解决方案）：
   1. `## 1. OOD High-Weight Samples: Why Rejection Outperforms Clipping`（Seq-MIS 动机与 bias-variance 分析）
-  2. `## 2. Length-Dependent Rejection Bias`（解释为什么 `ρ(y)` 带来系统性长度偏置）
+  2. `## 2. Length-Dependent Rejection Bias`（解释为什么 `\rho(y)` 带来系统性长度偏置）
   3. `## 3. Geometric Sequence Masking`（从 extensive 到 intensive，并给出与 per-token KL 的联系）
 - 关键定义的入口可用全文检索直接跳：
   - “Definition: Sequence-Level Masked IS (Seq-MIS)”
@@ -554,24 +554,24 @@
 
 #### 问题设定
 
-- 讨论对象：现代 LLM-RL 系统里 rollout（vLLM/SGLang）与 training forward（FSDP/Megatron）用不同 backend，导致同参不同分布：`π_sampler(θ) != π_learner(θ)`。
-- 直接后果：即便你“以为”在做 on-policy RL，实际梯度形式会变成 off-policy：采样来自 `π_sampler`，梯度来自 `π_learner`。
+- 讨论对象：现代 LLM-RL 系统里 rollout（vLLM/SGLang）与 training forward（FSDP/Megatron）用不同 backend，导致同参不同分布：`\pi_sampler(\theta) != \pi_learner(\theta)`。
+- 直接后果：即便你“以为”在做 on-policy RL，实际梯度形式会变成 off-policy：采样来自 `\pi_sampler`，梯度来自 `\pi_learner`。
 
 #### 承重公式
 
 - 混合系统下的 REINFORCE 形式（文档 `# The Mismatch Problem`）：
-  - `E_{a~π_sampler(θ)}[ R(a) · ∇_θ log π_learner(a,θ) ]`
+  - `E_{a~\pi_sampler(\theta)}[ R(a) \cdot ∇_\theta log \pi_learner(a,\theta) ]`
 - importance sampling 修正（文档 `## Embrace the mismatch — Apply algorithm-level fix`）：
-  - 乘 ratio `π_learner(a,θ) / π_sampler(a,θ)` 进行分布校正
+  - 乘 ratio `\pi_learner(a,\theta) / \pi_sampler(a,\theta)` 进行分布校正
 - truncated importance sampling（TIS）：
-  - `min( π_learner/π_sampler, C )` 用于控制方差与数值不稳定
+  - `min( \pi_learner/\pi_sampler, C )` 用于控制方差与数值不稳定
 
 #### 算法步骤
 
-1. rollout 侧明确行为策略是 `π_sampler`（不是 `π_learner`），并把 sampler logprob/logits 作为行为分布的观测。
-2. 训练侧计算 `π_learner` 的对应概率量（至少是 sampled token 的 logprob）。
-3. 构造 mismatch ratio：`ρ_mis = π_learner / π_sampler`。
-4. 用 TIS 截断：`ρ_mis_trunc = clip_or_min(ρ_mis, C)`，并把它乘到 policy gradient / surrogate loss 上作为 correction（必要时可区分 “PPO ratio” 与 “mismatch ratio” 两套 ratio）。
+1. rollout 侧明确行为策略是 `\pi_sampler`（不是 `\pi_learner`），并把 sampler logprob/logits 作为行为分布的观测。
+2. 训练侧计算 `\pi_learner` 的对应概率量（至少是 sampled token 的 logprob）。
+3. 构造 mismatch ratio：`\rho_mis = \pi_learner / \pi_sampler`。
+4. 用 TIS 截断：`\rho_mis_trunc = clip_or_min(\rho_mis, C)`，并把它乘到 policy gradient / surrogate loss 上作为 correction（必要时可区分 “PPO ratio” 与 “mismatch ratio” 两套 ratio）。
 
 #### 关键定理
 
@@ -602,26 +602,26 @@
 #### 承重公式
 
 - mismatch 下的“实际更新”（文档 `# 2. A Fundamental Conflict...`）：
-  - `E_{y~π_vllm(·|x)}[ R(x,y) · ∇ log π_fsdp(y|x) ]`（同参不同分布，隐式 off-policy）
+  - `E_{y~\pi_vllm(\cdot|x)}[ R(x,y) \cdot ∇ log \pi_fsdp(y|x) ]`（同参不同分布，隐式 off-policy）
 - 分布校正的序列级 IS 形式（文档 `4.2.1 A Principled Solution: Distribution Correction`）：
-  - sequence-level ratio `ρ(y) = π(y|x) / μ(y|x)`（并讨论其方差问题与 truncation）
+  - sequence-level ratio `\rho(y) = \pi(y|x) / \mu(y|x)`（并讨论其方差问题与 truncation）
 - Token-level IS 的关键缺陷定位（文档 `The Source of Bias in Token-Level IS`）：
-  - deterministic transition 导致 `d_μ != d_π`（state occupancy mismatch），token-wise ratio 无法校正状态分布差异，从而引入结构性 bias。
+  - deterministic transition 导致 `d_\mu != d_\pi`（state occupancy mismatch），token-wise ratio 无法校正状态分布差异，从而引入结构性 bias。
 - MIS 的核心形式（文档 `Masked Importance Sampling (MIS)`）：
-  - 用 hard gate/mask 拒绝高权重（OOD）样本，典型形式是 sequence gate：`I(ρ(y) <= C)`。
+  - 用 hard gate/mask 拒绝高权重（OOD）样本，典型形式是 sequence gate：`I(\rho(y) <= C)`。
 
 #### 算法步骤
 
-1. 先诊断 mismatch：把“rollout policy”和“training policy”分开写出来，明确你在优化哪个 `π`、数据来自哪个 `μ`。
-2. 尝试分布校正（IS/TIS）：用 ratio `ρ` 做 correction，但要意识到 Seq-IS 方差可能爆炸，因此需要 truncation。
-3. 进一步做 hard gate（MIS）：当样本明显 OOD（`ρ` 超阈）时直接拒绝，避免 clipping 后仍污染梯度。
+1. 先诊断 mismatch：把“rollout policy”和“training policy”分开写出来，明确你在优化哪个 `\pi`、数据来自哪个 `\mu`。
+2. 尝试分布校正（IS/TIS）：用 ratio `\rho` 做 correction，但要意识到 Seq-IS 方差可能爆炸，因此需要 truncation。
+3. 进一步做 hard gate（MIS）：当样本明显 OOD（`\rho` 超阈）时直接拒绝，避免 clipping 后仍污染梯度。
 4. 对 token-level 修正保持警惕：它能控方差但不消除 state occupancy mismatch 的 bias，长序列下仍可能崩。
 
 #### 关键定理
 
 - 无正式定理（theorem-proof）；该文主要以 “推导 + 机制解释 + 现象链路” 承重。
 - 但它给出两个对写论文非常有用的“可复用结论”：
-  - Token-level IS 的 bias 来源：state occupancy mismatch（`d_μ != d_π`）是不可被 token-wise ratio 消除的。
+  - Token-level IS 的 bias 来源：state occupancy mismatch（`d_\mu != d_\pi`）是不可被 token-wise ratio 消除的。
   - MIS 的必要性：对于 OOD high-weight samples，clipping 不等价于 rejection，后者在稳定性上更强。
 
 #### 理论结论与证明过程入口
@@ -633,8 +633,8 @@
 
 #### 与 OpenRLHF 映射（可选）
 
-- OpenRLHF 的 `seq-mask-tis` 更接近 Geo-Mask 风格的 gate（`exp(mean log_ratio)`），而不是 `ρ(y)` 形式的 Seq-MIS。
-- 若要做 Seq-MIS：需要显式构造 sequence ratio gate，并处理长度偏置（参考 Theory Part 3 对 `ρ_geo` 的修正思路）。
+- OpenRLHF 的 `seq-mask-tis` 更接近 Geo-Mask 风格的 gate（`exp(mean log_ratio)`），而不是 `\rho(y)` 形式的 Seq-MIS。
+- 若要做 Seq-MIS：需要显式构造 sequence ratio gate，并处理长度偏置（参考 Theory Part 3 对 `\rho_geo` 的修正思路）。
 
 ---
 
@@ -645,19 +645,19 @@
 #### 问题设定
 
 - 讨论对象：MoE 架构下 training-inference mismatch 为什么更严重，以及它如何在 on-policy RL 中触发崩溃。
-- 关键观察：routing（TopK experts）对数值扰动很敏感，导致同参但不同 backend 时激活专家集合不同，进而放大 `π_infer` vs `π_train` 的概率差异。
+- 关键观察：routing（TopK experts）对数值扰动很敏感，导致同参但不同 backend 时激活专家集合不同，进而放大 `\pi_infer` vs `\pi_train` 的概率差异。
 
 #### 承重公式
 
-- mismatch 的 policy gradient 写法（文档开头给出一条 “混合引擎” 更新式）：采样来自 `π_infer(θ)`，梯度来自 `π_train(θ)`。
+- mismatch 的 policy gradient 写法（文档开头给出一条 “混合引擎” 更新式）：采样来自 `\pi_infer(\theta)`，梯度来自 `\pi_train(\theta)`。
 - “Compounding Probability Discrepancy” Lemma（文档 `## What Effects Will It Bring to MoE RL?` 下）：
-  - 定义 `δ_t = D_KL(π_infer(·;θ_t) || π_train(·;θ_t))`；
+  - 定义 `\delta_t = D_KL(\pi_infer(\cdot;\theta_t) || \pi_train(\cdot;\theta_t))`；
   - 在一组局部条件下，bias 会推动 mismatch 进一步变大（自激/复利式增长）。
 - IcePop 的 double-sided mask：用双侧阈值把 discrepancy 过大的 token 从梯度里移除（“Discard All Noisy Gradient Updates” 的算法段落）。
 
 #### 算法步骤
 
-1. 明确行为策略与训练策略来自不同 backend：`π_infer` vs `π_train`（即便参数相同也可能不同分布）。
+1. 明确行为策略与训练策略来自不同 backend：`\pi_infer` vs `\pi_train`（即便参数相同也可能不同分布）。
 2. 对每个 token 计算 mismatch 指标（可理解为某种 ratio 或 divergence proxy）。
 3. 用双侧阈值生成 mask：当 mismatch 过大时把对应 token 的梯度贡献置 0。
 4. 用过滤后的 token-level surrogate 做更新，目标是阻断 mismatch 的复利式放大路径。
@@ -684,15 +684,15 @@
 #### 承重公式
 
 - 两种等价写法的对齐：
-  - token policy：`π(a_t|s_t)`
-  - sequence likelihood：`π(y|x) = ∏_t π(y_t|x,y_{<t})`
-- log-likelihood 分解（承重恒等式）：`log π(y|x) = Σ_t log π(a_t|s_t)`
-- surrogate objective 的关键形式：把采样分布固定在 `π_{θ_k}`，并显式写 ratio `π_θ/π_{θ_k}`，使得 “对 surrogate 做梯度下降” 等价于 “做 policy gradient 上升”。
+  - token policy：`\pi(a_t|s_t)`
+  - sequence likelihood：`\pi(y|x) = \prod_t \pi(y_t|x,y_{<t})`
+- log-likelihood 分解（承重恒等式）：`log \pi(y|x) = \sum_t log \pi(a_t|s_t)`
+- surrogate objective 的关键形式：把采样分布固定在 `\pi_{\theta_k}`，并显式写 ratio `\pi_\theta/\pi_{\theta_k}`，使得 “对 surrogate 做梯度下降” 等价于 “做 policy gradient 上升”。
 
 #### 算法步骤
 
-1. 先在序列层面写出目标 `J(θ) = E_{y~π_θ}[R(y)]`，并用 log-derivative trick 写出 `∇_θ J`。
-2. 用 `log π(y|x)=Σ_t log π(a_t|s_t)` 把序列级梯度展开成 token-level 求和形式（便于实现与解释 credit assignment）。
+1. 先在序列层面写出目标 `J(\theta) = E_{y~\pi_\theta}[R(y)]`，并用 log-derivative trick 写出 `∇_\theta J`。
+2. 用 `log \pi(y|x)=\sum_t log \pi(a_t|s_t)` 把序列级梯度展开成 token-level 求和形式（便于实现与解释 credit assignment）。
 3. 选择一个可训练的 surrogate loss（固定采样分布、显式 ratio、可带 baseline），把它写成 “直接喂给 autograd 的 loss”。
 
 #### 关键定理
@@ -711,13 +711,13 @@
 
 #### 问题设定
 
-- 给定 prompt `x~D`，每个 `x` 对应一个 teacher policy `π_{T(x)}`。
-- 目标：最小化 `KL(π_θ(·|x) || π_{T(x)}(·|x))`（reverse KL），等价于最大化一个 entropy-regularized 的序列级回报。
+- 给定 prompt `x~D`，每个 `x` 对应一个 teacher policy `\pi_{T(x)}`。
+- 目标：最小化 `KL(\pi_\theta(\cdot|x) || \pi_{T(x)}(\cdot|x))`（reverse KL），等价于最大化一个 entropy-regularized 的序列级回报。
 
 #### 承重公式
 
 - 目标函数把 OPD 解释为“奖励是 teacher logprob 的 RL”：
-  - immediate reward `r(s_t,a_t) = log π_{T(x)}(a_t|s_t)`（并带 entropy 项）
+  - immediate reward `r(s_t,a_t) = log \pi_{T(x)}(a_t|s_t)`（并带 entropy 项）
 - 给出 OPD 的 policy gradient 形式，并列出多种 advantage 选择：
   - full-trajectory log ratio
   - log-ratio-to-go
@@ -726,15 +726,15 @@
 
 #### 算法步骤
 
-1. 写出 OPD objective（reverse KL），并把它改写成在 `y~π_θ` 下的期望形式。
-2. 用 log-derivative trick 得到 `E[ advantage · ∇ log π_θ ]` 的 policy gradient 结构。
+1. 写出 OPD objective（reverse KL），并把它改写成在 `y~\pi_\theta` 下的期望形式。
+2. 用 log-derivative trick 得到 `E[ advantage \cdot ∇ log \pi_\theta ]` 的 policy gradient 结构。
 3. 选择 advantage 形态（full-trajectory / log-ratio-to-go / KL-to-go / baseline），并给出它们何时无偏、何时会引入 bias。
 
 #### 关键定理
 
 - Theorem 1（Policy Gradient of OPD）：给出 OPD 的无偏 policy gradient 形式，并说明 per-token advantage 需要包含未来项（log-ratio-to-go / KL-to-go 等）。
 - Lemma 1（Expectation Exchange Under State Occupancy）：用于把期望在 state occupancy 下交换，支撑后续分解。
-- Theorem 2（Gradient of Parameterized State Occupancy）：给出 `∑_s f(s) ∇ d_θ(s)` 的解析形式，用于解释 “只用 immediate log ratio 会产生 bias” 的来源。
+- Theorem 2（Gradient of Parameterized State Occupancy）：给出 `\sum_s f(s) ∇ d_\theta(s)` 的解析形式，用于解释 “只用 immediate log ratio 会产生 bias” 的来源。
 - Theorem 3（Optimality At The Stationary Point）：对不同 surrogate/advantage 选择的 stationary point 性质做比较。
 
 #### 理论结论与证明过程入口
@@ -757,24 +757,24 @@
 
 - 离散动作空间，softmax policy（非 neural softmax，只讨论最简形态）。
 - 用 KL-regularized 的 per-state update 解释 Natural Policy Gradient (NPG)：
-  - `π_{k+1}(·|s) = argmax_p E_{a~p}[Q^{π_k}(s,a)] - (1/η) KL(p, π_k(·|s))`
-  - 等价形式：`π_{k+1}(a|s) ∝ π_k(a|s) exp(η A^{π_k}(s,a))`
+  - `\pi_{k+1}(\cdot|s) = argmax_p E_{a~p}[Q^{\pi_k}(s,a)] - (1/\eta) KL(p, \pi_k(\cdot|s))`
+  - 等价形式：`\pi_{k+1}(a|s) ∝ \pi_k(a|s) exp(\eta A^{\pi_k}(s,a))`
 - 一句与 RLHF 的对齐：在 bandit/单步设置下，上述更新就是 “reward 直接当 advantage” 的单步 NPG（笔记里也点明了这点）。
 
 #### 承重公式
 
-把 `H(π(·|s))` 视为参数 `θ` 的函数，做一阶近似：
+把 `H(\pi(\cdot|s))` 视为参数 `\theta` 的函数，做一阶近似：
 
 - 一般 softmax 参数更新：
-  - `H(θ^{k+1}|s) - H(θ^k|s) ≈ -Cov_{a~π_k(·|s)}( log π_k(a|s), θ^{k+1}_{s,a} - θ^k_{s,a} )`
-- 代入 NPG 更新 `Δθ = η A`：
-  - `H(θ^{k+1}|s) - H(θ^k|s) ≈ -η · Cov_{a~π_k(·|s)}( log π_k(a|s), A^{π_k}(s,a) )`
+  - `H(\theta^{k+1}|s) - H(\theta^k|s) ≈ -Cov_{a~\pi_k(\cdot|s)}( log \pi_k(a|s), \theta^{k+1}_{s,a} - \theta^k_{s,a} )`
+- 代入 NPG 更新 `\Delta\theta = \eta A`：
+  - `H(\theta^{k+1}|s) - H(\theta^k|s) ≈ -\eta \cdot Cov_{a~\pi_k(\cdot|s)}( log \pi_k(a|s), A^{\pi_k}(s,a) )`
 
 #### 算法步骤
 
-1. 把 entropy 写成参数函数 `H(θ|s)`，对 `θ^{k+1}=θ^k+Δθ` 做一阶展开。
-2. 显式计算 `∇_θ H` 并与更新方向 `Δθ` 做内积，整理成协方差形式。
-3. 代入 NPG 的 `Δθ = η A` 得到 entropy 变化与 `Cov(log π, A)` 的直接关系，从而给出 “何时熵减/熵增” 的可解释条件。
+1. 把 entropy 写成参数函数 `H(\theta|s)`，对 `\theta^{k+1}=\theta^k+\Delta\theta` 做一阶展开。
+2. 显式计算 `∇_\theta H` 并与更新方向 `\Delta\theta` 做内积，整理成协方差形式。
+3. 代入 NPG 的 `\Delta\theta = \eta A` 得到 entropy 变化与 `Cov(log \pi, A)` 的直接关系，从而给出 “何时熵减/熵增” 的可解释条件。
 
 #### 关键定理
 
@@ -782,10 +782,10 @@
 
 #### 理论结论与证明过程入口
 
-- 推导入口：笔记从 entropy 定义出发逐行计算 `∇_θ H`，并整理成协方差表达式；不依赖额外 lemma。
+- 推导入口：笔记从 entropy 定义出发逐行计算 `∇_\theta H`，并整理成协方差表达式；不依赖额外 lemma。
 - 直觉入口：结论可以读成：
-  - `Cov(log π, A) > 0` 时 entropy 倾向下降（高概率动作也高 advantage，强化更确定的选择）。
-  - `Cov(log π, A) < 0` 时 entropy 下降被抑制甚至上升（优势主要集中在低概率动作，出现探索/迁移概率质量的压力）。
+  - `Cov(log \pi, A) > 0` 时 entropy 倾向下降（高概率动作也高 advantage，强化更确定的选择）。
+  - `Cov(log \pi, A) < 0` 时 entropy 下降被抑制甚至上升（优势主要集中在低概率动作，出现探索/迁移概率质量的压力）。
 
 ---
 
@@ -803,22 +803,22 @@
 #### 承重公式
 
 - 不等式 1（引用 EMPG paper，并用 Renyi entropy 单调性推出信息熵版上界）：
-  - `E_{a~π(·|s)}[ ||∇_{z(s)} log π(a|s)||_2^2 ] ≤ 1 - exp( -H(π(·|s)) )`
+  - `E_{a~\pi(\cdot|s)}[ ||∇_{z(s)} log \pi(a|s)||_2^2 ] \leq 1 - exp( -H(\pi(\cdot|s)) )`
 - 不等式 2（reverse KL 的二阶近似上界，带完整推导）：
-  - 对 `Δ_s = z_{θ^+}(s) - z_θ(s)`，
-  - `KL( π_{z_{θ^+}}(·|s) || π_{z_θ}(·|s) ) ≤ (|A|/2) · ||Δ_s||_∞^2 · (1 - exp(-H(π_θ(·|s)))) + o(||Δ_s||_2^2)`
+  - 对 `\Delta_s = z_{\theta^+}(s) - z_\theta(s)`，
+  - `KL( \pi_{z_{\theta^+}}(\cdot|s) || \pi_{z_\theta}(\cdot|s) ) \leq (|A|/2) \cdot ||\Delta_s||_∞^2 \cdot (1 - exp(-H(\pi_\theta(\cdot|s)))) + o(||\Delta_s||_2^2)`
 
 #### 算法步骤
 
 1. 把 entropy/梯度大小/策略位移都写到同一个 softmax logits 参数空间里（把 softmax 的“曲率”显式写出来）。
 2. 用不等式 1 解释：entropy 越低，期望梯度范数越小，学习会变慢。
-3. 用泰勒展开把 reverse KL 写成 Fisher 二次型，再把它上界到 `||Δ||_∞^2` 与 entropy 因子（不等式 2）。
+3. 用泰勒展开把 reverse KL 写成 Fisher 二次型，再把它上界到 `||\Delta||_∞^2` 与 entropy 因子（不等式 2）。
 
 #### 关键定理
 
 - 无正式 theorem-proof（它是笔记体），但有两条可复用的“承重结论”：
   - entropy 控制期望梯度范数上界（通过 `1-exp(-H)` 形式）
-  - entropy 进入 reverse KL 位移上界（通过 Fisher 二次项与 `||Δ||_∞`）
+  - entropy 进入 reverse KL 位移上界（通过 Fisher 二次项与 `||\Delta||_∞`）
 
 #### 理论结论与证明过程入口
 
@@ -826,4 +826,4 @@
 - 不等式 2：入口是 “## 2. Entropy 衰减，策略Reverse KL移动幅度上界衰减”：
   - 用泰勒展开得到 KL 的二阶项；
   - 识别 Hessian 为 Fisher；
-  - 用 `||Δ||_∞` + entropy 上界 Fisher 二次型（最后一步显式调用不等式 1）。
+  - 用 `||\Delta||_∞` + entropy 上界 Fisher 二次型（最后一步显式调用不等式 1）。
