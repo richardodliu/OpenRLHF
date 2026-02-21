@@ -101,11 +101,28 @@ with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserve
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
 $\beta>0$ on $\mathcal{N}$ (\Cref{eq:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
-\paragraph{Connection to asymmetric clipping.}
-Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage
-sign; adaptive normalization scales the advantage magnitude differently. Both control the effective step size asymmetrically, but
-normalization acts through the advantage rather than the ratio, avoiding the gradient-leakage failure mode of ratio clipping under mismatch
-(see \Cref{app:ppo-clip-leak}).
+\paragraph{Connection to response length.}
+Adaptive normalization is not related to PPO's asymmetric clipping, which modifies the importance ratio. Our asymmetry comes from
+sign-dependent rescaling of advantages under the token-level expansion and the empirical constraints in \Cref{def:adaptive-norm}.
+Since \Cref{sec:token-expand} uses $A_{i,t}=\tilde r_i$ for all $t\in\{1,\ldots,T_i\}$, the prompt-group statistics in
+\Cref{def:adaptive-norm} are implicitly length-weighted. In particular, the positive/negative token index sets satisfy
+\[
+|\mathcal P| = \sum_{i:\tilde r_i>0} T_i,
+\qquad
+|\mathcal N| = \sum_{i:\tilde r_i<0} T_i,
+\]
+and the ratio $\kappa$ in \Cref{def:adaptive-norm} can be written as
+\[
+\kappa
+=
+\frac{\sum_{(i,t)\in\mathcal P} A_{i,t}}{-\sum_{(i,t)\in\mathcal N} A_{i,t}}
+=
+\frac{\sum_{i:\tilde r_i>0} T_i\,\tilde r_i}{-\sum_{i:\tilde r_i<0} T_i\,\tilde r_i}.
+\]
+Therefore the closed-form scales $(\alpha,\beta)$ in \eqref{eq:alpha-beta} depend not only on reward magnitudes but also on the ratio of
+positive-token mass to negative-token mass within the same prompt group, which is directly affected by response lengths $(T_i)$.
+This is the sense in which the advantage scaling implicitly incorporates response-length information, rather than implementing any form of
+ratio clipping.
 
 \paragraph{Uniform scale mode.}
 When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
