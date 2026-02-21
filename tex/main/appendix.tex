@@ -21,11 +21,12 @@ when parameters are identical. Importantly, this third object is not an addition
 implementation-time anchor for the denominator of $\rho_t$.
 
 \paragraph{Trust Region Setup.}
-Following~\citet{qi2026rethinkingtrustregionllm}, the trust region (and hence the importance ratio) must be anchored to the original rollout
-distribution that generated the data, which we denote by $\piroll$. Accordingly, we define $\rho_t := \pitheta(y_t\mid c_t) /
-\piroll(y_t\mid c_t)$ and assume access to rollout-time cached log-probabilities $\log \piroll(y_t\mid c_t)$. The theoretical development
-therefore involves only the policy pair $(\piroll,\pitheta)$, consistent with long-horizon trust-region analyses for LLM-RL (e.g.,
-\citet{li2025trm}).
+\citet{qi2026rethinkingtrustregionllm} argue that the trust region (and hence the denominator of the importance ratio) must be defined with
+respect to the \emph{original} behavior policy that generated the data, rather than a recomputed policy distribution evaluated inside the
+training stack. Accordingly, we denote this rollout-time behavior policy by $\piroll$, define
+$\rho_t := \pitheta(y_t\mid c_t) / \piroll(y_t\mid c_t)$, and assume access to rollout-time cached log-probabilities
+$\log \piroll(y_t\mid c_t)$. The theoretical development therefore involves only the policy pair $(\piroll,\pitheta)$, consistent with
+long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
 
 \paragraph{PPO-style $\piold$ Mismatch.}
 In PPO-style implementations, the rollout snapshot used to generate data is often denoted by $\piold$; within a single policy update, this
@@ -136,10 +137,11 @@ The leave-one-out baseline is equivalent to the leave-one-out control variate fr
 \section{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
-\begin{remark}[Optimality of $\gamma = 1.0$ (standard)]
-When the extrinsic reward is sparse (assigned only at the final token), $\gamma = 1.0$ is the unique discount factor that preserves
-unbiasedness of the REINFORCE gradient estimator for the undiscounted objective $J(\pitheta) = \E[R(x,y)]$; see
-\citet{williams1992simple} for background.
+\begin{remark}[On setting $\gamma = 1.0$ for sparse terminal rewards (standard)]
+When the extrinsic reward is sparse (assigned only at the final token) and the target objective is the undiscounted return
+$J(\pitheta) = \E[R(x,y)]$, it is standard to set $\gamma = 1.0$ so that the token-level return matches the terminal reward at every
+position. Choosing $\gamma < 1$ instead corresponds to optimizing a discounted objective that downweights earlier tokens; see
+\citet{williams1992simple} for background on REINFORCE.
 \end{remark}
 
 
@@ -363,8 +365,7 @@ numerical stability and uniform-reward detection. They are unrelated to the dive
 \end{enumerate}
 
 These safeguards may cause the normalized advantages to deviate slightly from the exact empirical constraints in
-\Cref{def:adaptive-norm}, but in practice the deviation is negligible ($|\text{mean}| < 0.001$, $|\text{var} - 1| < 0.01$). These
-thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
+\Cref{def:adaptive-norm}. These thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
 
 \textbf{Fallback conditions.} Normalization is skipped entirely when:
 \begin{itemize}

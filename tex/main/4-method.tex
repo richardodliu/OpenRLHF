@@ -161,6 +161,7 @@ $M^{\mathrm{TRM}}(x,y)$, yielding a masked surrogate objective of the form
         M^{\mathrm{TRM}}(x,y)\cdot A(x,y)\cdot \sum_{t=1}^{T}\rho_t
     \right].
 \end{equation}
+This matches the masked surrogate objective in \citet{li2025trm} up to notation.
 Motivated by the same trust-region perspective for long-horizon generation, we introduce a prefix-level, per-position gate
 $M_t^{\mathrm{pre}}$ computed from a ratio-based \emph{prefix} statistic and multiply it into the token-level loss. Unlike TRM, which
 accepts or rejects an entire trajectory via a single gate $M^{\mathrm{TRM}}(x,y)$, the prefix gate can mask only the positions whose prefixes violate the

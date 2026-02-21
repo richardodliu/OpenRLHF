@@ -157,7 +157,8 @@ where
     g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big]
 \end{equation}
 is the expected advantage shift. Classical bounds on \eqref{eq:error-decomp} scale as $O(T^2)$~\citep{kakade2002approximately,
-achiam2017constrained}, which is vacuous for long-horizon LLM tasks ($T>4000$). Recent work~\citep{li2025trm} derives tighter bounds,
+achiam2017constrained}, rendering them theoretically vacuous for long-horizon LLM tasks with responses of thousands of tokens. Recent
+work~\citep{li2025trm} derives tighter bounds,
 including the Pinsker-Marginal bound ($O(T^{3/2})$), the Mixed bound ($O(T)$), and the data-dependent Adaptive bound.
 
 The Adaptive bound is particularly relevant to our work:

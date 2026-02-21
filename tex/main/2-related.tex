@@ -8,11 +8,11 @@ The high memory cost of maintaining a critic network has motivated a family of c
 \subsection{Off-Policy Correction in LLM-RL}
 
 Modern LLM-RL pipelines decouple inference from training: high-throughput engines such as vLLM~\citep{kwon2023efficient} generate rollouts, while gradient updates are performed in separate training frameworks. This architectural separation introduces a policy mismatch between the rollout engine and the training actor~\citep{yao2025offpolicy}.
-Recent empirical analyses further show that the trust region should be anchored to the \emph{original} rollout distribution rather than a
-recomputed anchor evaluated inside the training stack, since training-inference mismatch can make these distributions differ even under
-identical parameters~\citep{qi2026rethinkingtrustregionllm}.
+Recent empirical analyses further argue that the trust region must be defined with respect to the \emph{original} rollout distribution (the
+behavior policy that generated the data) rather than a recomputed anchor evaluated inside the training stack; anchoring to a recomputed
+on-policy distribution can lead to instability under training--inference mismatch~\citep{qi2026rethinkingtrustregionllm}.
 
-Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. IcePop~\citep{zhang2025IcePop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
+Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. IcePop~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
 
 At the sequence level, Trust Region Masking (TRM)~\citep{li2025trm} discards entire trajectories that violate a trust region criterion defined
 by the maximum token-level divergence (e.g., $\max_t \Dkltok(c_t;\piroll,\pitheta)$). GSPO~\citep{gspo2025} instead computes a single
@@ -28,7 +28,7 @@ sequence-level methods either reject the entire sequence or lose the ability to 
 
 \subsection{Trust Region Methods}
 
-Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical quadratic bounds become vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-level Causal Trust Region masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
+Trust region methods constrain the policy update to remain close to the current policy, ensuring stable optimization. TRPO~\citep{schulman2015trust} enforces a hard KL divergence constraint, while PPO~\citep{schulman2017proximal} relaxes this to a clipped surrogate objective that is simpler to implement. Recent work on Trust Region Masking~\citep{li2025trm} derives tighter error bounds for long-horizon LLM reinforcement learning, showing that classical $O(T^2)$ trust region bounds become theoretically vacuous for sequences of thousands of tokens. Their Adaptive bound achieves per-position granularity and preserves the causal structure of error accumulation, providing the theoretical foundation that motivates our prefix-level Causal Trust Region masking. Our work borrows the per-position error decomposition perspective from TRM but does not directly reuse its optimization objective.
 
 \subsection{Summary of Differences}
 

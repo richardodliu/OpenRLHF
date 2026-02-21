@@ -13,7 +13,7 @@ large per-token importance ratios $\rho_t=\pitheta(y_t\mid c_t)/\piroll(y_t\mid 
 deviation shifts the
 future context distribution, so token-independent ratio interventions may fail to respect the causal structure of error accumulation.
 
-These challenges are not independent: noisy advantage estimates amplify the effect of off-policy errors, and biased importance sampling weights distort the advantage signal, creating a compounding instability. Formally, the surrogate objective error decomposes into per-position terms involving both an advantage factor and a context distribution shift factor (see \Cref{eq:error-decomp}); high variance inflates the former while off-policy mismatch inflates the latter. Existing methods address each challenge in isolation---RLOO improves the baseline but ignores off-policy correction; TIS and IcePop correct for policy mismatch but ignore causal structure and use suboptimal advantage estimation.
+These challenges are not independent: noisy advantage estimates amplify the effect of off-policy errors, and biased importance sampling weights distort the advantage signal, creating a compounding instability. Formally, the surrogate objective error decomposes into per-position terms involving both an advantage factor and a context distribution shift factor (see \Cref{eq:error-decomp}); high variance inflates the former while off-policy mismatch inflates the latter. Existing methods address each challenge in isolation---RLOO improves the baseline but applies no ratio-based stabilization; TIS and IcePop stabilize off-policy updates via token-level truncation/masking but treat positions independently and do not account for causal context-shift propagation.
 
 We present \textbf{REINFORCE Pro Max}, a unified framework that addresses both challenges simultaneously. By combining variance-reduced
 advantage estimation (\Cref{sec:reinforce-max}) with prefix-level Causal Trust Region masking (\Cref{sec:reinforce-pro}), both factors in the error
@@ -23,9 +23,10 @@ joint benefit is discussed in \Cref{sec:unified}. Our contributions are:
 \begin{enumerate}
     \item \textbf{Leave-one-out baseline:} We adopt the leave-one-out (RLOO) baseline for its statistical independence between each sample and its baseline, avoiding correlated baseline artifacts. See \Cref{app:rloo-proof} for a brief summary and references.
 
-    \item \textbf{Adaptive asymmetric normalization} (\Cref{sec:adaptive-norm}): We introduce a normalization scheme that applies
-    different scaling factors $\alpha, \beta$ to positive and negative advantages. The scheme provably preserves gradient direction while
-    enforcing zero empirical mean and unit empirical variance on non-zero tokens (the constraints in \Cref{def:adaptive-norm}).
+    \item \textbf{Adaptive asymmetric normalization} (\Cref{sec:adaptive-norm}): We introduce a normalization scheme that applies different
+    scaling factors $\alpha, \beta$ to positive and negative advantages. The scheme provably preserves the sign of each non-zero advantage
+    (and the relative ordering within positive and negative groups) while enforcing zero empirical mean and unit empirical variance on
+    non-zero tokens (the constraints in \Cref{def:adaptive-norm}).
 
     \item \textbf{Prefix Causal Trust Region masking with causal structure (\Cref{sec:prefix-is}):} We propose a prefix-cumulative masking
     strategy constructed from the per-token ratio $\rho_t=\pitheta/\piroll$. Motivated by long-horizon trust-region analyses for LLM-RL
