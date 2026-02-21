@@ -1,0 +1,58 @@
+\begin{figure*} [h]
+\begin{subfigure}[t]{0.7\textwidth}  % 注意这里用 [t]
+    \centering
+    \includegraphics[width=\textwidth]{figures/figure1_bars.pdf}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.29\textwidth}  % 这里也用 [t]
+    \centering
+    \includegraphics[width=\textwidth]{figures/figure2_computation_scaling.pdf}
+\end{subfigure}
+    \caption{\textbf{Left}: Benchmark performance comparison of leading commercial and open-weight models across competition-level mathematics, coding, software engineering, agentic tool use, and long-context understanding tasks. We use the MiniMax-M1-80k model here for MiniMax-M1. 
+    \textbf{Right}: Theoretical inference FLOPs scaling with generation length (\# tokens).}
+
+    \label{fig:perf-bars-flops}
+\end{figure*}
+
+
+\section{Introduction}
+
+Large reasoning models (LRMs), such as OpenAI o1~\citep{openai2024o1} and DeepSeek-R1~\citep{deepseekai2025deepseekr1incentivizingreasoningcapability}, have demonstrated remarkable success by extending the length of reasoning through large-scale reinforcement learning (RL). In recent months, both the open-source community and commercial organizations have followed this trend, achieving significant advances on complex tasks such as Olympiad mathematics competitions and competitive programming~\citep{team2025kimi,anthropic2025claude37,deepmind2025geminipro,seed2025seed1,zeng2025simplerlzooinvestigatingtamingzero,yu2025dapoopensourcellmreinforcement,hu2025openreasonerzeroopensourceapproach}.
+The success of LRMs has been primarily attributed to a new scaling dimension of test-time compute—As more FLOPs are dedicated to extended reasoning processes during generation, model performance shows consistent improvement, particularly for complex real-world applications~\citep{openai2025research,jimenez2024swebenchlanguagemodelsresolve}. 
+
+However, continuously extending the reasoning process is challenging within the traditional transformer architecture~\citep{vaswani2017attention}, due to the inherent quadratic computational complexity of the softmax attention mechanism. While previous works have proposed various techniques to mitigate this issue—such as sparse attention~\citep{beltagy2020longformer,zaheer2020big,lu2025moba,yuan2025native}, linear attention~\citep{katharopoulos2020transformers,qin_cosformer_iclr_2021,choromanski2021rethinking,peng2021random,sun2023retentive,qin2022devil,zhen2022cosformer,qin2024you,qin2024various,peng_rwkv4_2024,sun2025linear,shen2024scaling,arora2024simple,zhang2024gated,du2025mom,he2024rodimus}, linear attention with delta decay~\cite{yang2024parallelizing,yang2024gated,peng2025rwkv}, state space models~\citep{gu2020hippo,gu2023how,s4, mamba,mamba2,glorioso2024zamba,ren2024samba,team2024jamba,gupta2022DSS}, and linear RNNs~\citep{hochreiter1997long,iclr18,gru,qin2023hierarchically,peng_rwkv_emnlp_2023,peng2024eagle,qin2024hgrn2,chou2024metala,siems2025deltaproduct,sun2024learning,von2025mesanet,behrouz2024titans}—these approaches have not been fully validated in large-scale reasoning models, and nearly all competitive LRMs to date still rely on traditional attention designs. An exception is the Hunyuan-T1 model~\citep{hunyuan_t1} that employs the Mamba architecture~\citep{mamba,mamba2}. However, this model is not open-sourced and few details are disclosed. 
+In this work, we aim to build and open-source a large reasoning model that can efficiently scale up test-time compute and compete with the state-of-the-art reasoning models. 
+
+We introduce MiniMax-M1, a reasoning model with a hybrid Mixture-of-Experts (MoE) architecture and Lightning Attention~\citep{qin2024lightning}, an I/O-aware implementation of a linear attention variant~\citep{qin2022devil}. MiniMax-M1 is developed based on our previous MiniMax-Text-01~\citep{minimax2025minimax01} model, and comprises 456 billion parameters in total, with 45.9 billion activations and 32 experts. In our attention design, a transformer block with softmax attention follows every seven transnormer blocks~\citep{qin2022devil} with lightning attention. This design theoretically enables efficient scaling of reasoning lengths to hundreds of thousands of tokens, as illustrated in Figure~\ref{fig:perf-bars-flops} (Right). For example, compared to DeepSeek R1, M1 consumes less than 50\% of the FLOPs at a generation length of 64K tokens, and approximately 25\% of the FLOPs at a length of 100K tokens. This substantial reduction in computational cost makes M1 significantly more efficient during both inference and large-scale RL training. Furthermore, owing to its lightning attention mechanism and in line with MiniMax-Text-01, our M1 model natively supports a context length of up to 1 million tokens -- eight times the context size of DeepSeek R1 and an order of magnitude greater than all open-weight LRMs available to date. These features make M1 particularly well-suited for addressing complex, real-world tasks that require processing long inputs and generating extended thinking. A comparison of the maximum input and output lengths of M1 and other leading models is demonstrated in Table~\ref{tab:context}.
+
+\begin{table}[!t]
+\caption{The maximum supported input length and output length (\# tokens) of different reasoning models. For Claude-4 we refer to the Claude-4-Opus model. ``DS-R1'' represents the latest \texttt{DeepSeek-R1-0528} model.}
+\label{tab:context}
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+                  & o3 & Gemini 2.5 Pro & Claude 4 & DS-R1 & Qwen3-235B & MiniMax-M1-80k \\
+\midrule
+Max Input  & 200K      & 1M             & 200K            & 128K        & 128K       & 1M             \\
+Max Output & 100K      & 64K            & 32K             & 64K         & 32K        & 80K            \\
+\bottomrule
+\end{tabular}
+
+
+\end{table}
+
+
+To develop our M1 model, we first continue pretraining MiniMax-Text-01 on 7.5T tokens from a carefully curated, reasoning-intensive corpus. Subsequently, we perform supervised fine-tuning (SFT) to inject certain chain-of-thought (CoT)~\citep{wei2022chain} patterns, establishing a strong foundation for reinforcement learning, the core stage of M1 development.
+Notably, our RL scaling with M1 is made efficient through innovations from two key perspectives: (1) We propose a novel RL algorithm, \method{}, which abandons the trust region constraint and instead clips the importance sampling weights to stabilize training. This approach always leverages all tokens for gradient computations, achieving enhanced efficiency compared to GRPO~\citep{shao2024deepseekmath} and DAPO~\citep{yu2025dapoopensourcellmreinforcement} empirically -- For example, on a controlled study based on Qwen2.5-32B models~\citep{qwen2025qwen25technicalreport}, \method{} achieves a 2x speedup compared to DAPO; (2) Although the hybrid-attention design in M1 naturally allows for efficient RL scaling, unique challenges arise when scaling RL with this architecture. For instance, we find a precision mismatch between the training and inference kernels of our architecture, which prevents reward growth during RL training. We develop targeted solutions to address these challenges and successfully scale up RL with this hybrid architecture.
+In the end, our efficient RL framework enables us to complete a full RL run of MiniMax-M1 within 3 weeks using 512 H800 GPUs---equivalent to a rental cost of approximately \$0.53M USD.
+
+In addition to methodological innovations, we curate a diverse set of problems and environments for RL training. Our data encompasses both verifiable and non-verifiable problems. For verifiable problems that are typically considered critical for reasoning learning, we not only include mathematical reasoning and competitive programming problems as commonly used in related works, but also leverage our previous data synthesis framework SynLogic~\citep{liu2025synlogic} to generate diverse logical reasoning problems spanning 41 distinct tasks. Furthermore, we construct sandboxes for complex software engineering (SE) environments derived from SWE-bench~\citep{jimenez2024swebenchlanguagemodelsresolve}, and conduct RL on real-world SE problems with execution-based rewards to improve M1's performance in challenging SE scenarios. Our unverifiable problems span a broad range of domains such as question answering and creative writing, where we use generative reward models to provide the feedback. 
+
+We train two versions of MiniMax-M1 models with 40K and 80K tokens of maximum generation length respectively, which leads to two models MiniMax-M1-40k and MiniMax-M1-80k.
+MiniMax-M1-80k outperforms MiniMax-M1-40k on complex mathematical and coding tasks, further demonstrating the benefits of scaling test-time compute. As shown in Figure~\ref{fig:perf-bars-flops} (Left), MiniMax-M1 surpasses previous leading open-weight models such as the original DeepSeek-R1 and Qwen-235B overall, with particular advantages in complex software engineering, tool-using, and long-context tasks.
+Compared to the latest DeepSeek-R1-0528 model, MiniMax-M1 lags in mathematical and coding competitions but achieves comparable or superior performance in more realistic tool-using and long-context scenarios.
+Notably, MiniMax-M1 outperforms Gemini 2.5 Pro on the agentic tool use benchmark TAU-Bench~\citep{yaotau}, and surpasses OpenAI o3 and Claude 4 Opus on long-context understanding benchmarks.
+With efficient test-time scaling, we contend that MiniMax-M1 establishes a strong foundation for next-generation language model agents to address real-world challenges.
+
+To facilitate collaboration and advancement in the field, we have made our models publicly available at GitHub and Hugging Face. They are now supported by both the \texttt{vLLM} and \texttt{Transformers} frameworks, with detailed deployment guides available at \href{https://github.com/MiniMax-AI/MiniMax-M1/blob/main/docs/vllm_deployment_guide.md}{vLLM} and \href{https://github.com/MiniMax-AI/MiniMax-M1/blob/main/docs/transformers_deployment_guide.md}{Transformers} respectively. This enables easy integration of MiniMax-M1 into modern inference pipelines. We also provide commercial standard API at \href{https://minimax.io}{minimax.io}.
+

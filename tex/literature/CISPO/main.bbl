@@ -1,0 +1,447 @@
+\begin{thebibliography}{85}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Anthropic(2025)]{anthropic2025claude37}
+Anthropic.
+\newblock Claude 3.7 sonnet and claude code.
+\newblock \url{https://www.anthropic.com/news/claude-3-7-sonnet}, 2025.
+\newblock Blog post, February 24, 2025.
+
+\bibitem[Arora et~al.(2024)Arora, Eyuboglu, Zhang, Timalsina, Alberti, Zinsley, Zou, Rudra, and R{\'e}]{arora2024simple}
+Simran Arora, Sabri Eyuboglu, Michael Zhang, Aman Timalsina, Silas Alberti, Dylan Zinsley, James Zou, Atri Rudra, and R{\'e}.
+\newblock Simple linear attention language models balance the recall-throughput tradeoff.
+\newblock \emph{arXiv preprint arXiv:2402.18668}, 2024.
+
+\bibitem[Bai et~al.(2024)Bai, Tu, Zhang, Peng, Wang, Lv, Cao, Xu, Hou, Dong, Tang, and Li]{bai2024longbench2}
+Yushi Bai, Shangqing Tu, Jiajie Zhang, Hao Peng, Xiaozhi Wang, Xin Lv, Shulin Cao, Jiazheng Xu, Lei Hou, Yuxiao Dong, Jie Tang, and Juanzi Li.
+\newblock {LongBench}.
+\newblock \emph{arXiv preprint arXiv:2412.15204}, 2024.
+
+\bibitem[Behrouz et~al.(2024)Behrouz, Zhong, and Mirrokni]{behrouz2024titans}
+Ali Behrouz, Peilin Zhong, and Vahab Mirrokni.
+\newblock Titans: Learning to memorize at test time.
+\newblock \emph{arXiv preprint arXiv:2501.00663}, 2024.
+
+\bibitem[Beltagy et~al.(2020)Beltagy, Peters, and Cohan]{beltagy2020longformer}
+Iz~Beltagy, Matthew~E Peters, and Arman Cohan.
+\newblock Longformer: The long-document transformer.
+\newblock \emph{arXiv preprint arXiv:2004.05150}, 2020.
+
+\bibitem[Choromanski et~al.(2021)Choromanski, Likhosherstov, Dohan, Song, Gane, Sarlos, Hawkins, Davis, Mohiuddin, Kaiser, Belanger, Colwell, and Weller]{choromanski2021rethinking}
+Krzysztof~Marcin Choromanski, Valerii Likhosherstov, David Dohan, Xingyou Song, Andreea Gane, Tamas Sarlos, Peter Hawkins, Jared~Quincy Davis, Afroz Mohiuddin, Lukasz Kaiser, David~Benjamin Belanger, Lucy~J Colwell, and Adrian Weller.
+\newblock Rethinking attention with {Performers}.
+\newblock In \emph{International Conference on Learning Representations}, 2021.
+\newblock URL \url{https://openreview.net/forum?id=Ua6zuk0WRH}.
+
+\bibitem[Chou et~al.(2024)Chou, Yao, Wang, Pan, Zhu, Wu, Zhong, Qiao, Xu, and Li]{chou2024metala}
+Yuhong Chou, Man Yao, Kexin Wang, Yuqi Pan, Rui-Jie Zhu, Jibin Wu, Yiran Zhong, Yu~Qiao, Bo~Xu, and Guoqi Li.
+\newblock Metala: Unified optimal linear approximation to softmax attention map.
+\newblock \emph{Advances in Neural Information Processing Systems}, 37:\penalty0 71034--71067, 2024.
+
+\bibitem[Chung and {\c{C}}(2014)]{gru}
+Junyoung Chung and {\c{C}}.
+\newblock Empirical evaluation of gated recurrent neural networks on sequence modeling.
+\newblock \emph{arXiv preprint arXiv:1412.3555}, 2014.
+
+\bibitem[Cui et~al.(2025)Cui, Zhang, Chen, Yuan, Wang, Zuo, Li, Fan, Chen, Chen, Liu, Peng, Bai, Ouyang, Cheng, Zhou, and Ding]{cui2025entropymechanismreinforcementlearning}
+Ganqu Cui, Yuchen Zhang, Jiacheng Chen, Lifan Yuan, Zhi Wang, Yuxin Zuo, Haozhan Li, Yuchen Fan, Huayu Chen, Weize Chen, Zhiyuan Liu, Hao Peng, Lei Bai, Wanli Ouyang, Yu~Cheng, Bowen Zhou, and Ning Ding.
+\newblock The entropy mechanism of reinforcement learning for reasoning language models.
+\newblock \emph{arXiv preprint arXiv:2505.22617}, 2025.
+
+\bibitem[Dao and Gu(2024)]{mamba2}
+Tri Dao and Albert Gu.
+\newblock Transformers are ssms: Generalized models and efficient algorithms through structured state space duality.
+\newblock \emph{arXiv preprint arXiv:2405.21060}, 2024.
+
+\bibitem[DeepSeek-AI et~al.(2025)DeepSeek-AI, Guo, Yang, Zhang, Song, Zhang, Xu, Zhu, Ma, Wang, et~al.]{deepseekai2025deepseekr1incentivizingreasoningcapability}
+DeepSeek-AI, Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Ruoyu Zhang, Runxin Xu, Qihao Zhu, Shirong Ma, Peiyi Wang, et~al.
+\newblock Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning.
+\newblock \emph{arXiv preprint arXiv:2501.12948}, 2025.
+
+\bibitem[Du et~al.(2025)Du, Sun, Lan, Hu, and Cheng]{du2025mom}
+Jusen Du, Weigao Sun, Disen Lan, Jiaxi Hu, and Yu~Cheng.
+\newblock Mom: Linear sequence modeling with mixture-of-memories.
+\newblock \emph{arXiv preprint arXiv:2502.13685}, 2025.
+
+\bibitem[Glorioso et~al.(2024)Glorioso, Anthony, Tokpanov, Whittington, Pilault, Ibrahim, and Millidge]{glorioso2024zamba}
+Paolo Glorioso, Quentin Anthony, Yury Tokpanov, James Whittington, Jonathan Pilault, Adam Ibrahim, and Beren Millidge.
+\newblock Zamba: A compact 7b {SSM}.
+\newblock \emph{arXiv preprint arXiv:2405.16712}, 2024.
+
+\bibitem[{Google DeepMind}(2025)]{deepmind2025geminipro}
+{Google DeepMind}.
+\newblock Gemini pro.
+\newblock \url{https://deepmind.google/models/gemini/pro/}, 2025.
+\newblock Web page, accessed 2025.
+
+\bibitem[Gu and Dao(2024)]{mamba}
+Albert Gu and Tri Dao.
+\newblock Mamba: Linear-time sequence modeling with selective state spaces.
+\newblock In \emph{First Conference on Language Modeling}, 2024.
+\newblock URL \url{https://openreview.net/forum?id=tEYskw1VY2}.
+
+\bibitem[Gu et~al.(2020)Gu, Dao, Ermon, Rudra, and R{\'e}]{gu2020hippo}
+Albert Gu, Tri Dao, Stefano Ermon, Atri Rudra, and Christopher R{\'e}.
+\newblock Hippo: Recurrent memory with optimal polynomial projections.
+\newblock \emph{Advances in neural information processing systems}, 33:\penalty0 1474--1487, 2020.
+
+\bibitem[Gu et~al.(2022)Gu, Goel, and R{\'{e}}]{s4}
+Albert Gu, Karan Goel, and Christopher R{\'{e}}.
+\newblock Efficiently modeling long sequences with structured state spaces.
+\newblock In \emph{The Tenth International Conference on Learning Representations, {ICLR} 2022, Virtual Event, April 25-29, 2022}. OpenReview.net, 2022.
+\newblock URL \url{https://openreview.net/forum?id=uYLFoz1vlAC}.
+
+\bibitem[Gu et~al.(2023)Gu, Johnson, Timalsina, Rudra, and Re]{gu2023how}
+Albert Gu, Isys Johnson, Aman Timalsina, Atri Rudra, and Christopher Re.
+\newblock How to train your {HIPPO}: State space models with generalized orthogonal basis projections.
+\newblock In \emph{International Conference on Learning Representations}, 2023.
+\newblock URL \url{https://openreview.net/forum?id=klK17OQ3KB}.
+
+\bibitem[Gupta et~al.(2022)Gupta, Gu, and Berant]{gupta2022DSS}
+Ankit Gupta, Albert Gu, and Jonathan Berant.
+\newblock Diagonal state spaces are as effective as structured state spaces.
+\newblock In \emph{NeurIPS}, 2022.
+\newblock URL \url{http://papers.nips.cc/paper\_files/paper/2022/hash/9156b0f6dfa9bbd18c79cc459ef5d61c-Abstract-Conference.html}.
+
+\bibitem[He et~al.(2024)He, Yu, Gong, Liu, Li, and Lin]{he2024rodimus}
+Zhihao He, Hang Yu, Zi~Gong, Shizhan Liu, Jianguo Li, and Weiyao Lin.
+\newblock Rodimus*: Breaking the accuracy-efficiency trade-off with efficient attentions.
+\newblock \emph{arXiv preprint arXiv:2410.06577}, 2024.
+
+\bibitem[Hendrycks et~al.(2021)Hendrycks, Burns, Kadavath, Arora, Basart, Tang, Song, and Steinhardt]{hendrycks2021measuring}
+Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, and Jacob Steinhardt.
+\newblock Measuring mathematical problem solving with the math dataset.
+\newblock \emph{arXiv preprint arXiv:2103.03874}, 2021.
+
+\bibitem[Hochreiter and Schmidhuber(1997)]{hochreiter1997long}
+Sepp Hochreiter and J{\"u}rgen Schmidhuber.
+\newblock Long short-term memory.
+\newblock \emph{Neural computation}, 9\penalty0 (8):\penalty0 1735--1780, 1997.
+
+\bibitem[Hu et~al.(2025)Hu, Zhang, Han, Jiang, Zhang, and Shum]{hu2025openreasonerzeroopensourceapproach}
+Jingcheng Hu, Yinmin Zhang, Qi~Han, Daxin Jiang, Xiangyu Zhang, and Heung-Yeung Shum.
+\newblock Open-reasoner-zero: An open source approach to scaling up reinforcement learning on the base model.
+\newblock \emph{arXiv preprint arXiv:2503.24290}, 2025.
+
+\bibitem[Jain et~al.(2025)Jain, Han, Gu, Li, Yan, Zhang, Wang, Solar-Lezama, Sen, and Stoica]{jainlivecodebench}
+Naman Jain, King Han, Alex Gu, Wen-Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar-Lezama, Koushik Sen, and Ion Stoica.
+\newblock Livecodebench: Holistic and contamination free evaluation of large language models for code.
+\newblock In \emph{The Thirteenth International Conference on Learning Representations}, 2025.
+
+\bibitem[{Jamba Team}(2024)]{team2024jamba}
+{Jamba Team}.
+\newblock Jamba-1.5: Hybrid {T}.
+\newblock \emph{arXiv preprint arXiv:2408.12570}, 2024.
+
+\bibitem[Jimenez et~al.(2024)Jimenez, Yang, Wettig, Yao, Pei, Press, and Narasimhan]{jimenez2024swebenchlanguagemodelsresolve}
+Carlos~E. Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir Press, and Karthik Narasimhan.
+\newblock {SWE}-bench: Can language models resolve real-world github issues?
+\newblock In \emph{International Conference on Learning Representations}, 2024.
+\newblock URL \url{https://openreview.net/forum?id=VTF8yNQM66}.
+
+\bibitem[Katharopoulos et~al.(2020)Katharopoulos, Vyas, Pappas, and Fleuret]{katharopoulos2020transformers}
+Angelos Katharopoulos, Apoorv Vyas, Nikolaos Pappas, and Fran{\c{c}}ois Fleuret.
+\newblock Transformers are {RNNs}: Fast autoregressive transformers with linear attention.
+\newblock In \emph{International Conference on Machine Learning}, pages 5156--5165. PMLR, 2020.
+
+\bibitem[{Kimi Team}(2025)]{team2025kimi}
+{Kimi Team}.
+\newblock Kimi k1. 5: Scaling reinforcement learning with llms.
+\newblock \emph{arXiv preprint arXiv:2501.12599}, 2025.
+
+\bibitem[Lin et~al.(2025)Lin, Bras, Richardson, Sabharwal, Poovendran, Clark, and Choi]{lin2025zebralogic}
+Bill~Yuchen Lin, Ronan~Le Bras, Kyle Richardson, Ashish Sabharwal, Radha Poovendran, Peter Clark, and Yejin Choi.
+\newblock Zebralogic: On the scaling limits of llms for logical reasoning.
+\newblock \emph{arXiv preprint arXiv:2502.01100}, 2025.
+
+\bibitem[Liu et~al.(2025{\natexlab{a}})Liu, Fan, Jiang, Ding, Hu, Zhang, Shi, Weng, Chen, Chen, Huang, Zhang, Zhao, Yan, and He]{liu2025synlogic}
+Junteng Liu, Yuanxiang Fan, Zhuo Jiang, Han Ding, Yongyi Hu, Chi Zhang, Yiqi Shi, Shitong Weng, Aili Chen, Shiqi Chen, Yunan Huang, Mozhi Zhang, Pengyu Zhao, Junjie Yan, and Junxian He.
+\newblock Synlogic: Synthesizing verifiable reasoning data at scale for learning logical reasoning and beyond.
+\newblock \emph{arXiv preprint arXiv:2505.19641}, 2025{\natexlab{a}}.
+
+\bibitem[Liu et~al.(2024)Liu, Zhu, Liu, Xin, Li, Long, Chen, Yang, Xia, Peng, Liu, Zhang, Zhang, Huang, Shen, and Xiang]{liu2024fullstackbenchevaluatingllms}
+Siyao Liu, He~Zhu, Jerry Liu, Shulin Xin, Aoyan Li, Rui Long, Li~Chen, Jack Yang, Jinxiang Xia, Z.~Y. Peng, Shukai Liu, Zhaoxiang Zhang, Ge~Zhang, Wenhao Huang, Kai Shen, and Liang Xiang.
+\newblock Fullstack bench: Evaluating llms as full stack coders.
+\newblock \emph{arXiv preprint arXiv:2412.00535}, 2024.
+
+\bibitem[Liu et~al.(2025{\natexlab{b}})Liu, Chen, Li, Qi, Pang, Du, Lee, and Lin]{liu2025understandingr1zeroliketrainingcritical}
+Zichen Liu, Changyu Chen, Wenjun Li, Penghui Qi, Tianyu Pang, Chao Du, Wee~Sun Lee, and Min Lin.
+\newblock Understanding r1-zero-like training: A critical perspective.
+\newblock \emph{arXiv preprint arXiv:2503.20783}, 2025{\natexlab{b}}.
+
+\bibitem[Loshchilov and Hutter(2019)]{loshchilovdecoupled}
+Ilya Loshchilov and Frank Hutter.
+\newblock Decoupled weight decay regularization.
+\newblock In \emph{International Conference on Learning Representations}, 2019.
+
+\bibitem[Lu et~al.(2025)Lu, Jiang, Liu, Du, Jiang, Hong, Liu, He, Yuan, Wang, et~al.]{lu2025moba}
+Enzhe Lu, Zhejun Jiang, Jingyuan Liu, Yulun Du, Tao Jiang, Chao Hong, Shaowei Liu, Weiran He, Enming Yuan, Yuzhi Wang, et~al.
+\newblock Moba: Mixture of block attention for long-context llms.
+\newblock \emph{arXiv preprint arXiv:2502.13189}, 2025.
+
+\bibitem[Martin and Cundy(2018)]{iclr18}
+Eric Martin and Chris Cundy.
+\newblock Parallelizing linear recurrent neural nets over sequence length.
+\newblock In \emph{6th International Conference on Learning Representations, {ICLR} 2018, Vancouver, BC, Canada, April 30 - May 3, 2018, Conference Track Proceedings}. OpenReview.net, 2018.
+\newblock URL \url{https://openreview.net/forum?id=HyUNwulC-}.
+
+\bibitem[MiniMax et~al.(2025)MiniMax, Li, Gong, Yang, Shan, Liu, Zhu, Zhang, Guo, Chen, Li, et~al.]{minimax2025minimax01}
+MiniMax, Aonian Li, Bangwei Gong, Bo~Yang, Boji Shan, Chang Liu, Cheng Zhu, Chunhao Zhang, Congchao Guo, Da~Chen, Dong Li, et~al.
+\newblock Minimax-01: Scaling foundation models with lightning attention.
+\newblock \emph{arXiv preprint arXiv:2501.08313}, 2025.
+
+\bibitem[Molybog et~al.(2023)Molybog, Albert, Chen, DeVito, Esiobu, Goyal, Koura, Narang, Poulton, Silva, Tang, Liskovich, Xu, Zhang, Kambadur, Roller, and Zhang]{molybog2023theoryadaminstabilitylargescale}
+Igor Molybog, Peter Albert, Moya Chen, Zachary DeVito, David Esiobu, Naman Goyal, Punit~Singh Koura, Sharan Narang, Andrew Poulton, Ruan Silva, Binh Tang, Diana Liskovich, Puxin Xu, Yuchen Zhang, Melanie Kambadur, Stephen Roller, and Susan Zhang.
+\newblock A theory on adam instability in large-scale machine learning.
+\newblock \emph{arXiv preprint arXiv:2304.09871}, 2023.
+
+\bibitem[OpenAI(2024{\natexlab{a}})]{openai2024o1}
+OpenAI.
+\newblock Introducing openai o1.
+\newblock \url{https://openai.com/o1/}, 2024{\natexlab{a}}.
+\newblock Web page, accessed 2024.
+
+\bibitem[OpenAI(2024{\natexlab{b}})]{openai_mrcr}
+OpenAI.
+\newblock Openai mrcr dataset.
+\newblock \url{https://huggingface.co/datasets/openai/mrcr}, 2024{\natexlab{b}}.
+\newblock Accessed: 2025-06-15.
+
+\bibitem[{OpenAI}(2025)]{openai2025research}
+{OpenAI}.
+\newblock Introducing deep research, 2025.
+\newblock URL \url{https://openai.com/index/introducing-deep-research/}.
+
+\bibitem[Peng et~al.(2023)Peng, Alcaide, Anthony, Albalak, Arcadinho, Biderman, Cao, Cheng, Chung, Derczynski, et~al.]{peng_rwkv_emnlp_2023}
+Bo~Peng, Eric Alcaide, Quentin~Gregory Anthony, Alon Albalak, Samuel Arcadinho, Stella Biderman, Huanqi Cao, Xin Cheng, Michael~Nguyen Chung, Leon Derczynski, et~al.
+\newblock Rwkv: Reinventing rnns for the transformer era.
+\newblock In \emph{Proceedings of the Conference on Empirical Methods in Natural Language Processing (EMNLP)}, 2023.
+
+\bibitem[Peng et~al.(2024{\natexlab{a}})Peng, Goldstein, Anthony, Albalak, Alcaide, Biderman, Cheah, Ferdinan, Hou, and Kazienko]{peng2024eagle}
+Bo~Peng, Daniel Goldstein, Quentin Anthony, Alon Albalak, Eric Alcaide, Stella Biderman, Eugene Cheah, Teddy Ferdinan, Haowen Hou, and Przemys{\l} Kazienko.
+\newblock Eagle and finch: Rwkv with matrix-valued states and dynamic recurrence.
+\newblock \emph{arXiv preprint arXiv:2404.05892}, 2024{\natexlab{a}}.
+
+\bibitem[Peng et~al.(2024{\natexlab{b}})Peng, Goldstein, Anthony, Albalak, Alcaide, Biderman, Cheah, Ferdinan, Hou, and Kazienko]{peng_rwkv4_2024}
+Bo~Peng, Daniel Goldstein, Quentin Anthony, Alon Albalak, Eric Alcaide, Stella Biderman, Eugene Cheah, Teddy Ferdinan, Haowen Hou, and Przemys{\l} Kazienko.
+\newblock Eagle and finch: Rwkv with matrix-valued states and dynamic recurrence.
+\newblock \emph{arXiv preprint arXiv:2404.05892}, 2024{\natexlab{b}}.
+
+\bibitem[Peng et~al.(2025)Peng, Zhang, Goldstein, Alcaide, Du, Hou, Lin, Liu, Lu, Merrill, et~al.]{peng2025rwkv}
+Bo~Peng, Ruichong Zhang, Daniel Goldstein, Eric Alcaide, Xingjian Du, Haowen Hou, Jiaju Lin, Jiaxing Liu, Janna Lu, William Merrill, et~al.
+\newblock Rwkv-7.
+\newblock \emph{arXiv preprint arXiv:2503.14456}, 2025.
+
+\bibitem[Peng et~al.(2021)Peng, Pappas, Yogatama, Schwartz, Smith, and Kong]{peng2021random}
+Hao Peng, Nikolaos Pappas, Dani Yogatama, Roy Schwartz, Noah Smith, and Lingpeng Kong.
+\newblock Random feature attention.
+\newblock In \emph{International Conference on Learning Representations}, 2021.
+\newblock URL \url{https://openreview.net/forum?id=QtTKTdVrFBB}.
+
+\bibitem[Phan et~al.(2025)Phan, Gatti, Han, Li, Hu, Zhang, Zhang, Shaaban, Ling, Shi, et~al.]{phan2025humanity}
+Long Phan, Alice Gatti, Ziwen Han, Nathaniel Li, Josephina Hu, Hugh Zhang, Chen Bo~Calvin Zhang, Mohamed Shaaban, John Ling, Sean Shi, et~al.
+\newblock Humanity's last exam.
+\newblock \emph{arXiv preprint arXiv:2501.14249}, 2025.
+
+\bibitem[Qin et~al.(2021)Qin, Sun, Deng, Li, Wei, Lv, Yan, Kong, and Zhong]{qin_cosformer_iclr_2021}
+Zhen Qin, Weixuan Sun, Hui Deng, Dongxu Li, Yunshen Wei, Baohong Lv, Junjie Yan, Lingpeng Kong, and Yiran Zhong.
+\newblock cosformer: Rethinking softmax in attention.
+\newblock In \emph{Proceedings of the International Conference on Learning Representations (ICLR)}, 2021.
+
+\bibitem[Qin et~al.(2022{\natexlab{a}})Qin, Han, Sun, Li, Kong, Barnes, and Zhong]{qin2022devil}
+Zhen Qin, Xiaodong Han, Weixuan Sun, Dongxu Li, Lingpeng Kong, Nick Barnes, and Yiran Zhong.
+\newblock The devil in linear transformer.
+\newblock In \emph{Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing}, pages 7025--7041, 2022{\natexlab{a}}.
+
+\bibitem[Qin et~al.(2022{\natexlab{b}})Qin, Sun, Deng, Li, Wei, Lv, Yan, Kong, and Zhong]{zhen2022cosformer}
+Zhen Qin, Weixuan Sun, Hui Deng, Dongxu Li, Yunshen Wei, Baohong Lv, Junjie Yan, Lingpeng Kong, and Yiran Zhong.
+\newblock {cosFormer}: Rethinking softmax in attention.
+\newblock In \emph{International Conference on Learning Representations}, 2022{\natexlab{b}}.
+\newblock URL \url{https://openreview.net/forum?id=Bl8CQrx2Up4}.
+
+\bibitem[Qin et~al.(2023)Qin, Yang, and Zhong]{qin2023hierarchically}
+Zhen Qin, Songlin Yang, and Yiran Zhong.
+\newblock Hierarchically gated recurrent neural network for sequence modeling.
+\newblock In \emph{Proceedings of the 37th International Conference on Neural Information Processing Systems}, pages 33202--33221, 2023.
+
+\bibitem[Qin et~al.(2024{\natexlab{a}})Qin, Mao, Shen, Li, Zhang, Dai, and Zhong]{qin2024you}
+Zhen Qin, Yuxin Mao, Xuyang Shen, Dong Li, Jing Zhang, Yuchao Dai, and Yiran Zhong.
+\newblock You only scan once: Efficient multi-dimension sequential modeling with lightnet.
+\newblock \emph{arXiv preprint arXiv:2405.21022}, 2024{\natexlab{a}}.
+
+\bibitem[Qin et~al.(2024{\natexlab{b}})Qin, Sun, Li, Shen, Sun, and Zhong]{qin2024lightning}
+Zhen Qin, Weigao Sun, Dong Li, Xuyang Shen, Weixuan Sun, and Yiran Zhong.
+\newblock Lightning attention-2: A free lunch for handling unlimited sequence lengths in large language models.
+\newblock \emph{arXiv preprint arXiv:2401.04658}, 2024{\natexlab{b}}.
+
+\bibitem[Qin et~al.(2024{\natexlab{c}})Qin, Sun, Li, Shen, Sun, and Zhong]{qin2024various}
+Zhen Qin, Weigao Sun, Dong Li, Xuyang Shen, Weixuan Sun, and Yiran Zhong.
+\newblock Various lengths, constant speed: Efficient language modeling with lightning attention.
+\newblock In \emph{International conference on machine learning}, pages 41517--41535. PMLR, 2024{\natexlab{c}}.
+
+\bibitem[Qin et~al.(2024{\natexlab{d}})Qin, Yang, Sun, Shen, Li, Sun, and Zhong]{qin2024hgrn2}
+Zhen Qin, Songlin Yang, Weixuan Sun, Xuyang Shen, Dong Li, Weigao Sun, and Yiran Zhong.
+\newblock {HGRN2}.
+\newblock \emph{arXiv preprint arXiv:2404.07904}, 2024{\natexlab{d}}.
+
+\bibitem[Qwen et~al.(2025)Qwen, :, Yang, Yang, Zhang, Hui, Zheng, Yu, Li, Liu, Huang, Wei, Lin, Yang, Tu, Zhang, Yang, Yang, Zhou, Lin, Dang, Lu, Bao, Yang, Yu, Li, Xue, Zhang, Zhu, Men, Lin, Li, Tang, Xia, Ren, Ren, Fan, Su, Zhang, Wan, Liu, Cui, Zhang, and Qiu]{qwen2025qwen25technicalreport}
+Qwen, :, An~Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo~Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, Huan Lin, Jian Yang, Jianhong Tu, Jianwei Zhang, Jianxin Yang, Jiaxi Yang, Jingren Zhou, Junyang Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin Yang, Le~Yu, Mei Li, Mingfeng Xue, Pei Zhang, Qin Zhu, Rui Men, Runji Lin, Tianhao Li, Tianyi Tang, Tingyu Xia, Xingzhang Ren, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yu~Wan, Yuqiong Liu, Zeyu Cui, Zhenru Zhang, and Zihan Qiu.
+\newblock Qwen2.5 technical report.
+\newblock \emph{arXiv preprint arXiv:2412.15115}, 2025.
+
+\bibitem[Rein et~al.(2024)Rein, Hou, Stickland, Petty, Pang, Dirani, Michael, and Bowman]{rein2024gpqa}
+David Rein, Betty~Li Hou, Asa~Cooper Stickland, Jackson Petty, Richard~Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel~R Bowman.
+\newblock Gpqa: A graduate-level google-proof q\&a benchmark.
+\newblock In \emph{First Conference on Language Modeling}, 2024.
+
+\bibitem[Ren et~al.(2024)Ren, Liu, Lu, Shen, Liang, and Chen]{ren2024samba}
+Liliang Ren, Yang Liu, Yadong Lu, Yelong Shen, Chen Liang, and Weizhu Chen.
+\newblock Samba: Simple hybrid state space models for efficient unlimited context language modeling.
+\newblock \emph{arXiv preprint arXiv:2406.07522}, 2024.
+
+\bibitem[Schulman et~al.(2017)Schulman, Wolski, Dhariwal, Radford, and Klimov]{schulman2017proximal}
+John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov.
+\newblock Proximal policy optimization algorithms.
+\newblock \emph{arXiv preprint arXiv:1707.06347}, 2017.
+
+\bibitem[Seed et~al.(2025)Seed, Chen, Fan, Liu, Liu, Lin, Wang, Wang, Wei, Xu, et~al.]{seed2025seed1}
+ByteDance Seed, Jiaze Chen, Tiantian Fan, Xin Liu, Lingjun Liu, Zhiqi Lin, Mingxuan Wang, Chengyi Wang, Xiangpeng Wei, Wenyuan Xu, et~al.
+\newblock Seed1. 5-thinking: Advancing superb reasoning models with reinforcement learning.
+\newblock \emph{arXiv preprint arXiv:2504.13914}, 2025.
+
+\bibitem[Shao et~al.(2024)Shao, Wang, Zhu, Xu, Song, Bi, Zhang, Zhang, Li, Wu, et~al.]{shao2024deepseekmath}
+Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, YK~Li, Y~Wu, et~al.
+\newblock {DeepSeekMath}.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+
+\bibitem[Shen et~al.(2024)Shen, Li, Leng, Qin, Sun, and Zhong]{shen2024scaling}
+Xuyang Shen, Dong Li, Ruitao Leng, Zhen Qin, Weigao Sun, and Yiran Zhong.
+\newblock Scaling laws for linear complexity language models.
+\newblock In \emph{Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing}, pages 16377--16426, 2024.
+
+\bibitem[Sheng et~al.(2024)Sheng, Zhang, Ye, Wu, Zhang, Zhang, Peng, Lin, and Wu]{sheng2024hybridflow}
+Guangming Sheng, Chi Zhang, Zilingfeng Ye, Xibin Wu, Wang Zhang, Ru~Zhang, Yanghua Peng, Haibin Lin, and Chuan Wu.
+\newblock Hybridflow: A flexible and efficient rlhf framework.
+\newblock \emph{arXiv preprint arXiv:2409.19256}, 2024.
+
+\bibitem[Si et~al.(2024)Si, Yang, and Hashimoto]{si2024llmsgeneratenovelresearch}
+Chenglei Si, Diyi Yang, and Tatsunori Hashimoto.
+\newblock Can llms generate novel research ideas? a large-scale human study with 100+ nlp researchers.
+\newblock \emph{arXiv preprint arXiv:2409.04109}, 2024.
+
+\bibitem[Siems et~al.(2025)Siems, Carstensen, Zela, Hutter, Pontil, and Grazzi]{siems2025deltaproduct}
+Julien Siems, Timur Carstensen, Arber Zela, Frank Hutter, Massimiliano Pontil, and Riccardo Grazzi.
+\newblock Deltaproduct: Improving state-tracking in linear rnns via householder products.
+\newblock \emph{arXiv preprint arXiv:2502.10297}, 2025.
+
+\bibitem[Sirdeshmukh et~al.(2025)Sirdeshmukh, Deshpande, Mols, Jin, Cardona, Lee, Kritz, Primack, Yue, and Xing]{sirdeshmukh2025multichallenge}
+Ved Sirdeshmukh, Kaustubh Deshpande, Johannes Mols, Lifeng Jin, Ed-Yeremai Cardona, Dean Lee, Jeremy Kritz, Willow Primack, Summer Yue, and Chen Xing.
+\newblock Multichallenge: A realistic multi-turn conversation evaluation benchmark challenging to frontier llms.
+\newblock \emph{arXiv preprint arXiv:2501.17399}, 2025.
+
+\bibitem[Sun et~al.(2025)Sun, Lan, Zhu, Qu, and Cheng]{sun2025linear}
+Weigao Sun, Disen Lan, Tong Zhu, Xiaoye Qu, and Yu~Cheng.
+\newblock Linear-moe: Linear sequence modeling meets mixture-of-experts.
+\newblock \emph{arXiv preprint arXiv:2503.05447}, 2025.
+
+\bibitem[Sun et~al.(2024)Sun, Li, Dalal, Xu, Vikram, Zhang, Dubois, Chen, Wang, Koyejo, et~al.]{sun2024learning}
+Yu~Sun, Xinhao Li, Karan Dalal, Jiarui Xu, Arjun Vikram, Genghan Zhang, Yann Dubois, Xinlei Chen, Xiaolong Wang, Sanmi Koyejo, et~al.
+\newblock Learning to (learn at test time): Rnns with expressive hidden states.
+\newblock \emph{arXiv preprint arXiv:2407.04620}, 2024.
+
+\bibitem[Sun et~al.(2023)Sun, Dong, Huang, Ma, Xia, Xue, Wang, and Wei]{sun2023retentive}
+Yutao Sun, Li~Dong, Shaohan Huang, Shuming Ma, Yuqing Xia, Jilong Xue, Jianyong Wang, and Furu Wei.
+\newblock Retentive network: A successor to transformer for large language models.
+\newblock \emph{arXiv preprint arXiv:2307.08621}, 2023.
+
+\bibitem[{Tencent AI Lab}(2025)]{hunyuan_t1}
+{Tencent AI Lab}.
+\newblock Hunyuan-t1: Reasoning efficiency redefined.
+\newblock \url{https://llm.hunyuan.tencent.com/#/Blog/hy-t1/}, 2025.
+\newblock Accessed: 2025-06-15.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, and Polosukhin]{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan~N Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock \emph{Advances in neural information processing systems}, 30, 2017.
+
+\bibitem[von Oswald et~al.(2025)von Oswald, Scherrer, Kobayashi, Versari, Yang, Schlegel, Maile, Schimpf, Sieberling, Meulemans, et~al.]{von2025mesanet}
+Johannes von Oswald, Nino Scherrer, Seijin Kobayashi, Luca Versari, Songlin Yang, Maximilian Schlegel, Kaitlin Maile, Yanick Schimpf, Oliver Sieberling, Alexander Meulemans, et~al.
+\newblock Mesanet: Sequence modeling by locally optimal test-time training.
+\newblock \emph{arXiv preprint arXiv:2506.05233}, 2025.
+
+\bibitem[Wang et~al.(2025)Wang, Yu, Gao, Zheng, Liu, Lu, Dang, Chen, Yang, Zhang, Liu, Yang, Zhao, Yue, Song, Yu, Huang, and Lin]{wang20258020rulehighentropyminority}
+Shenzhi Wang, Le~Yu, Chang Gao, Chujie Zheng, Shixuan Liu, Rui Lu, Kai Dang, Xionghui Chen, Jianxin Yang, Zhenru Zhang, Yuqiong Liu, An~Yang, Andrew Zhao, Yang Yue, Shiji Song, Bowen Yu, Gao Huang, and Junyang Lin.
+\newblock Beyond the 80/20 rule: High-entropy minority tokens drive effective reinforcement learning for llm reasoning.
+\newblock \emph{arXiv preprint arXiv:2506.01939}, 2025.
+
+\bibitem[Wang et~al.(2024)Wang, Ma, Zhang, Ni, Chandra, Guo, Ren, Arulraj, He, Jiang, et~al.]{wang2024mmlu}
+Yubo Wang, Xueguang Ma, Ge~Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, et~al.
+\newblock Mmlu-pro: A more robust and challenging multi-task language understanding benchmark.
+\newblock In \emph{The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track}, 2024.
+
+\bibitem[Wei et~al.(2022)Wei, Wang, Schuurmans, Bosma, Xia, Chi, Le, Zhou, et~al.]{wei2022chain}
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed~Chi, Quoc~V Le, Denny Zhou, et~al.
+\newblock Chain-of-thought prompting elicits reasoning in large language models.
+\newblock \emph{Advances in neural information processing systems}, 35:\penalty0 24824--24837, 2022.
+
+\bibitem[Wei et~al.(2024)Wei, Karina, Chung, Jiao, Papay, Glaese, Schulman, and Fedus]{wei2024measuring}
+Jason Wei, Nguyen Karina, Hyung~Won Chung, Yunxin~Joy Jiao, Spencer Papay, Amelia Glaese, John Schulman, and William Fedus.
+\newblock Measuring short-form factuality in large language models.
+\newblock \emph{arXiv preprint arXiv:2411.04368}, 2024.
+
+\bibitem[Xia et~al.(2024)Xia, Deng, Dunn, and Zhang]{xia2024agentless}
+Chunqiu~Steven Xia, Yinlin Deng, Soren Dunn, and Lingming Zhang.
+\newblock Agentless: Demystifying llm-based software engineering agents.
+\newblock \emph{arXiv preprint arXiv:2407.01489}, 2024.
+
+\bibitem[Xu et~al.(2025)Xu, Song, Li, Tang, Jain, Bao, Wang, Zhou, Guo, Cao, Yang, Lu, Martin, Su, Maben, Mehta, Chi, Jang, Xie, Zhou, and Neubig]{xu2025theagentcompanybenchmarkingllmagents}
+Frank~F. Xu, Yufan Song, Boxuan Li, Yuxuan Tang, Kritanjali Jain, Mengxue Bao, Zora~Z. Wang, Xuhui Zhou, Zhitong Guo, Murong Cao, Mingyang Yang, Hao~Yang Lu, Amaad Martin, Zhe Su, Leander Maben, Raj Mehta, Wayne Chi, Lawrence Jang, Yiqing Xie, Shuyan Zhou, and Graham Neubig.
+\newblock Theagentcompany: Benchmarking llm agents on consequential real world tasks.
+\newblock \emph{arXiv preprint arXiv:2412.14161}, 2025.
+
+\bibitem[Yang et~al.(2024{\natexlab{a}})Yang, Wang, Shen, Panda, and Kim]{yang2024gated}
+Songlin Yang, Bailin Wang, Yikang Shen, Rameswar Panda, and Yoon Kim.
+\newblock Gated linear attention transformers with hardware-efficient training.
+\newblock \emph{arXiv preprint arXiv:2312.06635}, 2024{\natexlab{a}}.
+
+\bibitem[Yang et~al.(2024{\natexlab{b}})Yang, Wang, Zhang, Shen, and Kim]{yang2024parallelizing}
+Songlin Yang, Bailin Wang, Yu~Zhang, Yikang Shen, and Yoon Kim.
+\newblock Parallelizing linear transformers with the delta rule over sequence length.
+\newblock \emph{arXiv preprint arXiv:2406.06484}, 2024{\natexlab{b}}.
+
+\bibitem[Yao et~al.(2025)Yao, Shinn, Razavi, and Narasimhan]{yaotau}
+Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik~R Narasimhan.
+\newblock $\tau$-bench: A benchmark for tool-agent-user interaction in real-world domains.
+\newblock In \emph{The Thirteenth International Conference on Learning Representations}, 2025.
+
+\bibitem[Yu et~al.(2025)Yu, Zhang, Zhu, Yuan, Zuo, Yue, Dai, Fan, Liu, Liu, Liu, Lin, Lin, Ma, Sheng, Tong, Zhang, Zhang, Zhang, Zhu, Zhu, Chen, Chen, Wang, Yu, Song, Wei, Zhou, Liu, Ma, Zhang, Yan, Qiao, Wu, and Wang]{yu2025dapoopensourcellmreinforcement}
+Qiying Yu, Zheng Zhang, Ruofei Zhu, Yufeng Yuan, Xiaochen Zuo, Yu~Yue, Weinan Dai, Tiantian Fan, Gaohong Liu, Lingjun Liu, Xin Liu, Haibin Lin, Zhiqi Lin, Bole Ma, Guangming Sheng, Yuxuan Tong, Chi Zhang, Mofan Zhang, Wang Zhang, Hang Zhu, Jinhua Zhu, Jiaze Chen, Jiangjie Chen, Chengyi Wang, Hongli Yu, Yuxuan Song, Xiangpeng Wei, Hao Zhou, Jingjing Liu, Wei-Ying Ma, Ya-Qin Zhang, Lin Yan, Mu~Qiao, Yonghui Wu, and Mingxuan Wang.
+\newblock Dapo: An open-source llm reinforcement learning system at scale.
+\newblock \emph{arXiv preprint arXiv:2503.14476}, 2025.
+
+\bibitem[Yuan et~al.(2025)Yuan, Gao, Dai, Luo, Zhao, Zhang, Xie, Wei, Wang, Xiao, et~al.]{yuan2025native}
+Jingyang Yuan, Huazuo Gao, Damai Dai, Junyu Luo, Liang Zhao, Zhengyan Zhang, Zhenda Xie, YX~Wei, Lean Wang, Zhiping Xiao, et~al.
+\newblock Native sparse attention: Hardware-aligned and natively trainable sparse attention.
+\newblock \emph{arXiv preprint arXiv:2502.11089}, 2025.
+
+\bibitem[Zaheer et~al.(2020)Zaheer, Guruganesh, Dubey, Ainslie, Alberti, Ontanon, Pham, Ravula, Wang, Yang, et~al.]{zaheer2020big}
+Manzil Zaheer, Guru Guruganesh, Kumar~Avinava Dubey, Joshua Ainslie, Chris Alberti, Santiago Ontanon, Philip Pham, Anirudh Ravula, Qifan Wang, Li~Yang, et~al.
+\newblock Big {B}ird: Transformers for longer sequences.
+\newblock \emph{Advances in neural information processing systems}, 33:\penalty0 17283--17297, 2020.
+
+\bibitem[Zeng et~al.(2025)Zeng, Huang, Liu, Liu, He, Ma, and He]{zeng2025simplerlzooinvestigatingtamingzero}
+Weihao Zeng, Yuzhen Huang, Qian Liu, Wei Liu, Keqing He, Zejun Ma, and Junxian He.
+\newblock Simplerl-zoo: Investigating and taming zero reinforcement learning for open base models in the wild.
+\newblock \emph{arXiv preprint arXiv:2503.18892}, 2025.
+
+\bibitem[Zhang et~al.(2024)Zhang, Yang, Zhu, Zhang, Cui, Wang, Wang, Shi, Wang, Bi, et~al.]{zhang2024gated}
+Yu~Zhang, Songlin Yang, Rui-Jie Zhu, Yue Zhang, Leyang Cui, Yiqiao Wang, Bolun Wang, Freda Shi, Bailin Wang, Wei Bi, et~al.
+\newblock Gated slot attention for efficient linear-time sequence modeling.
+\newblock \emph{Advances in Neural Information Processing Systems}, 37:\penalty0 116870--116898, 2024.
+
+\end{thebibliography}
