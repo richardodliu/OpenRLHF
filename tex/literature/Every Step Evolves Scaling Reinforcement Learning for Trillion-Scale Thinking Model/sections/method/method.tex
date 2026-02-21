@@ -1,0 +1,10 @@
+\section{Approach}
+\label{sec:method}
+The \model{} model was developed via a multi-stage pipeline, commencing with long-CoT SFT and advancing through reasoning and general RL phases. 
+While the complete pipeline is integral to the model's performance, the primary focus of this report is on RL components. We first summarize the long-CoT SFT process that primes the model for RL in Section~\ref{sec:sft}. 
+The core of our discussion then turns to the novel RL algorithm, which is elaborated upon in Section~\ref{sec:rl}.
+Additionally, we introduce ASystem in Section~\ref{subsec:asys}, the distributed system that enabled the large-scale RL training necessary for this project.
+
+\input{sections/method/pipeline}
+\input{sections/method/SFT}
+\input{sections/method/RL}

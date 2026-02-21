@@ -1,0 +1,20 @@
+\subsubsection{RL Data}
+\label{subsec:rl-data}
+
+
+High-quality and diverse data are critical for effective reinforcement learning. To this end, we introduce a carefully curated, multi-domain dataset spanning five core areas: math, code, science, logic, and general domains:
+\begin{itemize}
+    \item \textbf{Math:} We extend the dataset from~\cite{team2025ring} with mathematically rigorous problems from authoritative sources. Our curation ensures completeness, high complexity, and verifiable solutions, yielding a high-quality corpus for large-scale reinforcement learning.
+    
+    \item \textbf{Code:} Aside from the dataset employed in~\cite{team2025ring}, we develop a multi-phase workflow for synthesizing, validating, quality-scoring, and selecting additional test cases. This process ensures that each problem is equipped with a sufficient number of high-quality test cases. The final dataset contains programming problems with verified correct solutions and carefully tested cases.
+     
+    \item \textbf{Science:} We developed a crowdsourced science dataset of high-difficulty problems spanning physics, chemistry, and biology. To ensure complexity for reinforcement learning, all multiple-choice questions were reformatted into an open-ended format. 
+    For organic chemistry, we established a dedicated image-semantization pipeline that converts visual information such as molecular structures into structured textual descriptions. 
+    Finally, we applied a Pass-rate filtering strategy to select only the highest-quality items.
+    
+    \item \textbf{Logic:} Our logic reasoning dataset spans five domains: visual pattern induction ~\citep{Chollet2025}, grid puzzles (Sudoku), pathfinding (mazes), arithmetic reasoning (24 Game), and propositional logic (Knights and Knaves). We synthesized problems by integrating public resources such as \cite{Hodel2024}, \cite{Li2025InternBootcamp}, and \cite{Liu2025SynLogic} into an in-house game generator, enabling scalable and controlled creation. A quality control process ensures each task is solvable and non-trivial during both generation and post-processing. The final curated collection balanced across domains and complexity levels for reinforcement learning.
+
+    \item \textbf{General Data:} We constructed a comprehensive dataset for general reasoning by aggregating problems from two primary sources: public repositories and real-world user interactions. From public sources, we incorporated established general datasets including Magpie~\citep{xu2024magpiealignmentdatasynthesis}, WMT~\citep{feng2025mtr1zero}, RLVR-IFEval~\footnote{https://huggingface.co/datasets/allenai/RLVR-IFeval}, and AutoIF~\footnote{https://huggingface.co/datasets/Post-training-Data-Flywheel/AutoIF-instruct-61k}. To enhance practical alignment, we further integrated real-world user preference data such as arena-human-preference-100k and arena-human-preference-140k~\footnote{https://huggingface.co/datasets/lmarena-ai}. Additionally, we augmented this collection with problems sourced from social media platforms such as Zhihu and StackOverflow. 
+\end{itemize}
+
+Finally, we employ a multi-stage curation pipeline involving parsing, reformulation, and deduplication, with quality assured by a dual scoring system of LLMs and rule-based metrics. Furthermore, fine-grained metadata annotations on each sample enable dynamic sampling and cross-domain blending, a strategy that significantly improves training efficiency and model performance on complex tasks.

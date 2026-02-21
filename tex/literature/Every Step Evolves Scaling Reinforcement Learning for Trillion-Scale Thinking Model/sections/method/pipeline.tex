@@ -1,0 +1,23 @@
+\subsection{Training Pipeline}
+\label{sec:pipeline}
+
+\begin{figure}[!hbt]
+    \centering
+    \includegraphics[width=0.86\linewidth]{figures/Framework.pdf}
+    \caption{The training pipeline of \model.}
+    \label{fig:training_framework}
+\end{figure}
+
+
+We use Ling-1T-base model~\citep{lingv2}, a novel Mixture-of-Experts model with a total of \textbf{1 Trillion} parameters and an activation of \textbf{50 Billion} parameters, as our base model. The training of \model{} consists of three stages, comprising long-CoT SFT, reasoning-oriented RL, and general-oriented RL, to cultivate a powerful thinking model.
+\begin{itemize}
+    \item \textbf{Long-CoT SFT:} We collect and synthesize a large amount of multi-domain reasoning trajectory data covering mathematics, code, science, etc. Through large-scale supervised fine-tuning, the model learns general reasoning patterns and domain-specific reasoning skills, establishing a solid foundation for large-scale RL training.
+    \item \textbf{Reasoning RL:} We construct a comprehensive, challenging, and high-quality RL dataset encompassing math, code, science, and logic tasks with verifiable outcomes. 
+    The model's comprehensive reasoning performance is enhanced via \textit{RLVR (Reinforcement Learning from Verifiable Rewards)}. This process involves sampling extensive reasoning trajectories and refining the policy using verifiable rewards, which are provided by carefully designed multi-domain verifiers.
+    \item \textbf{General RL:} Following large-scale reinforcement learning on verifiable tasks, we conduct a second RL stage focused on general tasks. This phase employs \textit{RLHF (Reinforcement Learning from Human Feedback)} to recalibrate the model's capability distribution, preserving its core reasoning strength while enhancing human alignment, instruction following, creative writing, safety, and overall usability.
+    
+\end{itemize}
+
+
+
+

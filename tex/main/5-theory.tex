@@ -57,7 +57,7 @@ highlight the key design choices below.
     \STATE \textbf{Ratio:} $\rho_t \leftarrow \exp\!\big(\log \pitheta(y_t|c_t) - \log \piroll(y_t|c_t)\big)$
     \STATE \textbf{Prefix Proxy:} Compute $\log\rho_t$
     \STATE \hspace{2.6em} Compute $\rhoprefix{t}$ as in Eq.~\eqref{eq:prefix-is}
-    \STATE \hspace{2.6em} Compute $M_t^{\mathrm{prefix}}$ as in Eq.~\eqref{eq:prefix-mask}
+    \STATE \hspace{2.6em} Compute $M_t^{\mathrm{pre}}$ as in Eq.~\eqref{eq:prefix-mask}
     \STATE \textbf{Loss:} $\mathcal{L} \leftarrow \mathcal{L}^{\mathrm{ProMax}}$ (Eq.~\eqref{eq:promax-loss}) \hfill \COMMENT{negative surrogate}
     \STATE \textbf{Update:} $\theta \leftarrow \theta - \alpha_{\mathrm{lr}} \nabla_\theta \mathcal{L}$
 \end{algorithmic}
@@ -84,11 +84,11 @@ log-probabilities $\log\piroll(y_t|c_t)$ are reused from the rollout cache, as i
 \emph{Prefix Causal Trust Region Masking (Lines~9--11).} The per-token log-ratio $\log\rho_t$ captures local policy drift between $\pitheta$ and
 $\piroll$. The prefix cumulative statistic $\rhoprefix{t}$ in \eqref{eq:prefix-is} aggregates this drift causally: it depends only
 on positions $s\le t$, respecting the autoregressive order (\Cref{def:prefix-is}). The corresponding binary mask
-$M_t^{\mathrm{prefix}}$ in \eqref{eq:prefix-mask} filters out positions where the prefix average log-ratio leaves
+$M_t^{\mathrm{pre}}$ in \eqref{eq:prefix-mask} filters out positions where the prefix average log-ratio leaves
 $[\log(1-\epslow),\log(1+\epshigh)]$, enforcing a per-position, sample-level constraint (\Cref{cor:per-position-trust}).
 
 \emph{Loss Computation (Line~12).} The loss \eqref{eq:promax-loss} multiplies the per-token importance-weighted surrogate term
-$\rho_t \hat{A}_t$ by a detached prefix gate. Concretely, $M_t^{\mathrm{prefix}}$ is a binary mask (detached) and the normalized
+$\rho_t \hat{A}_t$ by a detached prefix gate. Concretely, $M_t^{\mathrm{pre}}$ is a binary mask (detached) and the normalized
 advantage $\hat{A}_t$ is detached, so gradients propagate only through $\rho_t$. The negative sign ensures that minimizing
 $\mathcal{L}$ maximizes the surrogate objective.
 

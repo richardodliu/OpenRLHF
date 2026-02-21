@@ -1,0 +1,50 @@
+
+\subsection{Large-Scale RL Infrastructure: ASystem}
+\label{subsec:asys}
+
+
+\begin{figure}[!hbt]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/asystem.pdf}
+    \caption{An overview of ASystem RL training framework.}
+    \label{fig:asystem}
+\end{figure}
+
+Training \model{} with reinforcement learning requires a specialized infrastructure that can manage its unprecedented scale. The sheer size of the model, coupled with the inherent complexity of distributed RL workflows, poses unique challenges in memory management, state synchronization, and computational throughput. To this end, we developed ASystem, a high-performance RL framework whose components are co-designed with the requirements of \model{} in mind.
+
+As illustrated in Figure~\ref{fig:asystem}, ASystem's architecture is built around a unified execution environment and includes the following key components, each engineered to address a specific bottleneck in the RL training for a trillion-parameter model:
+
+\begin{itemize}
+\item \textbf{Hybrid Runtime}: The core of ASystem, this runtime seamlessly integrates training and inference workloads. For \model{}, this means we can conduct massive parallel policy evaluation (inference) and model weight updates (training), eliminating the overhead of data transfer between separate systems and ensuring efficient utilization of thousands of GPUs.
+\item \textbf{AMem}: AMem is a GPU memory management library designed to overcome the critical memory bottleneck in large-scale RL training, like that of our 1T model. It optimizes memory usage and data transfer, enabling larger batches, fewer OOM errors, and faster deployment with minimal code changes and no loss of accuracy.
+\item \textbf{AState}: AState is a high-performance weight synchronization framework for RL. It efficiently addresses the challenge of distributing updated model parameters from trainers to inference actors using a zero-redundancy peer-to-peer mechanism, enabling synchronization of trillion-parameter models in under 10 seconds.
+\item \textbf{ASandbox}:  A serverless environment for rapid scenario validation. By offering millisecond-scale cold start and high-throughput isolation, ASandbox accelerates evaluation of \model{} rollouts during large-scale RL training.
+\end{itemize}
+
+
+This foundational design, based on a SingleController + SPMD (Single Program, Multiple Data) architecture, delivers significant advantages for robust large-scale training. It provides plug-and-play support for training, inference, and reward model backends, facilitating independent debugging and development at scale. Crucially, by separating the control flow from the data flow, ASystem effectively mitigates the single-point data flow bottlenecks prevalent in mainstream SingleController frameworks. Furthermore, the system incorporates mechanisms for fast-fail reporting and automatic recovery from slow training and hangs, thereby enhancing overall training stability and efficiency for demanding workloads like our \model{} model.
+
+
+\subsubsection{Hybrid Runtime: A Unified Training-Inference Execution Environment}
+
+Hybrid Runtime is an integrated training-inference system designed for large-scale LLM reinforcement learning. It provides a high-performance, elastic, and scalable foundation by unifying efficient resource scheduling, linear scalability, comprehensive parallelism strategies, and a unified execution engine. The system is architected to support models of diverse architectures, scales, and training paradigms on large-scale clusters.
+
+To bridge the gap between dynamic training and real-time inference in reinforcement learning (RL), we introduce \textbf{AState}, a high-speed framework for synchronizing weights between training and inference. AState provides a unified weight management API that supports diverse model architectures, deployment topologies, and pipeline paradigms without requiring framework modifications. At its core, a zero-redundancy peer-to-peer transmission mechanism delivers only necessary weight shards, enabling in-place updates on inference engines to eliminate costly data copies. This is complemented by a hardware–software co-design that optimizes data movement through NUMA topology and CPU-GPU affinity awareness, alongside a multi-transport communication layer (integrating RDMA, NCCL, and shared memory) that dynamically selects the optimal protocol based on data size and hardware topology. Consequently, AState achieves sub-second parameter updates, ensuring inference rollouts use the latest model and maintaining the critical training-inference alignment essential for stable policy optimization.
+
+To enhance GPU memory efficiency, we introduce \textbf{AMem}, a memory and data transfer library optimized for RL workloads on GPU clusters. AMem enhances memory management efficiency through three key mechanisms: (1) Memory Switching, for the transparent release and resumption of training state, including NCCL communications and CUDA graphs; (2) Distributed Multi-path Transfer~\cite{shen2025flexlinkboostingnvlinkbandwidth}, which aggregates bandwidth across multiple channels; and (3) Unified Memory Pooling, for dynamic allocation across GPUs and nodes. By enabling larger batch sizes, reducing out-of-memory (OOM) errors, and accelerating system startup, AMem alleviates common bottlenecks in large-scale RL. The library is designed for transparency, requiring no model modifications and ensuring no impact on RL convergence, thereby providing robust infrastructure support for the Hybrid Runtime and AState components.
+
+\subsubsection{ASandbox: An On-Demand Serverless Sandbox Engine}
+ASandbox is a serverless sandbox engine for RL, providing rapid, isolated environments for tasks like code execution and terminal simulation. Integrated with Kubernetes and deployable as a standalone FaaS cluster, it executes RL tasks via function calls. It offers specialized sandboxes (e.g., math, code, STEM, terminal) supporting HTTP and MCP protocols. To ensure the consistent, stable feedback critical for RL training, it features: 1) Security: Kernel-level isolation via secure containers (runsc, kata); 2) Availability: Automatic node failure detection and isolation; 3) Speed: 100ms startup via image caching, cgroups, and fork; 4) Scalability: 5,000 QPS/200ms throughput via scheduling partitions.
+
+
+\subsubsection{AReaL: A High-Performance RL Algorithm Framework}
+ASystem is a unified, high-performance foundation for distributed reinforcement learning. Its reinforcement learning component, AReaL, is an open-source framework~\citep{fu2025areal} built to prioritize algorithm development by balancing ease of use with system flexibility. It offers both single-controller and SPMD interfaces through minimalist APIs and an extensible plugin mechanism, allowing researchers to focus on algorithmic innovation.
+
+AReaL is characterized by several key features as follows:
+
+\begin{itemize}
+    \item \textbf{Asynchronous Multi-Stage Pipeline:} A fully decoupled architecture that concurrently executes trajectory generation, reward computation, and training. This overlap eliminates rollout long-tail issues and maximizes hardware utilization.
+    \item \textbf{Efficient Data Management:} Intelligent data packing and sharding minimize padding and rebalancing overhead, reducing computational waste and training stalls.
+    \item \textbf{Fault Tolerance:} The system features automated error detection, retry, and recovery mechanisms to ensure stability amidst hardware and software failures.
+    \item \textbf{Massive Scalability:} By separating control and data planes, AReaL avoids the single-controller bottleneck, enabling seamless scaling across large clusters.
+\end{itemize}

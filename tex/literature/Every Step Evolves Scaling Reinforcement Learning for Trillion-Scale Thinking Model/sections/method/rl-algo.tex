@@ -1,0 +1,105 @@
+\begin{figure}
+    \centering
+    \includegraphics[width=0.96\linewidth]{figures/rl_overview_preview.pdf}
+    \caption{We integrate C3PO++ and IcePop into \model, which enhances both training efficiency and effectiveness of RL.}
+    \label{fig:rl_overview}
+\end{figure}
+
+\subsubsection{IcePop: Discard All Noisy Gradient Updates}
+Contemporary reinforcement learning training frameworks typically utilize distinct engines for model training and inference processes. Throughout our experiments, we have observed that this separation may lead to discrepancies in probability calculations, potentially introducing instability to RL training. This problem is particularly pronounced in the training of MoE models with RL due to the inherent usage of the dynamic routing mechanism. Additionally, in long CoT settings, these discrepancies can gradually accumulate across iterations and become further amplified.
+
+\begin{theorem}{(Compounding Probability Discrepancy)}\label{theo:prob_dis}
+Let $\pi_{\mathrm{infer}}(\cdot;\theta)$ and $\pi_{\mathrm{train}}(\cdot;\theta)$ be the policy model loaded by inference and training engines, and $\delta_t \;=\; D_{\mathrm{KL}}\!\big(\pi_{\mathrm{infer}}(\cdot;\theta_t)\,\|\,\pi_{\mathrm{train}}(\cdot;\theta_t)\big)$ be probability discrepancy at step $t$. 
+Under certain conditions and a step size $\mu>0$,
+there exist a constant $\eta>0$ such that $\delta_{t+1} \;\ge\; \big(1 + \tfrac{\eta}{2}\,\mu\big)\,\delta_t.$ 
+\end{theorem}
+
+To address this compounding mismatch issue in MoE RL, we propose \textbf{IcePop}, a variant of GRPO that suppresses unstable training updates through double-sided masking calibration. IcePop only calibrates gradients within the acceptable region and discards all noisy gradient updates beyond that boundary, effectively aligning $\pi_{\textcolor{blue}{\text{train}}}$ with $\pi_{\textcolor{teal}{\text{infer}}}$. This is achieved through two key techniques:
+\begin{itemize}
+    \item \textbf{Double-sided calibration}: We calibrate token-level gradients within a region defined by lower and upper limits, well preserving the alignments between training and inference probabilities.
+    \item \textbf{Masking}: We exclude tokens with excessive probability deviation from gradient computation, constraining gradient updates in a stable region.
+\end{itemize}
+Integrating these techniques yields the following objective function for IcePop:
+\begin{equation}
+\begin{aligned}
+\mathcal{J}_{{\text{IcePop}}}(\theta) &= \mathbb{E}_{x \sim \mathcal{D}, \{y_i\}_{i=1}^G \sim \pi_{\textcolor{teal}{\text{infer}}}(\cdot \mid x; \theta_{\rm old})} \left[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \Big[\mathcal{M}\Bigl(\frac{\pi_{\textcolor{blue}{\text{train}}}(y_{i,t} \mid x, y_{i,<t};\theta_{\text{old}})}{\pi_{\textcolor{teal}{\text{infer}}}(y_{i,t} \mid x, y_{i,<t}; \theta_{\mathrm{old}})}; \alpha, \beta\Bigr) \right. \\ &\left. \qquad \qquad \qquad \qquad \quad \qquad \cdot \min \left( r_{i,t}\widehat{A}_{i,t}, \text{clip} \left( r_{i,t}, 1 - \varepsilon, 1 + \varepsilon \right) \widehat{A}_{i,t} \right)  - \gamma D_{\text{KL}}(\pi_{\theta}\|\pi_{\text{ref}})\right]\Bigg], &
+\end{aligned}
+\end{equation}
+where $r_{i,t} = \frac{\pi_{\textcolor{blue}{\text{train}}}(y_{i,t} \mid x, y_{i,<t}; \ \theta)}{\pi_{\textcolor{blue}{\text{train}}}(y_{i,t} \mid x, y_{i,<t}; \ \theta_{\text{old}})}$, $\mathcal{M}(k)$ is the masking function defined as below:
+
+\begin{equation}
+\mathcal{M}(k) =\begin{cases} k & \text{if \ } k \in [\alpha, \beta], \\ 
+0 & \text{otherwise}\end{cases}
+\end{equation}
+where $\alpha$,  $\beta$ controls the lower and upper limits.
+Thus, the gradient of IcePop is
+\begin{equation}
+\label{eq:gradient_icepop}
+\nabla_\theta \mathcal{J}_{\text{IcePop}}(\theta) \sim \mathbb{E}_{a \sim \textcolor{teal}{\pi_{\text{infer}}}(\theta_{\text{old}})} \Bigg[\mathcal{M}\Bigg(\frac{\textcolor{blue}{\pi_{\text{train}}}(a;\theta_{\text{old}})}{\textcolor{teal}{\pi_{\text{infer}}}(a;\theta_{\text{old}})}\Bigg ) \cdot \nabla_\theta \log \textcolor{blue}{\pi_{\text{train}}}(a;\theta) \cdot \hat{A} \cdot r(a)\Bigg)\Bigg].
+\end{equation}
+For $\dfrac{\textcolor{blue}{\pi_{\text{train}}}(a;\theta_{\text{old}})}{\textcolor{teal}{\pi_{\text{infer}}}(a;\theta_{\text{old}})} < \alpha$ and $\dfrac{\textcolor{blue}{\pi_{\text{train}}}(a;\theta_{\text{old}})}{\textcolor{teal}{\pi_{\text{infer}}}(a;\theta_{\text{old}})} > \beta$, IcePop discards all noisy gradients outside the region that may introduce potential instability into the training process. A more detailed introduction of IcePop could refer to our blog~\footnote{https://ringtech.notion.site/icepop}.
+
+
+\subsubsection{C3PO++: Dynamically Partition Rollouts with Budget} 
+
+\begin{figure}[!hbt]
+    \centering
+    \includegraphics[width=0.9\linewidth]{figures/c3po++_overview.pdf}
+    \caption{C3PO++ improves reinforcement learning efficiency for large thinking models by maintaining a rollout buffer across policy model versions. Once the rollout in an iteration reaches the token budget, optimization is performed; unfinished rollouts are stored in the buffer and resumed by the updated policy in the next iteration.}
+    \label{fig:c3po++}
+\end{figure}
+
+We introduce C3PO++, an extension of C3PO~\citep{team2025ring} that incorporates a budget-controlled rollout partition mechanism. This approach dynamically partitions rollout generation to prevent idleness of computational resources caused by individual long rollouts. The system incorporates two modules: a high-throughput inference pool $P_\text{infer} $ with capacity $\Omega_{\text{infer}}$ for parallel generation, and a training pool $Q_\text{train}$ with capacity $\Omega_\text{train}$ for collecting completed trajectories. Similar to the idea of C3PO, we regulate the rollout generation with a \textit{token budget} ($\Phi$), which stabilizes the training updates and enables a highly efficient rollout process.
+
+The C3PO++ procedure is detailed in Algorithm \ref{algo:c3po++}. At iteration $t$, the inference engine $\pi_{\text{infer};\theta_t}$ populates the inference pool by generating rollouts in parallel, while tracking the cumulative number of generated tokens $C$ in real-time. When a rollout reaches a terminal state (i.e., $\texttt{[EOS]}$), it will be moved from $P_{\text{infer}}$ to the training pool $Q_{\text{train}}$ and counted towards the training tokens $C$. Inference proceeds until $C$ reaches the token budget $\Phi$. At this point, the training engine $\pi_{\text{train};\theta_t}$ updates the parameters with the completed trajectories in $Q_{\text{train}}$ regulated by the token budget, which may include samples resumed from earlier inference versions. We denote the number of partitions a sequence has undergone as the retention period. For each iteration, the retention period of unfinished rollouts will be automatically increased by 1. Before each iteration, rollouts whose retention period exceeds a threshold $\sigma$ are purged from $P_{\text{infer}}$. Meanwhile, new prompts may be sampled to refill $P_{\text{infer}}$ until it reaches capacity $\Omega_{\text{infer}}$. After the model parameters are updated to $\theta_{t+1}$, the inference engine $\pi_{\text{infer};\theta_{t+1}}$ initiates a new iteration of rollout generation, continuing the process for rollouts within the valid retention period and monitored by the token budget.
+
+
+\begin{algorithm}[!tbh]
+\caption{C3PO++}
+\label{algo:c3po++}
+\KwIn{
+initial parameters $\theta_0$; inference engine $\pi_{\text{infer};\theta}$; training engine $\pi_{\text{train};\theta}$;
+token budget $\Phi$;
+inference pool capacity $\Omega_{\text{infer}}$;
+retention threshold $\sigma$.
+}
+\KwOut{Sequence of parameter updates $\theta_0 \rightarrow \theta_1 \rightarrow \cdots$}
+\textbf{State:} Inference pool $P_{\text{infer}}$ (capacity $\Omega_{\text{infer}}$); training pool $Q_{\text{train}}$.
+\Begin{
+  $P_{\text{infer}} \gets \emptyset$; $Q_{\text{train}} \gets \emptyset$; $t \gets 0$ \;
+  \While{not converged}{
+    $C \gets 0$\;
+    \ForPar{$o \in P_{\text{infer}}$}{
+        \If{$\text{retention}(o, \sigma)$}{
+          $P_{\text{infer}} \gets P_{\text{infer}} \backslash \{o\}$  \tcp*{remove overextended rollouts from inference pool}
+        }
+      }
+    \While{$(C < \Phi)$}{
+      \If{$|P_{\text{infer}}| < \Omega_{\text{infer}}$}{
+        $P_{\text{infer}} \gets P_{\text{infer}} \cup \text{sample\_prompt}()$ \tcp*{maintain a full inference pool}
+      }
+      \ForPar{$o \in P_{\text{infer}}$}{
+        $o \gets \pi_{\text{infer};\theta_t}(o)$ \tcp*{generate the next token for rollouts in parallel}
+        \If{$\text{terminal}(o)$}{
+          $C \gets C + |o|$ \tcp*{cumulate token amount}
+          $Q_{\text{train}} \gets Q_{\text{train}} \cup \{o\}$ \tcp*{save completed rollouts for training}
+          $P_{\text{infer}} \gets P_{\text{infer}} \backslash \{o\}$  \tcp*{remove completed rollouts from inference}
+        }
+      }
+    }
+    $\theta_{t+1} \gets \text{Update}(\theta_t, Q_{\text{train}})$ \;
+    $Q_{\text{train}} \gets \emptyset$ \;
+    $t \gets t + 1$ \;
+  }
+  \Return{$\theta_t$}
+}
+\end{algorithm}
+
+
+
+
+\subsubsection{Training Recipe}
+\label{subsec:rl-train}
+All policy optimization was conducted using the ASystem framework. We employ the AdamW optimizer with hyperparameters $\beta_1$ = 0.9, $\beta_2$ = 0.999, weight decay of $0.01$, and with the MoE router bias held fixed. 
+\textbf{For the reasoning RL stage}, we implemented the proposed IcePop ($\alpha=0.5$, $\beta=5$) and C3PO++ algorithms. The training configuration used a learning rate of $2 \times 10^{-6}$, a KL coefficient of $0.0$, and a sampling temperature of $1.0$. Each training step utilized 480 unique prompts, with 8 rollouts sampled per prompt and a maximum length of 65,536 tokens. 
+\textbf{For the general RL stage}, we utilized GRPO with a learning rate of $3 \times 10^{-6}$, a KL coefficient of $0.0$, and a sampling temperature of $1.0$. Each step in this stage consisted of 80 unique questions with 8 outputs each, and a maximum length of 32,768 tokens.

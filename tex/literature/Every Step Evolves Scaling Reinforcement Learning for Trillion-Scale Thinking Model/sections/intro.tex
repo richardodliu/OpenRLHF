@@ -1,0 +1,26 @@
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.99\textwidth]{figures/main_results.pdf}
+\caption{Performance comparison of \model{} and existing open-weights and close-weights$^{\dagger}$ models across benchmarks.}
+\label{fig:ring-lite-performance}
+\end{figure*}
+
+\section{Introduction}
+\label{sec:intro}
+
+Artificial intelligence is undergoing a pivotal transition: Large Language Models (LLMs) are advancing beyond static corpora of human knowledge, becoming dynamic processors that transform information into actionable insights and understanding~\citep{kimiteam2025kimik2openagentic,deepseekai2025deepseekr1}. This progression towards more general intelligence is empirically validated by their core capability – complex, adaptive problem-solving. 
+Recent breakthroughs in solving high-difficulty human competition problems provide concrete evidence of significantly advanced reasoning abilities in large language models. For instance, models~\citep{gpt5, qwen3max} have achieved 100\% accuracy on the AIME-2025~\citep{aime} and HMMT-2025~\footnote{https://www.hmmt.org/www/archive/problems}, and reached medal-level performance at the International Mathematical Olympiad (IMO)~\citep{gpt5}—a hallmark of sophisticated human intellect. This evolution beyond static knowledge repositories is driven by training on trillions of tokens across diverse domains, coupled with reinforcement learning-optimized reasoning techniques~\citep{openai2024openaio1card, deepseekai2025deepseekr1} that enable models to dynamically scale their capabilities with thinking effort, pointing toward higher levels of general intelligence.
+
+While related work~\citep{deepseekai2025deepseekr1,glm46} has made valuable contributions to the open-source community, the frontier of trillion-parameter thinking models remains uncharted territory. Scaling to this level introduces formidable challenges, such as severe training instability and prohibitive computational costs. In this work, we introduce \model{}, a novel Mixture-of-Experts (MoE) thinking model scaled to unprecedented size—and demonstrate breakthrough methodologies for efficient trillion-parameter training. By solving fundamental stability and efficiency challenges at this scale, we enable robust large-scale reasoning training while providing extensive implementation insights.
+
+
+Our \model{}, the first open-source reasoning model with one trillion total parameters, is built upon the Ling 2.0~\citep{lingv2} architecture and trained from the Ling-1T-base. 
+With approximately 50 billion activated parameters per token, \model{} achieves state-of-the-art performance across multiple challenging benchmarks—despite relying solely on natural language reasoning capabilities. It significantly outperforms existing open-source models, achieving scores of 93.4 on AIME-2025, 86.72 on HMMT-2025, 2088 on CodeForces, and 55.94 on ARC-AGI-v1. Remarkably, in the IMO-2025 evaluation within AWorld~\footnote{https://github.com/inclusionAI/AWorld}, \model{} achieved a silver medal-level result by correctly solving four problems and partially proving Problem 2, all within a single submission, and without relying on code generation or external symbolic solvers.
+Realizing this breakthrough required addressing fundamental challenges in trillion-scale RL training. We pioneered three interconnected innovations:
+\begin{itemize}
+    \item \textbf{IcePop} eliminates catastrophic training-inference misalignment in RL training by clipping excessive-discrepancy tokens. This selective correction pops out unstable contributions while preserving efficient updates, thereby stabilizing training without slowing inference.
+    \item \textbf{C3PO++} introduces a budget-controlled rollout scheduling mechanism that eliminates rollout-stage bottlenecks. Thus, it avoids inefficient single-pass processing of oversized sequences, reducing computational overhead while enabling their efficient reuse through batched continuation.
+    \item \textbf{ASystem} is a high-performance reinforcement learning (RL) framework designed for large-scale asynchronous training. It adopts a SingleController + SPMD (Single Program, Multiple Data) to enable fully asynchronous operations, multi-phase masking acceleration, and efficient data packing/sharding. 
+\end{itemize}
+
+The structure of this paper is organized as follows: Section~\ref{sec:method} describes our comprehensive training methodology, which includes Long Chain-of-Thought Supervised Fine-Tuning (Long-CoT SFT) and large-scale reinforcement learning (RL), including our key algorithmic contributions, IcePop and C3PO++, as well as the underlying training framework, Asystem. Finally, Section~\ref{sec:eval} presents a thorough evaluation of our model's performance against leading open-weights and closed-weights models on established benchmarks.

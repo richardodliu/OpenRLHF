@@ -1,0 +1,357 @@
+\section{Related Work}
+\subsection{Stable Reinforcement Learning} 
+To accelerate the training process of reinforcement learning on large-scale language models, current RL frameworks employ different backend implementations for training and inference stages. However, such heterogeneity inevitably introduces unaligned calculations of token probability, which consequently brings instability issues to the training process. To solve this problem, GSPO~\citep{zheng2025gspo} previously employed a routing replay training strategy, which cached the activated experts in the old policy model with parameter $\ \theta_{\text{old}}$ in advance and replayed these routing modes in the current policy model when computing the importance ratios. However, the routing replay strategy will increase both computation and memory overhead to the RL framework. Rather, they proposed an algorithm-level solution, which defines a sequence-level importance ratio and performs clipping on that, avoiding training crashes caused by high-variance gradients. In comparison to GSPO, the techniques employed by IcePop are independent of sequence-level optimization, suggesting that they can be incorporated into ongoing research efforts. TIS~\citep{yao2025offpolicy} also addresses the probability discrepancy problem that exists between the training and inference stages. They proposed using importance sampling correction to address the divergence and demonstrated promising results. Different from our work, for gradients exhibiting significant divergence, \textit{i.e.}, tokens outside our masking range, TIS opts to keep updating those tokens by applying a moderating coefficient to their gradients. Empirically, we find that as training progresses, these minor disturbances can gradually amplify and ultimately lead to a plateau in benchmark performance.
+
+\subsection{Efficient Reinforcement Learning}
+For reasoning models that generate long sequences, the rollout phase often consumes a large percentage of training resources and time. To improve the training efficiency, TPPO~\citep{fan2025tppo} extends PPO by implementing a truncated rollout strategy and eliminating biased estimation from incomplete trajectories. Prior work~\citep{fu2025areal} incorporates a high-efficiency generation management suitable for an asynchronous RL system with interruptible rollout workers. 
+In contrast to the existing works addressing low utilization of computing resources at the inference stage, C3PO++ stands out by applying a dynamic cutoff to rollout generation based on a token budget, balancing the stabilization of training updates with improved inference efficiency. Meanwhile, it supports high-throughput inference procedures in parallel, maximizing compute utilization and alleviating the rollout bottleneck during training. Our empirical analysis shows that the design of C3PO++ improves inference efficiency without sacrificing training performance, providing a solid foundation for integrating advanced training algorithms.
+
+\subsection{Reinforcement Learning Infrastructure}
+Training large-scale reinforcement learning models, particularly at the trillion-parameter level, imposes extraordinary demands on the underlying infrastructure. Below, we review how existing systems address the following three primary challenges and highlight their limitations, which collectively motivated the design of ASystem.
+
+\begin{itemize}
+\item \textbf{Memory Efficiency:} Managing the massive GPU memory footprint of model states, activations, and experience data throughout the training cycle without introducing significant overhead remains an open problem. Popular training and inference frameworks—including vLLM~\citep{kwon2023efficient}, SGLang~\citep{zheng2024sglangefficientexecutionstructured}, Megatron-LM~\cite{shoeybi2020megatronlmtrainingmultibillionparameter}, and RL-specific systems such as VeRL~\citep{sheng2024hybridflow} and OpenRLHF~\citep{hu2025openrlhfeasytousescalablehighperformance}—typically retain model states and communication groups in GPU memory throughout execution, leading to static and inefficient memory usage. The NVIDIA Collective Communication Library (NCCL) does not natively support live memory offloading. Although it provides plugin interfaces, a general and efficient solution remains absent. A recent effort, Slime~\citep{slime_github}, proposes destroying and re-creating NCCL communication groups to free memory, but the subsequent re-initialization overhead is prohibitive at scale, often consuming several minutes and severely disrupting training stability.
+
+\item \textbf{State Synchronization:} Efficiently and reliably propagating model weights across distributed training and rollout workers is essential for policy consistency. Early RL frameworks such as OpenRLHF~\citep{hu2025openrlhfeasytousescalablehighperformance} relied on distributed file systems (e.g., NFS) for checkpoint sharing, suffering from limited bandwidth and throughput with synchronization latencies of tens of minutes. More recent systems, including VeRL~\citep{sheng2024hybridflow} and the checkpoint-engine~\citep{kimi_engine}, have shifted toward using NCCL for direct peer-to-peer weight synchronization. While this reduces dependency on shared storage, the approach still suffers from redundant data movement and poor performance in handling numerous small tensors, keeping end-to-end synchronization in the minute range.
+
+\item \textbf{System Orchestration \& Reproducibility:} Providing a flexible, stable, and deterministic execution environment is crucial for rapid iteration. Existing frameworks like OpenRLHF and VERL are typically architected with tight coupling between components, making backend integration costly and slow. Furthermore, rollout behavior in these systems remains inherently non-deterministic due to fluctuating batch sizes and the non-associative nature of floating-point arithmetic across distributed workers~\citep{he2025nondeterminism}. The absence of systematic support for deterministic execution and metric alignment complicates reliable ablation studies and hinders root-cause analysis when reward improvement stagnates.
+
+\end{itemize}
+
+
+In contrast to the limitations above, ASystem is designed from the ground up to holistically address these core infrastructure challenges. Our \textbf{AMem} component enables efficient live memory offloading without the excessive re-initialization overhead seen in approaches like Slime~\citep{slime_github}. The \textbf{AState} system overcomes the inefficiencies of existing synchronization methods through a zero-redundancy P2P transmission mechanism and a hardware-aware multi-transport communication layer, supporting sub-second weight synchronization and in-place updates. Finally, the \textbf{Hybrid Runtime} offers a unified, RL-specific API that abstracts away backend complexities in networking, memory management, and weight exchange. Crucially, it incorporates a comprehensive precision alignment mechanism—comprising Tracker, Analyzer, and Replayer modules—to ensure end-to-end reproducibility and deterministic execution. Together, these components allow ASystem to deliver the stability, efficiency, and developer agility necessary for training massive models such as our \model{}.
+
+
+
+\section{Theoretical Analysis for IcePop}\label{app:anlaysis_icepop}
+
+\begin{theorem}[Compounding probability discrepancy]\label{thm:prob_dis_full}
+Let $\pi_{\mathrm{infer}}(\cdot;\theta)$ and $\pi_{\mathrm{train}}(\cdot;\theta)$ be the policy model loaded by inference and training engines, and denote the probability discrepancy as
+\[
+\delta(\theta)\;=\;D_{\mathrm{KL}}\!\big(\pi_{\mathrm{infer}}(\cdot;\theta)\,\|\,\pi_{\mathrm{train}}(\cdot;\theta)\big), 
+\qquad
+\delta_t:=\delta(\theta_t).
+\]
+Consider the update with a step size of $\mu$ 
+\[
+\theta_{t+1}=\theta_t+\mu\,g_t,\qquad 
+g_t \;=\; \mathbb{E}_{a\sim \pi_{\mathrm{infer}}(\cdot;\theta_t)}\!\big[A(a)\,\nabla_\theta\log\pi_{\mathrm{train}}(a;\theta_t)\big],
+\]
+and write $g_t=g_t^\star+b_t$ with
+\[
+g_t^\star \;=\; \mathbb{E}_{a\sim \pi_{\mathrm{train}}(\cdot;\theta_t)}\!\big[A(a)\,\nabla_\theta\log\pi_{\mathrm{train}}(a;\theta_t)\big],\qquad
+b_t:=g_t-g_t^\star .
+\]
+
+Assume there exists a neighborhood that contains the iterates $\{\theta_t\}$ where
+
+\smallskip
+\noindent{(A1) $L$-smoothness.} $\delta$ is differentiable with $L$-Lipschitz gradient, i.e.
+\[
+\big|\,\delta(\theta+\Delta)-\delta(\theta)-\langle\nabla \delta(\theta),\Delta\rangle\,\big|
+\;\le\; \tfrac{L}{2}\,\|\Delta\|^2.
+\]
+
+\noindent{(A2) Bias alignment.} There is $c>0$ such that
+\[
+\big\langle \nabla \delta(\theta_t),\, b_t \big\rangle \;\ge\; c\,\delta_t .
+\]
+
+\noindent{(A3) Bounded on-policy drift.} There is $M\ge 0$ such that
+\[
+\big|\big\langle \nabla \delta(\theta_t),\, g_t^\star \big\rangle\big| \;\le\; M .
+\]
+
+\noindent{(A4) Local gradient bound.} There is $G\ge 0$ such that $\|g_t\|\le G$.
+
+\smallskip
+Then for any stepsize $\mu\in(0,\bar\mu]$ (with $\bar\mu$ chosen so that (A1)–(A4) hold throughout the trajectory), there exist constants
+\[
+\eta:=c>0, 
+\qquad 
+\kappa:=M+\tfrac{L}{2}\,\bar\mu\,G^2\;\ge 0,
+\]
+such that
+\[
+\delta_{t+1}\;\ge\; \big(1+\eta\,\mu\big)\,\delta_t \;-\; \kappa\,\mu .
+\]
+Consequently, if $\delta_t \,\ge\, \delta_c:=\tfrac{2\kappa}{\eta}$, then
+\[
+\delta_{t+1}\;\ge\;\big(1+\tfrac{\eta}{2}\,\mu\big)\,\delta_t .
+\]
+\end{theorem}
+
+\begin{proof}
+By (A1) with $\Delta=\mu g_t$,
+\[
+\delta_{t+1}
+= \delta(\theta_t+\mu g_t)
+\;\ge\; \delta_t + \mu \big\langle \nabla \delta(\theta_t), g_t \big\rangle - \tfrac{L}{2}\mu^2\|g_t\|^2.
+\]
+Decompose $g_t=g_t^\star+b_t$ and apply (A2)–(A3):
+\[
+\big\langle \nabla \delta(\theta_t), g_t \big\rangle
+= \big\langle \nabla \delta(\theta_t), g_t^\star \big\rangle
+  + \big\langle \nabla \delta(\theta_t), b_t \big\rangle
+\;\ge\; -M + c\,\delta_t .
+\]
+Use (A4) to bound the quadratic term:
+\[
+-\tfrac{L}{2}\mu^2\|g_t\|^2 \;\ge\; -\tfrac{L}{2}\mu^2 G^2 \;\ge\; -\tfrac{L}{2}\bar\mu\,\mu\,G^2 .
+\]
+Combine the inequalities to obtain
+\[
+\delta_{t+1}
+\;\ge\; \delta_t + \mu\,(c\,\delta_t - M) - \tfrac{L}{2}\bar\mu\,\mu\,G^2
+\;=\; (1+\eta\mu)\,\delta_t \;-\; \big(M+\tfrac{L}{2}\bar\mu G^2\big)\mu .
+\]
+Setting $\eta:=c$ and $\kappa:=M+\tfrac{L}{2}\bar\mu G^2$ gives the first claim:
+\[
+\delta_{t+1}\;\ge\;(1+\eta\mu)\,\delta_t - \kappa\,\mu .
+\]
+
+For the compounding form, rewrite
+\[
+(1+\eta\mu)\,\delta_t - \kappa\mu
+\;=\; \Big(1+\tfrac{\eta}{2}\mu\Big)\delta_t \;+\; \Big(\tfrac{\eta}{2}\delta_t - \kappa\Big)\mu .
+\]
+Hence, if $\delta_t \ge 2\kappa/\eta$, the last term is nonnegative and
+\[
+\delta_{t+1}\;\ge\;\Big(1+\tfrac{\eta}{2}\mu\Big)\delta_t .
+\]
+\end{proof}
+
+
+\section{Preliminary Analysis for IcePop on Ring-mini-2.0}
+We also analyze IcePop in terms of the probability discrepancy between training and inference engines, training stability, exploration ability, and ill-conditioned tokens.
+\paragraph{Training Stability.} We believe that a stable training process serves as a solid foundation and sufficient space to showcase the power of reinforcement learning. It is worth noting that both IcePop and TIS mitigate the instability of RL training within 600 gradient steps (see Figure \ref{fig:training_stability}), avoiding rapid training crashes occurring in the baseline setting. 
+
+\begin{figure}[!hbt]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/icepop_tis_baseline_reward.pdf}
+\end{subfigure}
+\hspace{2mm}
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/icepop_tis_baseline_grad_norm.pdf}
+\end{subfigure}
+\caption{(Left) Training reward. The reward of baseline collapses after 180–200 steps. Both IcePop and TIS maintain stable growth. (Right) Gradient norm. Baseline explodes, IcePop and TIS remain stable.}
+\label{fig:training_stability}
+\end{figure}
+
+\paragraph{Probability Discrepancy.} Without addressing the mismatch issues, the probability difference grows rapidly, as shown in the baseline setting. In contrast, both TIS and IcePop keep the KL divergence of training-inference probability within a reasonable range. Although the maximum probability difference rises for all three methods as training proceeds, the discrepancy of IcePop remains relatively low and even decreases within 400 steps (see the left in Figure \ref{fig:icepop-logp}). We also notice that TIS consistently shows larger extreme discrepancies and faster growth than ours, probably due to including the noisy policy updates during training.
+
+\paragraph{Exploration Space.} In the right of Figure \ref{fig:icepop-logp}, we observed that the log probabilities of IcePop consistently maintain relatively lower values than those of TIS, which implicitly indicates that our method avoids overconfident predictions, thus ensuring a larger scope for exploring space, where low-probability tokens are more likely to be chosen, eventually increasing the diversity of responses.
+    
+\begin{figure}[!htb]
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/icepop_tis_logp_diff_max.pdf}
+  \end{subfigure}
+  \hspace{2mm}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+\includegraphics[width=\textwidth]{figures/RL/icepop_tis_baseline_logp.pdf}
+  \end{subfigure}
+  \caption{(Left) The maximum of probability discrepancy. (Right) The log probability of tokens. Baseline increases rapidly and drops to the bottom, while IcePop is relatively steady.}
+\label{fig:icepop-logp}
+\end{figure}
+    
+\paragraph{Ill-conditioned Tokens.} In our experiments, we found that the clipping ratio from our masking mechanism stays around 1–2‰ of training tokens (see Figure \ref{fig:ill_conditioned_tokens}). As training progresses, the clipping ratio rises sharply, suggesting that increasingly subtle but harmful gradient updates occur and necessitate a higher clipping ratio. We also conducted a detailed analysis of the clipped tokens. The following right figure shows that, compared to all tokens, clipped tokens have higher entropy, indicating that the clipped tokens play an important role in training.
+
+\begin{figure}[!hbt]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/icepop_clip_token.pdf}
+\end{subfigure}
+\hspace{2mm}
+\begin{subfigure}[b]{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/clip_token.pdf}
+\end{subfigure}
+\caption{(Left) Clipping ratio. IcePop maintains ~1–2‰  of tokens clipped in our default setting. (Right) The comparisons of token entropy between all tokens and clipped tokens. Compared to all tokens, clipped tokens show a higher proportion of high-entropy tokens.}
+\label{fig:ill_conditioned_tokens}
+\end{figure}
+
+\paragraph{Sensitivity Analysis.} We compare how different masking ranges for the calibration ratio affect training. Specifically, we experiment with three masking ranges: (1) $\alpha=0.5, \beta=5.0$ (default range), (2) $\alpha=0.5, \beta=2.0$ (narrow range), and (3) $\alpha=0.4, \beta=5.0$ (wider range). As shown in Figure \ref{fig:ablation_study},
+\begin{enumerate}
+    \item The default masking range $[0.5, 5.0]$ not only stabilizes training but also enriches sampling diversity.
+    \item The narrow masking range $[0.5, 2.0]$ immediately destabilizes training, as shown in the volatility of gradient norm and the sharp increase in probability discrepancy.
+    \item The wide masking range $[0.4, 5.0]$ still stabilizes training, yet includes tokens with higher log probability compared to the default setting.
+\end{enumerate}
+
+\begin{figure}[!hbt]
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/clip_range_grad_norm.pdf}
+  \end{subfigure}
+  \hspace{2mm}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+\includegraphics[width=\textwidth]{figures/RL/clip_range_logp_diff.pdf}
+  \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/clip_range_logp.pdf}
+  \end{subfigure}
+  \hspace{2mm}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+\includegraphics[width=\textwidth]{figures/RL/clip_range_token.pdf}
+  \end{subfigure}
+  \caption{The training dynamics under different masking ranges.}
+\label{fig:ablation_study}
+\end{figure}
+
+
+\section{Training Data Analysis}
+
+This section analyzes the composition of our SFT and RL datasets. We first present the domain distribution of the SFT data in Figure~\ref{fig:sft_data_dist}, illustrating its diversity, which underpins the model's broad knowledge base. Subsequently, Figure~\ref{fig:rl_data_dist} details the complexity distribution of the RL data.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.8\linewidth]{figures/sft_distribution.pdf}
+    \caption{The domain distribution of SFT Data.}
+    \label{fig:sft_data_dist}
+\end{figure}
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=1\linewidth]{figures/rl_distribution.pdf}
+    \caption{The difficulty distribution of RL Data.}
+    \label{fig:rl_data_dist}
+\end{figure}
+
+
+
+\section{IMO Case}
+\label{sec:imo}
+As established in the main paper, our proposed model \model{} achieved a silver-medal performance at IMO 2025. The detail IMO 2025 Results from \model{} could refer to the AWorld~\footnote{\url{https://github.com/inclusionAI/AWorld/tree/main/examples/imo/samples/samples\%20from\%20Ring-1T}}. Below, we present a detailed solution from \model{} to the competition's first problem:
+
+\paragraph{Question:} A line in the plane is called sunny if it is not parallel to any of the $x$–axis, the $y$–axis, or the line $x + y = 0$. Let $n \geq 3$ be a given integer. Determine all nonnegative integers $k$ such that there exist n distinct lines in the plane satisfying both of the following: 1. for all positive integers $a$ and $b$ with $a + b \leq n + 1$, the point $(a, b)$ lies on at least one of the lines; and 2. exactly $k$ of the $n$ lines are sunny.
+
+\paragraph{Solution:} Generated by \model{}: 
+
+\begin{tcolorbox}[
+    width=0.85\linewidth,
+    center,
+    breakable,
+    colback=white,
+    colframe=black,
+    boxrule=1pt,
+    arc=4pt,
+    fontupper=\scriptsize,
+]
+\section*{Summary}
+
+\subsection*{a. Verdict}
+I have found a complete solution. The nonnegative integers $k$ satisfying the conditions are precisely $k = 0$, $k = 1$, and $k = 3$. All other values of $k$ (i.e., even integers $k \geq 2$, odd integers $k \geq 5$, and $k > n$) are impossible.
+
+\subsection*{b. Method Sketch}
+The problem requires covering all points $(a, b) \in \mathbb{Z}^+ \times \mathbb{Z}^+$ with $a + b \leq n + 1$ using exactly $n$ distinct lines, where exactly $k$ are ``sunny'' (not parallel to the $x$-axis, $y$-axis, or $x + y = 0$).
+
+\begin{itemize}
+    \item \textbf{Key Observations:}
+    \begin{itemize}
+        \item The set of required points forms a triangular grid $P_n$ with $T(n) = \frac{n(n+1)}{2}$ points.
+        \item Non-sunny lines fall into three categories: horizontal ($y = c$), vertical ($x = d$), and diagonal ($x + y = e$).
+        \item A sunny line can cover at most $\left\lfloor \frac{k+1}{2} \right\rfloor$ points from any subset isomorphic to $P_k$, due to geometric constraints on collinearity in the grid.
+    \end{itemize}
+    
+    \item \textbf{Critical Results:}
+    \begin{itemize}
+        \item \textbf{Even $k \geq 2$:} The minimum number of uncovered points $U(k) = \frac{k(k+1)}{2}$ exceeds the maximum coverage $k \cdot \frac{k}{2}$ by $k$ sunny lines, making it impossible.
+        \item \textbf{Odd $k \geq 5$:} For $k = 2t - 1$ with $t \geq 3$, the minimal uncovered set $P_k$ has $t(2t - 1)$ points. While $k$ sunny lines could theoretically cover this if each had $t$ points, only 3 disjoint $t$-point sunny lines exist in $P_k$, leaving $2t(t - 2)$ points that cannot be covered by the remaining $2t - 4$ lines (as $2t(t - 2) > (2t - 4)(t - 1)$ for $t \geq 3$).
+        \item \textbf{$k = 0, 1, 3$:} Explicit constructions show these are always possible:
+        \begin{itemize}
+            \item $k = 0$: Use $n$ diagonal lines $x + y = 2, \dots, n + 1$.
+            \item $k = 1$: Use $n - 1$ horizontal lines and one sunny line through the single uncovered point.
+            \item $k = 3$: Use $n - 3$ horizontal lines to leave a subgrid isomorphic to $P_3$, which can be partitioned into 3 sunny lines.
+        \end{itemize}
+    \end{itemize}
+    
+    \item \textbf{Construction Strategy:}
+    \begin{itemize}
+        \item For $k = 3$, the uncovered subgrid $P_3$ is covered by three specific sunny lines with slopes $1$, $-2$, and $-\frac{1}{2}$, verified explicitly for $P_3$ and generalized via coordinate transformation for larger $n$.
+    \end{itemize}
+\end{itemize}
+
+\section*{Detailed Solution}
+
+\subsection*{Step 1: Understanding the Point Set}
+Let $N = n + 1$. The set of required points is:
+\[
+P_n = \{(a, b) \in \mathbb{Z}^+ \times \mathbb{Z}^+ : a + b \leq N\}.
+\]
+This set has $T(n) = \frac{n(n+1)}{2}$ points. Each point lies on one horizontal line ($y = b$), one vertical line ($x = a$), and one diagonal line ($x + y = s$).
+
+\subsection*{Step 2: Maximum Coverage by Non-Sunny Lines}
+Define $M(m, n)$ as the maximum number of points in $P_n$ covered by $m$ non-sunny lines. It is known that:
+\[
+M(m, n) = \frac{m(2n - m + 1)}{2},
+\]
+achieved by selecting the largest $m$ non-sunny lines (e.g., top $m$ rows). If $m = n - k$ non-sunny lines are used, the minimum number of uncovered points is:
+\[
+U(k) = T(n) - M(n - k, n) = \frac{k(k+1)}{2}.
+\]
+These $U(k)$ points must be covered by $k$ sunny lines.
+
+\subsection*{Step 3: Impossibility for Even $k \geq 2$}
+For even $k \geq 2$, $U(k) = \frac{k(k+1)}{2}$. Any sunny line can cover at most $\left\lfloor \frac{k+1}{2} \right\rfloor = \frac{k}{2}$ points from a set isomorphic to $P_k$. Thus, $k$ sunny lines cover at most:
+\[
+k \cdot \frac{k}{2} = \frac{k^2}{2} < \frac{k(k+1)}{2} = U(k).
+\]
+Hence, \textbf{no configuration exists} for even $k \geq 2$.
+
+\subsection*{Step 4: Impossibility for Odd $k \geq 5$}
+Let $k = 2t - 1$ with $t \geq 3$. Then $U(k) = t(2t - 1)$. The maximum number of points per sunny line in $P_k$ is $t$, but only 3 disjoint $t$-point sunny lines exist in $P_k$ (e.g., slopes $1$, $-2$, $-\frac{1}{2}$), covering $3t$ points. The remaining points are:
+\[
+t(2t - 1) - 3t = 2t(t - 2).
+\]
+With $k - 3 = 2t - 4$ lines left, each can cover at most $t - 1$ points, yielding maximum coverage:
+\[
+(2t - 4)(t - 1) = 2t^2 - 6t + 4.
+\]
+Since $2t(t - 2) = 2t^2 - 4t > 2t^2 - 6t + 4$ for $t \geq 3$, the remaining points cannot be covered. Thus, \textbf{no configuration exists} for odd $k \geq 5$.
+
+\subsection*{Step 5: Possibility for $k = 0$}
+Use the $n$ lines $x + y = 2, 3, \dots, n + 1$. These are all non-sunny (slope $-1$) and partition $P_n$, covering all $T(n)$ points. Hence, $k = 0$ is valid.
+
+\subsection*{Step 6: Possibility for $k = 1$}
+Use $n - 1$ horizontal lines $y = 1, 2, \dots, n - 1$, covering all points with $b \leq n - 1$. The only uncovered point is $(1, n)$ (since $a + n \leq n + 1 \implies a = 1$). Cover $(1, n)$ with a sunny line, e.g., $y = x + (n - 1)$ (slope $1$, sunny). This line is distinct from the horizontal lines, so all $n$ lines are distinct and exactly $k = 1$ is sunny.
+
+\subsection*{Step 7: Possibility for $k = 3$}
+Use $m = n - 3$ horizontal lines $y = 1, 2, \dots, m$, covering all points with $b \leq m$. The uncovered points satisfy $b \geq m + 1$, $a \geq 1$, $a + b \leq N$. Substituting $b' = b - m$, this becomes $a + b' \leq 4$, forming a subgrid isomorphic to $P_3$ with 6 points:
+\[
+(1,1), (1,2), (1,3), (2,1), (2,2), (3,1).
+\]
+Cover $P_3$ with three sunny lines:
+\begin{itemize}
+    \item $L_1$: $(1,1), (2,2)$ (slope $1$),
+    \item $L_2$: $(1,2), (3,1)$ (slope $-\frac{1}{2}$),
+    \item $L_3$: $(1,3), (2,1)$ (slope $-2$).
+\end{itemize}
+These lines are sunny (slopes not $0, \infty, -1$) and disjoint, covering all 6 points. Transforming back to original coordinates ($b = b' + m$), the lines remain distinct and sunny. Combined with the $m$ non-sunny horizontal lines, this gives $n$ distinct lines with exactly $k = 3$ sunny lines.
+
+\subsection*{Step 8: Completeness of Characterization}
+\begin{itemize}
+    \item $k = 0$: Always possible via diagonal lines.
+    \item $k = 1$: Always possible via $n - 1$ horizontal lines and one sunny line.
+    \item $k = 3$: Always possible for $n \geq 3$ via the above construction.
+    \item Even $k \geq 2$: Impossible due to coverage deficit.
+    \item Odd $k \geq 5$: Impossible due to geometric constraints on $P_k$.
+    \item $k > n$: Impossible since there are only $n$ lines.
+\end{itemize}
+No other values of $k$ are feasible.
+
+\section*{Final Answer}
+All nonnegative integers $k$ satisfying the conditions are $k = 0$, $k = 1$, and $k = 3$. Thus, the solution is:
+\[
+\boxed{k = 0,\ 1,\ 3}
+\]
+\end{tcolorbox}

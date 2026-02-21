@@ -1,0 +1,10 @@
+\subsection{Long-CoT SFT}
+\label{sec:sft}
+
+In this stage, we aim to endow the base model with fundamental long-chain reasoning abilities through Long Chain-of-Thought Supervised Fine-Tuning (Long-CoT SFT). This process serves as the foundation for subsequent reinforcement learning, equipping it with the capability to sustain coherent, multi-step thinking processes for complex problems.
+
+\paragraph{Data Collection} A comprehensive, high-quality dataset featuring Long-CoT reasoning patterns was constructed to effectively activate the base model’s reasoning capability. The query pool originates from a tripartite sourcing strategy: open-source repositories, expert manual generation, and LLM-based synthesis. 
+Following data collection, rigorous data-cleansing protocols were applied. 
+To ensure the resulting dataset's quality, we designed a rigorous data processing pipeline comprising four sequential steps: 1) Deduplication, where we employed exact matching to remove repetitive samples; 2) Harmful Content Filtering, where data samples containing toxic or harmful information were identified and purged; 3) Data Decontamination, where we utilized both hashing and exact string matching techniques to detect and eliminate any samples that overlap with existing benchmarks; and 4) Low-Quality Sample Filtering, which removeed various noise sources including invisible control codes and extraneous Unicode characters. The final data is predominantly composed of four domains: Mathematics (46\%), STEM (26\%), Code (20\%), and Others (8\%).
+
+\paragraph{Training} We conduct Long-CoT SFT on our Ling-1T-base model~\citep{lingv2} to obtain a model with preliminary thinking capabilities. The training data are packed into 64k-length sequences. For this stage, the model was trained for 3 epochs with a learning rate of $2 \times 10^{-4}$. We employed a cosine decay scheduler with 30 warmup steps and applied a weight decay of 0.1 throughout the process.

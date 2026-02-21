@@ -1,0 +1,82 @@
+\subsection{Experiments and Analysis}
+\label{subsec:rl-exp}
+This section presents experiments to validate the effectiveness of our proposed methods: IcePop, which ensures stable policy optimization, and C3PO++, which enables efficient rollout generation.
+\subsubsection{IcePop}\label{subsec:rl-exp-icepop}
+
+\paragraph{Setup} To evaluate the effectiveness of IcePop, we conduct preliminary experiments on the Ring-mini-2.0\footnote{\href{https://huggingface.co/inclusionAI/Ring-mini-2.0}{https://huggingface.co/inclusionAI/Ring-mini-2.0}} model, which is a MoE model with 16.8B total parameters and 0.75B activated parameters. We compare three settings: (1) IcePop with $\alpha=0.5, \beta=5$, (2) TIS~\citep{yao2025offpolicy} with the officially recommended setting, which mitigates the training-inference mismatch issue with importance-sampling correction, and (3) Vanilla GRPO without the KL-term. For fair comparison, we use the same training dataset for all models.
+
+\paragraph{Preliminary results on Ring-mini-2.0.} As shown in Figure \ref{fig:icepop_aime25}, we can see that IcePop consistently outperforms TIS on the challenging benchmark AIME25, with a large gain along the training process, and finally improves the base score (63\%) by over 14\%, and expands the performance gap with TIS by relative 6\%.
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figures/RL/AIME25.pdf}
+    \caption{The performance comparison on AIME25 (Avg@64). We evaluate all models using the same setting.}
+    \label{fig:icepop_aime25}
+\end{figure}
+
+
+\paragraph{Experiments on Ring-1T.} As training progresses, we can see from Figure~\ref{fig:icepop_ring_1t} that the original GRPO suffers from training instability, as both the gradient norms and the probability discrepancy between the inference and training engines tend to increase rapidly. However, after applying IcePop, we can observe that the mismatch issue has been largely mitigated, stabilizing the RL training process. 
+
+
+\begin{figure}[h!]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/ring_max_grad.pdf}
+\end{subfigure}
+\hspace{2mm}
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/ring_max_logp.pdf}
+\end{subfigure}
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/ring_max_logp_diff_abs_mean.pdf}
+\end{subfigure}
+\hspace{2mm}
+\begin{subfigure}[b]{0.45\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/RL/ring_max_logp_diff_max.pdf}
+\end{subfigure}
+\caption{The training dynamics before and after applying IcePop.}
+\label{fig:icepop_ring_1t}
+\end{figure}
+
+\subsubsection{C3PO++}\label{subsec:rl-exp-c3poplus}
+We compare C3PO++ with the baseline setting that omits our budget-controlled rollout partition mechanism, assessing training efficiency and effectiveness in terms of training time, training reward, and benchmark performance. 
+\begin{itemize}
+    \item \textbf{Training Time.}~~As illustrated in Figure~\ref{fig:c3popp_time}, C3PO++ substantially reduces the time of the rollout phase, achieving an approximately 2.5 times speedup per step. Since rollout duration usually accounts for a large portion of training time in RL, the training optimization designed by C3PO++ yields about a 1.5 times speedup for the end-to-end phase per step, significantly boosting the training efficiency for reinforcement learning.
+    \begin{figure}[!htb]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/c3po++_e2e.pdf}
+    \end{subfigure}
+    \hspace{2mm}
+    \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/c3po++_rollout.pdf}
+    \end{subfigure}
+    \caption{Comparison of time cost between C3PO++ and the baseline.}
+   \label{fig:c3popp_time}
+   \end{figure}
+   
+    \item \textbf{Reward and Performance.}~~As shown in Figure~\ref{fig:c3popp_reward}, the reward curve of C3PO++ remains close to that of the baseline, suggesting that our optimization in rollout management maintains comparable training dynamics in the reinforcement learning process. On the representative reasoning benchmarks, C3PO++ achieves performance on par with the baseline, demonstrating its strength in producing competitive results.
+    \begin{figure}[!htb]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/c3po++_reward.pdf}
+    \end{subfigure}
+    \hspace{2mm}
+    \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/RL/c3po++_perf.pdf}
+    \end{subfigure}
+    \caption{Comparison of reward and benchmark performance between C3PO++ and the baseline.}
+   \label{fig:c3popp_reward}
+   \end{figure}
+
+\end{itemize}
+
+

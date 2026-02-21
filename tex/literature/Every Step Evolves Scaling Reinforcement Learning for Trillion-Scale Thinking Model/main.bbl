@@ -1,0 +1,280 @@
+\begin{thebibliography}{53}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[AI(2025)]{kimi_engine}
+Moonshot AI.
+\newblock checkpoint-engine, 2025.
+\newblock \url{https://github.com/MoonshotAI/checkpoint-engine}.
+
+\bibitem[AIME(2025)]{aime}
+AIME.
+\newblock Aime problems and solutions.
+\newblock \url{https://artofproblemsolving.com/wiki/index.p hp/AIME Problems and Solutions}, 2025.
+
+\bibitem[Ainslie et~al.(2023)Ainslie, Lee-Thorp, de~Jong, Zemlyanskiy, Lebrón, and Sanghai]{ainslie2023gqatraininggeneralizedmultiquery}
+Joshua Ainslie, James Lee-Thorp, Michiel de~Jong, Yury Zemlyanskiy, Federico Lebrón, and Sumit Sanghai.
+\newblock Gqa: Training generalized multi-query transformer models from multi-head checkpoints, 2023.
+\newblock \url{https://arxiv.org/abs/2305.13245}.
+
+\bibitem[Arora et~al.(2025)Arora, Wei, Hicks, Bowman, Candela, Tsimpourlas, Sharman, Shah, Vallone, Beutel, Heidecke, and Singhal]{HealthBench}
+Rahul~K. Arora, Jason Wei, Rebecca~Soskin Hicks, Preston Bowman, Joaquin~Qui{\~{n}}onero Candela, Foivos Tsimpourlas, Michael Sharman, Meghan Shah, Andrea Vallone, Alex Beutel, Johannes Heidecke, and Karan Singhal.
+\newblock Healthbench: Evaluating large language models towards improved human health.
+\newblock \emph{CoRR}, abs/2505.08775, 2025.
+\newblock \doi{10.48550/ARXIV.2505.08775}.
+\newblock \url{https://doi.org/10.48550/arXiv.2505.08775}.
+
+\bibitem[Chollet et~al.(2024)Chollet, Knoop, Kamradt, and Landers]{chollet2024arc}
+Francois Chollet, Mike Knoop, Gregory Kamradt, and Bryan Landers.
+\newblock Arc prize 2024: Technical report.
+\newblock \emph{arXiv preprint arXiv:2412.04604}, 2024.
+
+\bibitem[Chollet et~al.(2025)Chollet, Knoop, Kamradt, Landers, and Pinkard]{Chollet2025}
+Fran{\c{c}}ois Chollet, Mike Knoop, Gregory Kamradt, Bryan Landers, and Henry Pinkard.
+\newblock {ARC-AGI-2:} {A} new challenge for frontier {AI} reasoning systems.
+\newblock \emph{CoRR}, abs/2505.11831, 2025.
+
+\bibitem[DeepSeek-AI(2025)]{deepseekai2025deepseekr1}
+DeepSeek-AI.
+\newblock Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning, 2025.
+\newblock \url{https://arxiv.org/abs/2501.12948}.
+
+\bibitem[Fan et~al.(2025)Fan, Liu, Yue, Chen, Wang, Yu, Zhang, Lin, Zhu, Yuan, Zuo, Ma, Zhang, Liu, Zhang, Zhou, Xie, Zhu, Zhang, Liu, Wang, Yan, and Wu]{fan2025tppo}
+Tiantian Fan, Lingjun Liu, Yu~Yue, Jiaze Chen, Chengyi Wang, Qiying Yu, Chi Zhang, Zhiqi Lin, Ruofei Zhu, Yufeng Yuan, Xiaochen Zuo, Bole Ma, Mofan Zhang, Gaohong Liu, Ru~Zhang, Haotian Zhou, Cong Xie, Ruidong Zhu, Zhi Zhang, Xin Liu, Mingxuan Wang, Lin Yan, and Yonghui Wu.
+\newblock Truncated proximal policy optimization, 2025.
+\newblock \url{https://arxiv.org/abs/2506.15050}.
+
+\bibitem[Feng et~al.(2025)Feng, Cao, Ren, Su, Chen, Zhang, Xu, Hu, Wu, and Liu]{feng2025mtr1zero}
+Zhaopeng Feng, Shaosheng Cao, Jiahan Ren, Jiayuan Su, Ruizhe Chen, Yan Zhang, Zhe Xu, Yao Hu, Jian Wu, and Zuozhu Liu.
+\newblock Mt-r1-zero: Advancing llm-based machine translation via r1-zero-like reinforcement learning, 2025.
+\newblock \url{https://arxiv.org/abs/2504.10160}.
+
+\bibitem[Fu et~al.(2025)Fu, Gao, Shen, Zhu, Mei, He, Xu, Wei, Mei, Wang, Yang, Yuan, and Wu]{fu2025areal}
+Wei Fu, Jiaxuan Gao, Xujie Shen, Chen Zhu, Zhiyu Mei, Chuyi He, Shusheng Xu, Guo Wei, Jun Mei, Jiashu Wang, Tongkai Yang, Binhang Yuan, and Yi~Wu.
+\newblock Areal: A large-scale asynchronous reinforcement learning system for language reasoning, 2025.
+\newblock \url{https://arxiv.org/abs/2505.24298}.
+
+\bibitem[Gao et~al.(2024)Gao, Song, Yang, Cai, Miao, Dong, Li, Ma, Chen, Xu, Tang, Wang, Zan, Quan, Zhang, Sha, Zhang, Ren, Liu, and Chang]{gao2024omnimathuniversalolympiadlevel}
+Bofei Gao, Feifan Song, Zhe Yang, Zefan Cai, Yibo Miao, Qingxiu Dong, Lei Li, Chenghao Ma, Liang Chen, Runxin Xu, Zhengyang Tang, Benyou Wang, Daoguang Zan, Shanghaoran Quan, Ge~Zhang, Lei Sha, Yichang Zhang, Xuancheng Ren, Tianyu Liu, and Baobao Chang.
+\newblock Omni-math: A universal olympiad level mathematic benchmark for large language models, 2024.
+\newblock \url{https://arxiv.org/abs/2410.07985}.
+
+\bibitem[He and Lab(2025)]{he2025nondeterminism}
+Horace He and Thinking~Machines Lab.
+\newblock Defeating nondeterminism in llm inference.
+\newblock \emph{Thinking Machines Lab: Connectionism}, 2025.
+\newblock \doi{10.64434/tml.20250910}.
+\newblock https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/.
+
+\bibitem[Hodel(2024)]{Hodel2024}
+Michael Hodel.
+\newblock Addressing the abstraction and reasoning corpus via procedural example generation.
+\newblock \emph{CoRR}, abs/2404.07353, 2024.
+
+\bibitem[Hu et~al.(2025)Hu, Wu, Shen, Liu, Zhu, Wang, Jiang, Wang, Chen, Chen, Fang, Xianyu, Cao, Xu, and Liu]{hu2025openrlhfeasytousescalablehighperformance}
+Jian Hu, Xibin Wu, Wei Shen, Jason~Klein Liu, Zilin Zhu, Weixun Wang, Songlin Jiang, Haoran Wang, Hao Chen, Bin Chen, Weikai Fang, Xianyu, Yu~Cao, Haotian Xu, and Yiming Liu.
+\newblock Openrlhf: An easy-to-use, scalable and high-performance rlhf framework, 2025.
+\newblock \url{https://arxiv.org/abs/2405.11143}.
+
+\bibitem[Huang et~al.(2023)Huang, Bai, Zhu, Zhang, Zhang, Su, Liu, Lv, Zhang, Lei, Fu, Sun, and He]{ceval}
+Yuzhen Huang, Yuzhuo Bai, Zhihao Zhu, Junlei Zhang, Jinghan Zhang, Tangjun Su, Junteng Liu, Chuancheng Lv, Yikai Zhang, Jiayi Lei, Yao Fu, Maosong Sun, and Junxian He.
+\newblock C-eval: {A} multi-level multi-discipline chinese evaluation suite for foundation models.
+\newblock In \emph{NeurIPS 2023}, 2023.
+\newblock \url{http://papers.nips.cc/paper\_files/paper/2023/hash/c6ec1844bec96d6d32ae95ae694e23d8-Abstract-Datasets\_and\_Benchmarks.html}.
+
+\bibitem[Jain et~al.(2025)Jain, Han, Gu, Li, Yan, Zhang, Wang, Solar{-}Lezama, Sen, and Stoica]{livecodebench}
+Naman Jain, King Han, Alex Gu, Wen{-}Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar{-}Lezama, Koushik Sen, and Ion Stoica.
+\newblock Livecodebench: Holistic and contamination free evaluation of large language models for code.
+\newblock In \emph{The Thirteenth International Conference on Learning Representations, {ICLR} 2025, Singapore, April 24-28, 2025}. OpenReview.net, 2025.
+\newblock \url{https://openreview.net/forum?id=chfJJYC3iL}.
+
+\bibitem[{Joshi} et~al.(2017){Joshi}, {Choi}, {Weld}, and {Zettlemoyer}]{2017arXivtriviaqa}
+Mandar {Joshi}, Eunsol {Choi}, Daniel {Weld}, and Luke {Zettlemoyer}.
+\newblock {triviaqa: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension}.
+\newblock \emph{arXiv e-prints}, art. arXiv:1705.03551, 2017.
+
+\bibitem[Kazemi et~al.(2025)Kazemi, Fatemi, Bansal, Palowitch, Anastasiou, Mehta, Jain, Aglietti, Jindal, Chen, et~al.]{kazemi2025big}
+Mehran Kazemi, Bahare Fatemi, Hritik Bansal, John Palowitch, Chrysovalantis Anastasiou, Sanket~Vaibhav Mehta, Lalit~K Jain, Virginia Aglietti, Disha Jindal, Peter Chen, et~al.
+\newblock Big-bench extra hard.
+\newblock \emph{arXiv preprint arXiv:2502.19187}, 2025.
+
+\bibitem[Kwon et~al.(2023)Kwon, Li, Zhuang, Sheng, Zheng, Yu, Gonzalez, Zhang, and Stoica]{kwon2023efficient}
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody~Hao Yu, Joseph~E. Gonzalez, Hao Zhang, and Ion Stoica.
+\newblock Efficient memory management for large language model serving with pagedattention.
+\newblock In \emph{Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles}, 2023.
+
+\bibitem[Li et~al.(2023)Li, Zhang, Koto, Yang, Zhao, Gong, Duan, and Baldwin]{li2023cmmlu}
+Haonan Li, Yixuan Zhang, Fajri Koto, Yifei Yang, Hai Zhao, Yeyun Gong, Nan Duan, and Timothy Baldwin.
+\newblock Cmmlu: Measuring massive multitask language understanding in chinese, 2023.
+
+\bibitem[Li et~al.(2025)Li, Ye, Chen, Ma, Yu, Chen, Cui, Li, Chen, Lyu, Zhang, Li, Guo, Lin, Zhou, and Chen]{Li2025InternBootcamp}
+Peiji Li, Jiasheng Ye, Yongkang Chen, Yichuan Ma, Zijie Yu, Kedi Chen, Ganqu Cui, Haozhan Li, Jiacheng Chen, Chengqi Lyu, Wenwei Zhang, Linyang Li, Qipeng Guo, Dahua Lin, Bowen Zhou, and Kai Chen.
+\newblock Internbootcamp technical report: Boosting {LLM} reasoning with verifiable task scaling.
+\newblock \emph{CoRR}, abs/2508.08636, 2025.
+
+\bibitem[Li et~al.(2024)Li, Chiang, Frick, Dunlap, Zhu, Gonzalez, and Stoica]{li2024live}
+Tianle Li, Wei-Lin Chiang, Evan Frick, Lisa Dunlap, Banghua Zhu, Joseph~E Gonzalez, and Ion Stoica.
+\newblock From live data to high-quality benchmarks: The arena-hard pipeline.
+\newblock \emph{Blog post.[Accessed 07-02-2025]}, 2024.
+
+\bibitem[Lin et~al.(2025)Lin, Bras, Richardson, Sabharwal, Poovendran, Clark, and Choi]{lin2025zebralogic}
+Bill~Yuchen Lin, Ronan~Le Bras, Kyle Richardson, Ashish Sabharwal, Radha Poovendran, Peter Clark, and Yejin Choi.
+\newblock Zebralogic: On the scaling limits of llms for logical reasoning.
+\newblock \emph{arXiv preprint arXiv:2502.01100}, 2025.
+
+\bibitem[Ling-Team(2025)]{lingv2}
+Ling-Team.
+\newblock Ling-2.0 techinical report, 2025.
+\newblock \url{https://github.com/inclusionAI/Ling-V2}.
+
+\bibitem[Ling-Team et~al.(2025)Ling-Team, Hu, Chen, Zhao, Liu, Jin, Zhu, Dai, Luan, Guo, et~al.]{team2025ring}
+Ling-Team, Bin Hu, Cai Chen, Deng Zhao, Ding Liu, Dingnan Jin, Feng Zhu, Hao Dai, Hongzhi Luan, Jia Guo, et~al.
+\newblock Ring-lite: Scalable reasoning via c3po-stabilized reinforcement learning for llms.
+\newblock \emph{arXiv preprint arXiv:2506.14731}, 2025.
+
+\bibitem[Liu et~al.(2025)Liu, Fan, Jiang, Ding, Hu, Zhang, Shi, Weng, Chen, Chen, Huang, Zhang, Zhao, Yan, and He]{Liu2025SynLogic}
+Junteng Liu, Yuanxiang Fan, Zhuo Jiang, Han Ding, Yongyi Hu, Chi Zhang, Yiqi Shi, Shitong Weng, Aili Chen, Shiqi Chen, Yunan Huang, Mozhi Zhang, Pengyu Zhao, Junjie Yan, and Junxian He.
+\newblock Synlogic: Synthesizing verifiable reasoning data at scale for learning logical reasoning and beyond.
+\newblock \emph{CoRR}, abs/2505.19641, 2025.
+
+\bibitem[Lu et~al.(2025)Lu, Jiang, Liu, Du, Jiang, Hong, Liu, He, Yuan, Wang, Huang, Yuan, Xu, Xu, Lai, Chen, Zheng, Yan, Su, Wu, Zhang, Yang, Zhou, Zhang, and Qiu]{lu2025mobamixtureblockattention}
+Enzhe Lu, Zhejun Jiang, Jingyuan Liu, Yulun Du, Tao Jiang, Chao Hong, Shaowei Liu, Weiran He, Enming Yuan, Yuzhi Wang, Zhiqi Huang, Huan Yuan, Suting Xu, Xinran Xu, Guokun Lai, Yanru Chen, Huabin Zheng, Junjie Yan, Jianlin Su, Yuxin Wu, Neo~Y. Zhang, Zhilin Yang, Xinyu Zhou, Mingxing Zhang, and Jiezhong Qiu.
+\newblock Moba: Mixture of block attention for long-context llms, 2025.
+\newblock \url{https://arxiv.org/abs/2502.13189}.
+
+\bibitem[OpenAI(2024)]{openai2024openaio1card}
+OpenAI.
+\newblock Openai o1 system card, 2024.
+\newblock \url{https://arxiv.org/abs/2412.16720}.
+
+\bibitem[OpenAI(2025)]{gpt5}
+OpenAI.
+\newblock Openai gpt-5, 2025.
+\newblock \url{https://openai.com/gpt-5/}.
+
+\bibitem[Paech(2025)]{creative-writing-bench-v3}
+Samuel~J Paech.
+\newblock Eq-bench creative writing benchmark v3.
+\newblock \url{https://github.com/EQ-bench/creative-writing-bench}, 2025.
+
+\bibitem[Peng et~al.(2023)Peng, Quesnelle, Fan, and Shippole]{peng2023yarn}
+Bowen Peng, Jeffrey Quesnelle, Honglu Fan, and Enrico Shippole.
+\newblock Yarn: Efficient context window extension of large language models.
+\newblock \emph{arXiv preprint arXiv:2309.00071}, 2023.
+
+\bibitem[Phan et~al.(2025)Phan, Gatti, Han, Li, Hu, Zhang, Zhang, Shaaban, Ling, Shi, et~al.]{phan2025humanity}
+Long Phan, Alice Gatti, Ziwen Han, Nathaniel Li, Josephina Hu, Hugh Zhang, Chen Bo~Calvin Zhang, Mohamed Shaaban, John Ling, Sean Shi, et~al.
+\newblock Humanity's last exam.
+\newblock \emph{arXiv preprint arXiv:2501.14249}, 2025.
+
+\bibitem[Qiu et~al.(2025)Qiu, Guo, Song, Sun, Cai, Wei, Luo, Yin, Zhang, Hu, Wang, Tang, Chang, Liu, Zhou, Zhang, Zhang, Liu, Li, Zhang, Jing, Yin, Ren, Fu, Wang, Tian, Lv, Man, Li, Tao, Sun, Liang, Mu, Li, Zhang, Zhang, Li, Xia, Lin, Shen, Chen, Xiong, Wang, Wang, Ni, Zhang, Cui, Shao, Cao, xing Luo, Zhang, and Zhu]{qiu2025phybenchholisticevaluationphysical}
+Shi Qiu, Shaoyang Guo, Zhuo-Yang Song, Yunbo Sun, Zeyu Cai, Jiashen Wei, Tianyu Luo, Yixuan Yin, Haoxu Zhang, Yi~Hu, Chenyang Wang, Chencheng Tang, Haoling Chang, Qi~Liu, Ziheng Zhou, Tianyu Zhang, Jingtian Zhang, Zhangyi Liu, Minghao Li, Yuku Zhang, Boxuan Jing, Xianqi Yin, Yutong Ren, Zizhuo Fu, Weike Wang, Xudong Tian, Anqi Lv, Laifu Man, Jianxiang Li, Feiyu Tao, Qihua Sun, Zhou Liang, Yushu Mu, Zhongxuan Li, Jing-Jun Zhang, Shutao Zhang, Xiaotian Li, Xingqi Xia, Jiawei Lin, Zheyu Shen, Jiahang Chen, Qiuhao Xiong, Binran Wang, Fengyuan Wang, Ziyang Ni, Bohan Zhang, Fan Cui, Changkun Shao, Qing-Hong Cao, Ming xing Luo, Muhan Zhang, and Hua~Xing Zhu.
+\newblock Phybench: Holistic evaluation of physical perception and reasoning in large language models, 2025.
+\newblock \url{https://arxiv.org/abs/2504.16074}.
+
+\bibitem[Rein et~al.(2023)Rein, Hou, Stickland, Petty, Pang, Dirani, Michael, and Bowman]{gpqa}
+David Rein, Betty~Li Hou, Asa~Cooper Stickland, Jackson Petty, Richard~Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel~R. Bowman.
+\newblock Gpqa: A graduate-level google-proof q\&a benchmark, 2023.
+\newblock \url{https://arxiv.org/abs/2311.12022}.
+
+\bibitem[Shen et~al.(2025)Shen, Zhang, and Zhao]{shen2025flexlinkboostingnvlinkbandwidth}
+Ao~Shen, Rui Zhang, and Junping Zhao.
+\newblock Flexlink: Boosting your nvlink bandwidth by 27% without accuracy concern, 2025.
+\newblock \url{https://arxiv.org/abs/2510.15882}.
+
+\bibitem[Sheng et~al.(2024)Sheng, Zhang, Ye, Wu, Zhang, Zhang, Peng, Lin, and Wu]{sheng2024hybridflow}
+Guangming Sheng, Chi Zhang, Zilingfeng Ye, Xibin Wu, Wang Zhang, Ru~Zhang, Yanghua Peng, Haibin Lin, and Chuan Wu.
+\newblock Hybridflow: A flexible and efficient rlhf framework.
+\newblock \emph{arXiv preprint arXiv: 2409.19256}, 2024.
+
+\bibitem[Shoeybi et~al.(2020)Shoeybi, Patwary, Puri, LeGresley, Casper, and Catanzaro]{shoeybi2020megatronlmtrainingmultibillionparameter}
+Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, and Bryan Catanzaro.
+\newblock Megatron-lm: Training multi-billion parameter language models using model parallelism, 2020.
+\newblock \url{https://arxiv.org/abs/1909.08053}.
+
+\bibitem[Sirdeshmukh et~al.(2025)Sirdeshmukh, Deshpande, Mols, Jin, Cardona, Lee, Kritz, Primack, Yue, and Xing]{sirdeshmukh2025multichallenge}
+Ved Sirdeshmukh, Kaustubh Deshpande, Johannes Mols, Lifeng Jin, Ed-Yeremai Cardona, Dean Lee, Jeremy Kritz, Willow Primack, Summer Yue, and Chen Xing.
+\newblock Multichallenge: A realistic multi-turn conversation evaluation benchmark challenging to frontier llms.
+\newblock \emph{arXiv preprint arXiv:2501.17399}, 2025.
+
+\bibitem[Tang et~al.(2025)Tang, Ma, He, Liu, Yang, Rong, Li, Ji, Huang, Hu, et~al.]{tang2025financereasoning}
+Zichen Tang, Ziyan Ma, Haoyang He, Jiacheng Liu, Zhongjun Yang, Zihua Rong, Rongjin Li, Kun Ji, Qing Huang, Xinyang Hu, et~al.
+\newblock Financereasoning: Benchmarking financial numerical reasoning more credible, comprehensive and challenging.
+\newblock \emph{arXiv preprint arXiv:2506.05828}, 2025.
+
+\bibitem[Team et~al.(2025)Team, Bai, Bao, Chen, Chen, Chen, Chen, Chen, Chen, Chen, Chen, Cui, Ding, Dong, Du, Du, Du, Du, Fan, Feng, Fu, Gao, Gao, Gao, Gao, Gu, Guan, Guo, Guo, Hu, Hao, He, He, He, Hong, Hu, Hu, Huang, Huang, Huang, Jiang, Jiang, Jin, Kang, Lai, Li, Li, Li, Li, Li, Li, Li, Li, Li, Lin, Lin, Lin, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Liu, Lu, Lu, Ma, Ma, Ma, Mao, Mei, Men, Miao, Pan, Peng, Qin, Qu, Shang, Shi, Shi, Song, Su, Su, Sun, Sung, Tang, Tao, Teng, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wang, Wei, Wei, Wu, Wu, Wu, Xiao, Xie, Xiong, Xu, Xu, Xu, Xu, Xu, Xu, Xu, Xu, Xu, Xu, Yan, Yan, Yang, Yang, Yang, Yang, Yang, Yao, Yao, Ye, Ye, Yin, Yu, Yuan, Yuan, Yuan, Zhan, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhang, Zhao, Zhao, Zheng, Zheng, Zhou, Zhou, Zhou, Zhu, Zhuang, and Zu]{kimiteam2025kimik2openagentic}
+Kimi Team, Yifan Bai, Yiping Bao, Guanduo Chen, Jiahao Chen, Ningxin Chen, Ruijue Chen, Yanru Chen, Yuankun Chen, Yutian Chen, Zhuofu Chen, Jialei Cui, Hao Ding, Mengnan Dong, Angang Du, Chenzhuang Du, Dikang Du, Yulun Du, Yu~Fan, Yichen Feng, Kelin Fu, Bofei Gao, Hongcheng Gao, Peizhong Gao, Tong Gao, Xinran Gu, Longyu Guan, Haiqing Guo, Jianhang Guo, Hao Hu, Xiaoru Hao, Tianhong He, Weiran He, Wenyang He, Chao Hong, Yangyang Hu, Zhenxing Hu, Weixiao Huang, Zhiqi Huang, Zihao Huang, Tao Jiang, Zhejun Jiang, Xinyi Jin, Yongsheng Kang, Guokun Lai, Cheng Li, Fang Li, Haoyang Li, Ming Li, Wentao Li, Yanhao Li, Yiwei Li, Zhaowei Li, Zheming Li, Hongzhan Lin, Xiaohan Lin, Zongyu Lin, Chengyin Liu, Chenyu Liu, Hongzhang Liu, Jingyuan Liu, Junqi Liu, Liang Liu, Shaowei Liu, T.~Y. Liu, Tianwei Liu, Weizhou Liu, Yangyang Liu, Yibo Liu, Yiping Liu, Yue Liu, Zhengying Liu, Enzhe Lu, Lijun Lu, Shengling Ma, Xinyu Ma, Yingwei Ma, Shaoguang Mao, Jie Mei, Xin Men, Yibo Miao, Siyuan Pan, Yebo Peng, Ruoyu Qin, Bowen Qu, Zeyu
+  Shang, Lidong Shi, Shengyuan Shi, Feifan Song, Jianlin Su, Zhengyuan Su, Xinjie Sun, Flood Sung, Heyi Tang, Jiawen Tao, Qifeng Teng, Chensi Wang, Dinglu Wang, Feng Wang, Haiming Wang, Jianzhou Wang, Jiaxing Wang, Jinhong Wang, Shengjie Wang, Shuyi Wang, Yao Wang, Yejie Wang, Yiqin Wang, Yuxin Wang, Yuzhi Wang, Zhaoji Wang, Zhengtao Wang, Zhexu Wang, Chu Wei, Qianqian Wei, Wenhao Wu, Xingzhe Wu, Yuxin Wu, Chenjun Xiao, Xiaotong Xie, Weimin Xiong, Boyu Xu, Jing Xu, Jinjing Xu, L.~H. Xu, Lin Xu, Suting Xu, Weixin Xu, Xinran Xu, Yangchuan Xu, Ziyao Xu, Junjie Yan, Yuzi Yan, Xiaofei Yang, Ying Yang, Zhen Yang, Zhilin Yang, Zonghan Yang, Haotian Yao, Xingcheng Yao, Wenjie Ye, Zhuorui Ye, Bohong Yin, Longhui Yu, Enming Yuan, Hongbang Yuan, Mengjie Yuan, Haobing Zhan, Dehao Zhang, Hao Zhang, Wanlu Zhang, Xiaobin Zhang, Yangkun Zhang, Yizhi Zhang, Yongting Zhang, Yu~Zhang, Yutao Zhang, Yutong Zhang, Zheng Zhang, Haotian Zhao, Yikai Zhao, Huabin Zheng, Shaojie Zheng, Jianren Zhou, Xinyu Zhou, Zaida Zhou, Zhen Zhu,
+  Weiyu Zhuang, and Xinxing Zu.
+\newblock Kimi k2: Open agentic intelligence, 2025.
+\newblock \url{https://arxiv.org/abs/2507.20534}.
+
+\bibitem[Team(2025)]{qwen3max}
+Qwen Team.
+\newblock Qwen3-max: Just scale it, September 2025.
+
+\bibitem[Wang et~al.(2024)Wang, Ma, Zhang, Ni, Chandra, Guo, Ren, Arulraj, He, Jiang, Li, Ku, Wang, Zhuang, Fan, Yue, and Chen]{mmlu-pro}
+Yubo Wang, Xueguang Ma, Ge~Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, Tianle Li, Max Ku, Kai Wang, Alex Zhuang, Rongqi Fan, Xiang Yue, and Wenhu Chen.
+\newblock Mmlu-pro: {A} more robust and challenging multi-task language understanding benchmark.
+\newblock In Amir Globersons, Lester Mackey, Danielle Belgrave, Angela Fan, Ulrich Paquet, Jakub~M. Tomczak, and Cheng Zhang, editors, \emph{Advances in Neural Information Processing Systems 38: Annual Conference on Neural Information Processing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 - 15, 2024}, 2024.
+\newblock \url{http://papers.nips.cc/paper\_files/paper/2024/hash/ad236edc564f3e3156e1b2feafb99a24-Abstract-Datasets\_and\_Benchmarks\_Track.html}.
+
+\bibitem[Xu et~al.(2025)Xu, Zhang, Chen, Chao, Hu, and Yang]{xu2025ugmathbench}
+Xin Xu, Jiaxin Zhang, Tianhao Chen, Zitong Chao, Jishan Hu, and Can Yang.
+\newblock Ugmathbench: A diverse and dynamic benchmark for undergraduate-level mathematical reasoning with large language models.
+\newblock \emph{arXiv preprint arXiv:2501.13766}, 2025.
+
+\bibitem[Xu et~al.(2024)Xu, Jiang, Niu, Deng, Poovendran, Choi, and Lin]{xu2024magpiealignmentdatasynthesis}
+Zhangchen Xu, Fengqing Jiang, Luyao Niu, Yuntian Deng, Radha Poovendran, Yejin Choi, and Bill~Yuchen Lin.
+\newblock Magpie: Alignment data synthesis from scratch by prompting aligned llms with nothing, 2024.
+\newblock \url{https://arxiv.org/abs/2406.08464}.
+
+\bibitem[Yan et~al.(2024)Yan, Mao, Ji, Zhang, Patil, Stoica, and Gonzalez]{BFCL}
+Fanjia Yan, Huanzhi Mao, Charlie Cheng-Jie Ji, Tianjun Zhang, Shishir~G. Patil, Ion Stoica, and Joseph~E. Gonzalez.
+\newblock Berkeley function calling leaderboard.
+\newblock \url{https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html}, 2024.
+
+\bibitem[Yao et~al.(2025)Yao, Liu, Zhang, Dong, Shang, and Gao]{yao2025offpolicy}
+Feng Yao, Liyuan Liu, Dinghuai Zhang, Chengyu Dong, Jingbo Shang, and Jianfeng Gao.
+\newblock Your efficient rl framework secretly brings you off-policy rl training, August 2025.
+\newblock \url{https://fengyao.notion.site/off-policy-rl}.
+
+\bibitem[Yu et~al.(2025)Yu, Lu, Zhuang, Wang, Wu, Li, Gan, Wang, Hou, Huang, et~al.]{yu2025aworld}
+Chengyue Yu, Siyuan Lu, Chenyi Zhuang, Dong Wang, Qintong Wu, Zongyue Li, Runsheng Gan, Chunfeng Wang, Siqi Hou, Gaochi Huang, et~al.
+\newblock Aworld: Orchestrating the training recipe for agentic ai.
+\newblock \emph{arXiv preprint arXiv:2508.20404}, 2025.
+
+\bibitem[Zheng et~al.(2025)Zheng, Liu, Li, Chen, Yu, Gao, Dang, Liu, Men, Yang, Zhou, and Lin]{zheng2025gspo}
+Chujie Zheng, Shixuan Liu, Mingze Li, Xiong-Hui Chen, Bowen Yu, Chang Gao, Kai Dang, Yuqiong Liu, Rui Men, An~Yang, Jingren Zhou, and Junyang Lin.
+\newblock Group sequence policy optimization, 2025.
+\newblock \url{https://arxiv.org/abs/2507.18071}.
+
+\bibitem[Zheng et~al.(2024)Zheng, Yin, Xie, Sun, Huang, Yu, Cao, Kozyrakis, Stoica, Gonzalez, Barrett, and Sheng]{zheng2024sglangefficientexecutionstructured}
+Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Sun, Jeff Huang, Cody~Hao Yu, Shiyi Cao, Christos Kozyrakis, Ion Stoica, Joseph~E. Gonzalez, Clark Barrett, and Ying Sheng.
+\newblock Sglang: Efficient execution of structured language model programs, 2024.
+\newblock \url{https://arxiv.org/abs/2312.07104}.
+
+\bibitem[Zhipu-AI(2025)]{glm46}
+Zhipu-AI.
+\newblock Glm-4.6, 2025.
+\newblock \url{https://z.ai/blog/glm-4.6}.
+
+\bibitem[Zhong et~al.(2023)Zhong, Cui, Guo, Liang, Lu, Wang, Saied, Chen, and Duan]{zhong2023agieval}
+Wanjun Zhong, Ruixiang Cui, Yiduo Guo, Yaobo Liang, Shuai Lu, Yanlin Wang, Amin Saied, Weizhu Chen, and Nan Duan.
+\newblock Agieval: A human-centric benchmark for evaluating foundation models, 2023.
+
+\bibitem[Zhou et~al.(2023)Zhou, Lu, Mishra, Brahma, Basu, Luan, Zhou, and Hou]{zhou2023instruction}
+Jeffrey Zhou, Tianjian Lu, Swaroop Mishra, Siddhartha Brahma, Sujoy Basu, Yi~Luan, Denny Zhou, and Le~Hou.
+\newblock Instruction-following evaluation for large language models.
+\newblock \emph{arXiv preprint arXiv:2311.07911}, 2023.
+
+\bibitem[Zhu et~al.(2025)Zhu, Xie, Lv, and slime Contributors]{slime_github}
+Zilin Zhu, Chengxing Xie, Xin Lv, and slime Contributors.
+\newblock slime: An llm post-training framework for rl scaling.
+\newblock \url{https://github.com/THUDM/slime}, 2025.
+\newblock GitHub repository. Corresponding author: Xin Lv.
+
+\end{thebibliography}

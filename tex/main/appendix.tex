@@ -49,7 +49,7 @@ ratio is
 \end{equation}
 The clipped surrogate takes the form
 \begin{equation}
-    L^{\mathrm{CLIP}}(\pitheta)
+    \mathcal{L}^{\mathrm{CLIP}}(\pitheta)
     = \E_{\piroll}\!\left[\sum_{t=1}^{T}\min\!\Big(
         \rho_t \hat{A}_t,\;
         \mathrm{clip}(\rho_t, 1-\epsilon_{\mathrm{clip}}, 1+\epsilon_{\mathrm{clip}})\,\hat{A}_t
@@ -282,7 +282,7 @@ so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\
     for all $t$.
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
     \begin{equation}
-        M_t^{\mathrm{prefix}}
+        M_t^{\mathrm{pre}}
         := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big]
         = \mathbb{I}\!\big[\log\rhoprefix{t} \in [-\tau_-,\tau_+]\big],
     \end{equation}
@@ -300,7 +300,7 @@ so $M_t^{\mathrm{tok}}=1$ for all $t>1$, while $M_1^{\mathrm{tok}}=0$ (since $\r
 ICEPOP masks only position $t=1$.
 
 \smallskip
-For the prefix mask, note first that $M_1^{\mathrm{prefix}}=0$ because $\rhoprefix{1}=\rho_1\notin[1-\epslow,1+\epshigh]$. To quantify how
+For the prefix mask, note first that $M_1^{\mathrm{pre}}=0$ because $\rhoprefix{1}=\rho_1\notin[1-\epslow,1+\epshigh]$. To quantify how
 long the rejection can persist, use \eqref{eq:prefix-is}:
 \begin{equation}
     \log\rhoprefix{t}
@@ -313,7 +313,7 @@ If $\log\rho_1>\tau_+$, then $\log\rho_s \ge -\varepsilon$ for all $s\ge2$, henc
     &\ge \frac{1}{t}\big(\log\rho_1-(t-1)\varepsilon\big)
     = \frac{\log\rho_1+\varepsilon}{t} - \varepsilon.
 \end{align}
-Thus, if $t < (\log\rho_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{prefix}}=0$.
+Thus, if $t < (\log\rho_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{pre}}=0$.
 The lower-violation case $\log\rho_1<-\tau_-$ is symmetric: since $\log\rho_s \le \varepsilon$ for $s\ge2$, we have
 $\sum_{s=2}^{t}\log\rho_s \le \varepsilon(t-1)$ and therefore
 \begin{align}
@@ -321,7 +321,7 @@ $\sum_{s=2}^{t}\log\rho_s \le \varepsilon(t-1)$ and therefore
     &\le \frac{1}{t}\big(\log\rho_1+\varepsilon(t-1)\big)
     = \frac{\log\rho_1-\varepsilon}{t} + \varepsilon.
 \end{align}
-If $t < (-\log\rho_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{prefix}}=0$.
+If $t < (-\log\rho_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{pre}}=0$.
 This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
 \par
@@ -330,10 +330,10 @@ Assume there exists $t^*\in\{1,\ldots,T\}$ such that $\rho_{t^*}\notin[1-\epslow
 for all $t\neq t^*$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-ratios in the prefix satisfy $\log\rho_s \in [-\tau_-,\tau_+]$.
 Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
-$\log\rhoprefix{t} \in [-\tau_-,\tau_+]$, and hence $M_t^{\mathrm{prefix}}=1$ for all $t<t^*$. Therefore prefix masking can only occur
+$\log\rhoprefix{t} \in [-\tau_-,\tau_+]$, and hence $M_t^{\mathrm{pre}}=1$ for all $t<t^*$. Therefore prefix masking can only occur
 for positions $t\ge t^*$, which implies
 \begin{equation}
-    \big|\{t : M_t^{\mathrm{prefix}} = 0\}\big| \le T - t^* + 1.
+    \big|\{t : M_t^{\mathrm{pre}} = 0\}\big| \le T - t^* + 1.
 \end{equation}
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
@@ -350,12 +350,12 @@ Since $t^* \le T$ and $\log\rho_{t^*}>0$, we have $\log\rhoprefix{t^*} \ge \log\
     \quad\text{and}\quad
     \frac{1}{T}\log\rho_{t^*} \le \tau_+,
 \end{equation}
-we obtain $M_{t^*}^{\mathrm{prefix}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
+we obtain $M_{t^*}^{\mathrm{pre}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
 \par
 \noindent\textbf{Part (c): Monotone violation.}
 If $\log\rho_s > \tau_+$ for all $s$, then for every $t$ the prefix average satisfies $\log\rhoprefix{t} > \tau_+$, since it is an
-average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{prefix}}=0$ for all $t$. The sequence-level average
+average of values each strictly larger than $\tau_+$. Hence $M_t^{\mathrm{pre}}=0$ for all $t$. The sequence-level average
 $\log\rhoseq$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ for all $t$. The lower-violation case $\log\rho_s < -\tau_-$
 is symmetric.
 \end{proof}
@@ -385,11 +385,11 @@ The main text uses a pointwise prefix gate at each position $t$. A more rejectio
 once a prefix violates the threshold, all subsequent positions are rejected.
 
 \begin{equation}
-    \widetilde{M}_t^{\mathrm{prefix}}
+    \widetilde{M}_t^{\mathrm{pre}}
     := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big],
     \qquad
-    M_t^{\mathrm{abs\text{-}prefix}}
-    := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{prefix}}.
+    M_t^{\mathrm{abs\text{-}pre}}
+    := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{pre}}.
 \end{equation}
 
 \paragraph{Variant C (prefix-max mask / max-filtering).}
@@ -402,9 +402,9 @@ The corresponding prefix-max statistic and mask are
 \begin{equation}
     S_t^{\max} := \max_{1\le s\le t} k_2(\rho_s),
     \qquad
-    M_t^{\mathrm{prefix\text{-}max}} := \mathbb{I}\!\big[S_t^{\max} \le \delta_{\max}\big].
+    M_t^{\mathrm{pre\text{-}max}} := \mathbb{I}\!\big[S_t^{\max} \le \delta_{\max}\big].
 \end{equation}
-Equivalently, $M_t^{\mathrm{prefix\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
+Equivalently, $M_t^{\mathrm{pre\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
 \paragraph{Variant D (prefix-score mask / bound-driven).}
 
@@ -419,7 +419,7 @@ and deterministic nonnegative weights $(w_t)_{t\ge1}$ with $\sum_{s\le t} w_s > 
 \end{equation}
 and the corresponding mask is
 \begin{equation}
-    M_t^{\mathrm{prefix\text{-}score}} := \mathbb{I}\!\big[\widetilde{W}_t \le \delta_W\big].
+    M_t^{\mathrm{pre\text{-}score}} := \mathbb{I}\!\big[\widetilde{W}_t \le \delta_W\big].
 \end{equation}
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
@@ -436,7 +436,7 @@ $\rho_t=\pitheta/\piroll$ and support overlap. This motivates a prefix-average K
     \overline{k}_{3,t}
     := \frac{1}{t}\sum_{s=1}^{t} k_3(\rho_s),
     \qquad
-    M_t^{\mathrm{prefix\text{-}k3}} := \mathbb{I}\!\big[\overline{k}_{3,t} \le \delta_{k3}\big].
+    M_t^{\mathrm{pre\text{-}k3}} := \mathbb{I}\!\big[\overline{k}_{3,t} \le \delta_{k3}\big].
 \end{equation}
 Unlike ratio-interval thresholding, this variant targets a prefix-level \emph{average} KL proxy and can be interpreted as a causal
 refinement of average-based trust-region criteria.

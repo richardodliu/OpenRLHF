@@ -1,0 +1,112 @@
+\documentclass[table]{gtech}
+\PassOptionsToPackage{table,usenames,dvipsnames}{xcolor}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{multirow}
+\usepackage{comment}
+\usepackage{bigdelim}
+\usepackage{longtable}
+\usepackage{tabularray}
+\usepackage{wrapfig}
+\usepackage[most]{tcolorbox}
+\usepackage{url}
+\usepackage{float}
+\usepackage{datatool}
+\usepackage{enumitem}
+\usepackage{subcaption} 
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\usepackage{pifont}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage[justification=centering]{caption}
+\let\comment\undefined
+\RequirePackage{tgpagella} 
+\RequirePackage{mathpazo}  
+\RequirePackage{inconsolata}
+\usepackage{makecell}
+\usepackage{tcolorbox}
+
+\renewcommand{\title}[1]{\newcommand{\titlelist}{{\huge\fontfamily{optimistic}\selectfont #1}}}
+
+\newcommand{\model}{\texttt{Ring-1T}}
+\definecolor{prompt}{HTML}{5f84e4}
+\definecolor{img}{HTML}{820100}
+\newcommand{\best}[1]{{\textbf{#1}}}
+\newcommand{\second}[1]{{\underline{#1}}}
+
+\newcommand\myboxed[1]{{{%
+    \setlength\fboxsep{8pt}%
+     \boxed{#1}}}}
+
+
+\newcommand{\cmark}{\textcolor{green}{\ding{51}}}    
+\newcommand{\xmark}{\textcolor{red}{\ding{55}}}     
+\usepackage{arydshln}
+\definecolor{CQColor}{rgb}{0.0,0.0,1.0} 
+\definecolor{TABLE_LINE}{rgb}{0.88,0.96,1.0}
+
+\usepackage{colortbl}
+\usepackage{amssymb}
+\usepackage{pifont}
+\usepackage{booktabs,multirow}
+\usepackage{makecell}
+\usepackage{tabulary}
+\usepackage{fontawesome5}
+\usepackage{bbding}
+\usepackage{multicol}
+\newcommand \blfootnote[1]{
+    \begingroup
+        \renewcommand
+        \thefootnote{}\footnote{#1}
+        \addtocounter{footnote}{-1}
+        \vspace{-1ex}
+    \endgroup
+}
+\newlength\savewidth\newcommand\shline{\noalign{\global\savewidth\arrayrulewidth
+  \global\arrayrulewidth 1pt}\hline\noalign{\global\arrayrulewidth\savewidth}}
+\newcommand\hshline{\noalign{\global\savewidth\arrayrulewidth
+  \global\arrayrulewidth 0.6pt}\hline\noalign{\global\arrayrulewidth\savewidth}}
+\newcommand{\tablestyle}[2]{\setlength{\tabcolsep}{#1}\renewcommand{\arraystretch}{#2}\centering\footnotesize}
+\newcommand{\placeholder}[2]{%
+  \noindent
+  \fbox{%
+    \rule{0pt}{#2}%
+    \makebox[#1][c]{}
+  }%
+}
+
+\newcommand{\jia}[1]{\textcolor{red}{[Jia: #1]}}
+\newcommand{\zy}[1]{\textcolor{purple}{[ZY: #1]}}
+\newcommand{\TODO}[1]{\textcolor{blue}{[TODO: #1]}}
+
+
+\title{\textcolor[HTML]{0369ff}{Every Step Evolves}: Scaling Reinforcement Learning for Trillion-Scale Thinking Model}
+
+\author[*]{Ling Team, Inclusion AI}
+
+\contribution[*]{See Contributions section (Sec.~\ref{sec:contri}) for full author list.}
+
+\abstract{\fontsize{11pt}{12pt} 
+We present \model{}, the first open-source, state-of-the-art thinking model with a trillion-scale parameter. It features 1 trillion total parameters and activates approximately 50 billion per token. Training such models at a trillion-parameter scale introduces unprecedented challenges, including train-inference misalignment, inefficiencies in rollout processing, and bottlenecks in the RL system. To address these, we pioneer three interconnected innovations: (1) IcePop stabilizes RL training via token-level discrepancy masking and clipping, resolving instability from training-inference mismatches; (2) C3PO++ improves resource utilization for long rollouts under a token budget by dynamically partitioning them, thereby obtaining high time efficiency; and (3) ASystem, a high-performance RL framework designed to overcome the systemic bottlenecks that impede trillion-parameter model training. \model{} delivers breakthrough results across critical benchmarks: 93.4 on AIME-2025, 86.72 on HMMT-2025, 2088 on CodeForces, and 55.94 on ARC-AGI-1. Notably, it attains a silver medal-level result on the IMO-2025, underscoring its exceptional reasoning capabilities. By releasing the complete 1T parameter MoE model to the community, we provide the research community with direct access to cutting-edge reasoning capabilities. This contribution marks a significant milestone in democratizing large-scale reasoning intelligence and establishes a new baseline for open-source model performance. 
+}
+\date{Oct 22, 2025\vspace{-1mm}}
+\gtechdata[Code]{\url{https://github.com/inclusionAI/Ring-V2}\vspace{-1mm}}
+\gtechdata[Model]{\url{https://huggingface.co/inclusionAI/Ring-1T}}
+
+\begin{document}
+\maketitle
+
+\input{sections/intro}
+\input{sections/method/method}
+\input{sections/eval/eval}
+\input{sections/conclu}
+\input{sections/author}
+
+\bibliographystyle{assets/plainnat}
+\bibliography{main}
+
+\clearpage
+\beginappendix
+\input{sections/appendix}
+
+\end{document}

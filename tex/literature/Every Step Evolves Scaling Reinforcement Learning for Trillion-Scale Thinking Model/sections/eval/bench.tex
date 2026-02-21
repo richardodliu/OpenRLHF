@@ -1,0 +1,20 @@
+\subsection{Benchmarks}
+\label{subsec:bench}
+
+To comprehensively assess \model{}, we conduct evaluations across a wide range of benchmarks, primarily covering 8 domains: knowledge, coding, math, reasoning, alignment, healthcare, multi-turn, and agent.
+
+\begin{itemize}
+    \item \textbf{Knowledge:} GPQA-Diamond~\citep{gpqa}, MMLU-Pro~\citep{mmlu-pro}, C-Eval~\citep{ceval}, Phybench~\citep{qiu2025phybenchholisticevaluationphysical}, AGIEval~\citep{zhong2023agieval}, TriviaQA~\citep{2017arXivtriviaqa}, CMMLU~\citep{li2023cmmlu}.
+    \item \textbf{Coding:} LiveCodeBench-v6 (2408 to 2505)~\citep{livecodebench}, CodeForces~\footnote{The Codeforces was assessed through problems from 14 Div. 2 contests of Codeforces, combined with expert-designed test cases, followed by the computation of expected ratings and competitor proportions. It is worth noting that the highest rating attainable is 2209.}, Aider~\footnote{https://aider.chat/docs/benchmarks.html\#the-benchmark}.
+    \item \textbf{Math:} AIME 2025~\citep{aime}, Omni-MATH~\citep{gao2024omnimathuniversalolympiadlevel}, HMMT 2025, CNMO 2024, FinanceReasoning~\citep{tang2025financereasoning}, UGMathBench~\citep{xu2025ugmathbench}.
+    \item \textbf{Reasoning:} ARC-AGI-1~\citep{chollet2024arc}, BBEH~\citep{kazemi2025big}, ZebraLogic~\citep{lin2025zebralogic}, HLE~\citep{phan2025humanity}.
+    \item \textbf{Alignment:} ArenaHard v2~\citep{li2024live}, Creative Writing v3~\citep{creative-writing-bench-v3}, IFEval~\citep{zhou2023instruction}.
+    \item \textbf{Healthcare:} HealthBench~\citep{HealthBench}.
+    \item \textbf{Multi-turn:} MultiChallenge~\citep{sirdeshmukh2025multichallenge}.
+    \item \textbf{Agent:} BFCL v3~\citep{BFCL}.
+\end{itemize}
+
+
+We benchmark \model{} against leading open-weights models (DeepSeek-V3.1-Terminus-Thinking, and Qwen-35B-A22B-Thinking-2507) and proprietary API models (Gemini-2.5-pro, GPT-5-Thinking). All evaluations use controlled experimental conditions with standardized configurations.
+
+\input{tables/benchmarks}

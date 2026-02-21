@@ -1,0 +1,18 @@
+\section{Conclusion}
+\label{sec:conclu}
+
+In this work, we have presented \model{}, a landmark achievement as the first open-weights 1 \textbf{Trillion} parameter thinking model. This project successfully addressed the profound and unprecedented system and algorithmic challenges inherent in scaling reinforcement learning to a trillion-parameter regime. The core of our contribution lies in three interconnected innovations: the IcePop for resolving training-inference mismatches, the C3PO++ for efficient long-trajectory rollouts, and the ASystem framework that eliminates scalability bottlenecks and ensures training stability. Together, these advancements enabled the stable and efficient training of \model{}, which has demonstrated breakthrough, state-of-the-art performance across a rigorous set of benchmarks spanning mathematical reasoning, competitive programming, and general intelligence. These results validate our approach and systems, demonstrating that trillion-parameter reasoning models are not only feasible but also exhibit exceptional capability.
+
+\section{Limitations \& Future Work}
+Despite its landmark achievements, \model{} and its associated training systems have several limitations that point to fruitful directions for future research.
+
+\begin{itemize}
+    \item \textbf{Model Architecture \& Inference Efficiency:} The model's use of GQA~\citep{ainslie2023gqatraininggeneralizedmultiquery} provides a solid balance between performance and speed. However, for our \model{} thinking model, which generates extensive internal ``thought'' processes, the inference cost imposed by GQA remains non-trivial. Future work will therefore explore alternative mechanisms, such as MoBA~\citep{lu2025mobamixtureblockattention} or advanced linear attention variants, to achieve the higher throughput required for efficient inference. 
+
+    \item \textbf{Training-Inference Consistency:} While our IcePop methodology mitigates the major training-inference mismatch, it does not achieve perfect training-inference consistency. Underlying numerical discrepancies between the training and inference computational operators persist as a latent source of instability. Resolving this fundamental systems challenge is imperative for the stable scaling of future models.
+    
+    \item \textbf{Capability Deficiencies:} The training strategy for \model{} was optimized for foundational natural language reasoning, leaving advanced agentic skills (e.g., tool use) under-optimized. Future iterations will position \model{} as a base for such capabilities, integrating specialized data and training paradigms like agentic RL to cultivate sophisticated autonomous problem-solving. Additionally, minor issues such as identity confusion and linguistic code-switching, attributed to data impurity and insufficient regularization, will be addressed through refined data curation techniques.
+    
+\end{itemize}
+
+\clearpage
