@@ -30,7 +30,7 @@ Together, they address two distinct sources of instability in the surrogate opti
 \begin{remark}[Variance Reduction]
 Intuitively, the two components of REINFORCE Pro Max reduce gradient variance through complementary mechanisms. Component~1 (leave-one-out
 baseline + adaptive normalization) reduces the variance of the advantage estimates themselves (\Cref{prop:rloo-variance},
-\Cref{prop:alpha-beta}). Component~2 (prefix-level masking) attenuates high-variance gradient contributions from ratio-outlier tokens
+\Cref{eq:alpha-beta}). Component~2 (prefix-level masking) attenuates high-variance gradient contributions from ratio-outlier tokens
 (\Cref{thm:prefix-tighter}), where the importance ratios would otherwise amplify noise.
 \end{remark}
 
@@ -139,7 +139,7 @@ theoretically principled but sacrifices per-position granularity.
 
 \textbf{REINFORCE Pro Max.} REINFORCE Pro Max targets all four dimensions in \Cref{tab:comparison}. The RLOO
 baseline provides statistical independence (\Cref{prop:rloo-variance}); adaptive normalization preserves advantage sign while enforcing
-zero empirical mean and unit empirical variance on non-zero tokens (\Cref{prop:alpha-beta}, \Cref{par:adv-sign-preservation}); and prefix
+zero empirical mean and unit empirical variance on non-zero tokens (\Cref{eq:alpha-beta}, \Cref{par:adv-sign-preservation}); and prefix
 cumulative IS provides causal, per-position masking that detects both early deviations propagating forward and cumulative drift from many
 small mismatches (\Cref{thm:prefix-tighter}). Each design choice targets a specific factor in the error decomposition, and the two
 components are complementary (\Cref{sec:unified}): REINFORCE Max targets the advantage factor while REINFORCE Pro targets the context shift

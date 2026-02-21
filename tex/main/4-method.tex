@@ -79,46 +79,21 @@ Equivalently, these constraints can be written as
 \end{equation}
 \end{definition}
 
-\begin{proposition}[Closed-Form Solution]
-\label{prop:alpha-beta}
-Assume $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$. The unique solution satisfying $\alpha S^+ = \beta S^-$ and
-$\alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|$ is:
+When $\mathcal{P} \neq \emptyset$ and $\mathcal{N} \neq \emptyset$, solving the constraints in \Cref{def:adaptive-norm} yields the
+closed-form scaling factors:
 \begin{equation}
     \alpha = \sqrt{\frac{|\mathcal{P}| + |\mathcal{N}|}{Q^+ + \left(\frac{S^+}{S^-}\right)^{\!2} Q^-}},
     \qquad
     \beta = \alpha \cdot \frac{S^+}{S^-}.
     \label{eq:alpha-beta}
 \end{equation}
-\end{proposition}
-
-\begin{proof}
-We solve the two scalar constraints in \Cref{def:adaptive-norm} and then enforce $\alpha,\beta>0$.
-
-\textbf{Step 1 (zero empirical mean).} The constraint $\alpha S^+ = \beta S^-$ implies
-\begin{equation}
-    \beta = \alpha \cdot \frac{S^+}{S^-}.
-    \label{eq:beta-from-mean}
-\end{equation}
-Since $\mathcal{P}\neq\emptyset$ and $\mathcal{N}\neq\emptyset$, we have $S^+>0$ and $S^->0$, so $S^+/S^-$ is well-defined.
-
-\textbf{Step 2 (unit empirical second moment).} Substituting \eqref{eq:beta-from-mean} into
-$\alpha^2 Q^+ + \beta^2 Q^- = |\mathcal{P}| + |\mathcal{N}|$ yields
-\begin{align}
-\alpha^2
-&= \frac{|\mathcal{P}| + |\mathcal{N}|}{Q^+ + \left(\frac{S^+}{S^-}\right)^{2} Q^-}.
-\end{align}
-The denominator is strictly positive because $Q^+>0$, $Q^->0$, and $|\mathcal{P}| + |\mathcal{N}|>0$ under the same assumption. Taking
-the positive square root gives the stated $\alpha>0$, and then \eqref{eq:beta-from-mean} yields the stated $\beta$.
-The mean constraint uniquely specifies the ratio $\beta/\alpha$, and the second-moment constraint uniquely
-specifies $\alpha^2$. Enforcing $\alpha>0$ and $\beta>0$ therefore yields a unique solution.
-\end{proof}
 
 \paragraph{Advantage sign preservation.}
 \label{par:adv-sign-preservation}
 The adaptive normalization preserves the sign of the advantage at every token: $\sign(\hat{A}_{i,t}) = \sign(A_{i,t})$ for all $(i,t)$
 with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserved within the positive group $\mathcal{P}$ and within the
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
-$\beta>0$ on $\mathcal{N}$ (\Cref{prop:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
+$\beta>0$ on $\mathcal{N}$ (\Cref{eq:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
 \paragraph{Connection to asymmetric clipping.}
 Adaptive normalization is a soft analog of PPO's asymmetric clipping. PPO clips the importance ratio differently depending on the advantage
