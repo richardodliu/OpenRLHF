@@ -143,6 +143,22 @@ Accordingly, the error decomposition below is stated in terms of $\mathcal{L}_{\
 factorization, while the implemented loss uses $\tilde{\mathcal{L}}_{\piroll}$ as a practical approximation.
 \end{remark}
 
+\begin{remark}[Gradient Form of the Implementation Surrogate]
+\label{rem:grad-impl-surrogate}
+During a policy update, the rollout distribution $P^{\piroll}(\cdot|x)$ is treated as fixed, and rewards/baselines are detached.
+Consequently, for a parameterized policy $\pi_\theta$ (denoted $\pitheta$), the trajectory-level surrogate in \Cref{def:impl-surrogate} has the
+score-function gradient form
+\begin{equation*}
+    \nabla_\theta \tilde{\mathcal{L}}_{\piroll}(\pitheta)
+    =
+    \E_{\piroll}\!\left[
+        A \cdot \sum_{t=1}^{T} \rho_t\, \nabla_\theta \log \pitheta(y_t\mid c_t)
+    \right].
+\end{equation*}
+This expression is structurally analogous to classical importance-weighted policy-gradient surrogates; see Appendix~\Cref{app:grad-impl-surrogate}
+for a derivation and comparisons (e.g., \citet{qi2026rethinkingtrustregionllm}).
+\end{remark}
+
 The approximation error of the per-step surrogate is
 \begin{equation*}
     \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - \mathcal{L}_{\piroll}(\pitheta).
@@ -227,6 +243,39 @@ Fix a prompt $x$ and recall that $P^{\pi}(\cdot|x)$ denotes the distribution ove
 \noindent These statements clarify the relationship between single-sample ratio statistics and distributional divergences. In particular,
 \Cref{lem:tv-ratio-identity} shows that the token-level ratio residual $|\rho_t-1|$ is an unbiased proxy for a TV divergence under
 rollout-time sampling, while \Cref{lem:coarse-grain-lower} characterizes divergence proxies computed on reduced (coarse-grained) supports.
+
+\begin{remark}[Coarse-Graining Gap for TV]
+\label{rem:tv-gap}
+Fix a context $c_t$ and a partition $\mathcal{C}=\{C_1,\ldots,C_m\}$. For policies $\pi,\pi'$, define the cell-wise slack
+\begin{equation*}
+    s_j(c_t)
+    :=
+    \sum_{v\in C_j} \big|\pi(v|c_t)-\pi'(v|c_t)\big|
+    -
+    \big|\pi(C_j|c_t)-\pi'(C_j|c_t)\big|.
+\end{equation*}
+Then $s_j(c_t)\ge 0$ and the gap between the true and coarse-grained TV divergences satisfies
+\begin{equation*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    -
+    \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big)
+    =
+    \frac{1}{2}\sum_{j=1}^{m} s_j(c_t).
+\end{equation*}
+Moreover, each slack term is bounded by the total mass of its cell:
+\begin{equation*}
+    0 \le s_j(c_t) \le \pi(C_j|c_t) + \pi'(C_j|c_t).
+\end{equation*}
+For Top-$K$ style partitions in which all head tokens are isolated and only a single tail cell is aggregated, the coarse-graining gap is
+therefore controlled by the tail mass. A proof is given in Appendix~\Cref{app:dppo-div-gap} (cf.\ \citet{qi2026rethinkingtrustregionllm}).
+\end{remark}
+
+\begin{remark}[Equality Condition for Coarse-Grained KL]
+\label{rem:kl-equality}
+Under the absolute continuity condition in \Cref{lem:coarse-grain-lower}, equality in the KL coarse-graining inequality holds if and only
+if, for each cell $C_j$ with $\pi(C_j|c_t)>0$, the ratio $\pi(v|c_t)/\pi'(v|c_t)$ is constant over all $v\in C_j$ with $\pi(v|c_t)>0$.
+This is the equality condition of the log-sum inequality; see Appendix~\Cref{app:dppo-div-gap}.
+\end{remark}
 
 \subsection{Finite-Horizon Trust Region Bounds}
 \label{sec:fh-tr}

@@ -13,8 +13,14 @@ This appendix collects supplementary material for the main paper.
     sampled-token ratio statistics to distributional divergences and provide proof entry points for
     \Cref{lem:tv-ratio-identity,lem:coarse-grain-lower,lem:seq-tv-sum}.
 
+    \item \textbf{Divergence approximation gaps.} \Cref{app:dppo-div-gap} bounds the slack introduced by TV coarse-graining and records
+    equality conditions for KL coarse-graining, providing proof entry points for \Cref{rem:tv-gap,rem:kl-equality}.
+
     \item \textbf{Finite-horizon trust-region bounds.} \Cref{app:dppo-llm-tr} proves the finite-horizon performance difference identity and
     the associated remainder bounds recorded in \Cref{rem:fh-tr-bound}, adapted from \citet{qi2026rethinkingtrustregionllm}.
+
+    \item \textbf{Surrogate gradient forms.} \Cref{app:grad-impl-surrogate} derives the gradient of the implementation surrogate
+    $\tilde{\mathcal{L}}_{\piroll}$, providing a proof entry point for \Cref{rem:grad-impl-surrogate}.
 
     \item \textbf{REINFORCE Max details.} \Cref{app:rloo-proof} summarizes standard properties of the leave-one-out (RLOO) baseline.
     \Cref{app:gamma-one} gives a brief justification for setting $\gamma = 1.0$ under sparse terminal rewards. \Cref{app:numerical} and
@@ -285,6 +291,74 @@ $c_t\sim d_t^{\piroll}$ gives
 Dividing by $2$ completes the proof.
 \end{proof}
 
+\section{Divergence Approximation Gaps and Equality Conditions}
+\label[appsec]{app:dppo-div-gap}
+
+This section complements the coarse-graining lower bounds in \Cref{lem:coarse-grain-lower} by quantifying the slack introduced by TV
+coarse-graining and recording the equality condition for KL coarse-graining. The arguments are standard (e.g.,
+\citet{qi2026rethinkingtrustregionllm}).
+
+\subsection{Proof of \texorpdfstring{\Cref{rem:tv-gap}}{Remark}}
+
+\begin{proof}
+Fix a context $c_t$ and write $p(v):=\pi(v|c_t)$ and $q(v):=\pi'(v|c_t)$. For each cell $C_j$, define the slack
+\begin{equation*}
+    s_j(c_t)
+    :=
+    \sum_{v\in C_j} \big|p(v)-q(v)\big|
+    -
+    \left|\sum_{v\in C_j}\big(p(v)-q(v)\big)\right|.
+\end{equation*}
+By the triangle inequality, $s_j(c_t)\ge 0$. Moreover,
+\begin{align*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    &=
+    \frac{1}{2}\sum_{j=1}^{m}\sum_{v\in C_j} \big|p(v)-q(v)\big|,
+    \\
+    \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big)
+    &=
+    \frac{1}{2}\sum_{j=1}^{m} \left|p(C_j)-q(C_j)\right|
+    =
+    \frac{1}{2}\sum_{j=1}^{m} \left|\sum_{v\in C_j}\big(p(v)-q(v)\big)\right|.
+\end{align*}
+Subtracting the two displays yields the gap identity
+\begin{equation*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    -
+    \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big)
+    =
+    \frac{1}{2}\sum_{j=1}^{m} s_j(c_t).
+\end{equation*}
+Finally, since $\left|\sum_{v\in C_j}(p(v)-q(v))\right|\ge 0$, one has
+\begin{equation*}
+    s_j(c_t)
+    \le
+    \sum_{v\in C_j}\big|p(v)-q(v)\big|
+    \le
+    \sum_{v\in C_j}\big(p(v)+q(v)\big)
+    =
+    p(C_j)+q(C_j),
+\end{equation*}
+where the second inequality uses $|a-b|\le a+b$ for $a,b\ge 0$. This proves the claimed slack bound.
+\end{proof}
+
+\subsection{Proof of \texorpdfstring{\Cref{rem:kl-equality}}{Remark}}
+
+\begin{proof}
+Fix a context $c_t$ and recall the absolute continuity assumption in \Cref{lem:coarse-grain-lower}, so $q(v)>0$ whenever $p(v)>0$. In the
+proof of \Cref{lem:coarse-grain-lower}, we apply the log-sum inequality within each cell $C_j$:
+\begin{equation*}
+    \sum_{v\in C_j} p(v)\log\frac{p(v)}{q(v)}
+    \ge
+    \left(\sum_{v\in C_j}p(v)\right)\log\frac{\sum_{v\in C_j}p(v)}{\sum_{v\in C_j}q(v)}
+    =
+    p(C_j)\log\frac{p(C_j)}{q(C_j)}.
+\end{equation*}
+The log-sum inequality holds with equality if and only if the ratio $p(v)/q(v)$ is constant over all $v\in C_j$ with $p(v)>0$. Since the
+coarse-grained KL lower bound is obtained by summing these inequalities over $j$, equality holds globally if and only if the condition
+holds for every cell.
+\end{proof}
+
 \section{Finite-Horizon Trust Region Bounds}
 \label[appsec]{app:dppo-llm-tr}
 
@@ -441,6 +515,49 @@ since $\epsilon=\Dtvtokmax$ upper bounds every token-level TV divergence. Substi
     4R_{\max}\sum_{t=1}^{T}\Dbar_t.
 \end{align*}
 Taking the minimum of the two bounds completes the proof.
+\end{proof}
+
+\section{Gradient Form of the Implementation Surrogate}
+\label[appsec]{app:grad-impl-surrogate}
+
+This section provides a derivation of the gradient expression stated in \Cref{rem:grad-impl-surrogate}. The derivation is standard in
+policy-gradient analyses; see, e.g., \citet{qi2026rethinkingtrustregionllm} for related surrogate-gradient comparisons in the LLM regime.
+
+\subsection{Proof of \texorpdfstring{\Cref{rem:grad-impl-surrogate}}{Remark}}
+
+\begin{proof}
+Recall the implementation surrogate from \Cref{def:impl-surrogate}:
+\begin{equation*}
+    \tilde{\mathcal{L}}_{\piroll}(\pitheta)
+    =
+    \E_{\piroll}\!\left[A \cdot \sum_{t=1}^{T}\rho_t\right],
+    \qquad
+    \rho_t
+    =
+    \frac{\pitheta(y_t\mid c_t)}{\piroll(y_t\mid c_t)}.
+\end{equation*}
+During a policy update, the behavior policy $\piroll$ is fixed, so the expectation does not depend on $\theta$. Treating $A$ as a detached
+scalar weight, differentiate under the expectation to obtain
+\begin{equation*}
+    \nabla_\theta \tilde{\mathcal{L}}_{\piroll}(\pitheta)
+    =
+    \E_{\piroll}\!\left[A \cdot \sum_{t=1}^{T}\nabla_\theta \rho_t\right].
+\end{equation*}
+Since $\piroll$ is independent of $\theta$, one has
+\begin{equation*}
+    \nabla_\theta \rho_t
+    =
+    \rho_t \nabla_\theta \log \pitheta(y_t\mid c_t).
+\end{equation*}
+Substituting this identity yields
+\begin{equation*}
+    \nabla_\theta \tilde{\mathcal{L}}_{\piroll}(\pitheta)
+    =
+    \E_{\piroll}\!\left[
+        A \cdot \sum_{t=1}^{T} \rho_t\,\nabla_\theta \log \pitheta(y_t\mid c_t)
+    \right],
+\end{equation*}
+which is the claimed score-function form.
 \end{proof}
 
 \section{REINFORCE Max: Supplementary Details}
