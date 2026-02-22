@@ -43,6 +43,7 @@
 2. 若某个结论完全来自引用论文：只给出本文需要使用的陈述与明确出处说明，不在本文附录给 proof。
 3. 若某个结论需要在本文设定下做延伸或补充才能使用：放到 Method/Theory，并在附录证明。
 4. Method/Theory 中引入的新结论必须与本文方法强绑定，用于突出或解释本文的核心优势；不满足该要求的内容不得进入正文结论链路（最多作为背景引用，且不占篇幅）。
+5. Preliminaries 不得出现“必须先证明才能使用”的结论型内容：不允许出现 “Proof deferred to Appendix / 见附录证明 / proof in appendix” 等表述；凡需要本文证明链路支撑的内容必须移至 Method/Theory + Appendix。
 
 ### 3.2 DPPO 迁移红线
 
@@ -71,6 +72,14 @@
 3. 严禁复制与符号替换式搬运：禁止直接复制参考论文的结论陈述、证明推导、文字表述或段落结构；禁止仅做符号替换、变量重命名、重排等形式化改写来冒充新内容。这类行为属于严重学术不端，必须在执行中作为一票否决项。
 4. 引用他人成果的合规方式：若需要使用参考论文的结论，应在 Preliminaries 中仅引用本文需要使用的那部分陈述，并给出明确引用与出处说明；不得在本文（包括附录）复现其证明过程。若必须在本文设定下扩展该结论，则必须明确写出新增假设、扩展点与差异，并给出本文自己的证明。
 5. 核心目标约束：参考论文的主要价值在于提供证明方法与技术细节，用来辅助说明本文方法的优势与机制。大量直接搬运参考论文结果会削弱本文核心贡献，应严格控制引用结果的数量与篇幅，并保证论文叙事的主语始终是本文方法与其可证明的优势。
+
+### 3.6 Section 职能分工（强制）
+
+1. Preliminaries：只用于定义、记号、假设与引用外部论文的必要结论片段（statement-only + citation）。Preliminaries 的所有内容必须做到“无需依赖本文附录证明即可直接使用”。
+2. Preliminaries 禁止项：不得出现本文原创或本文延伸结论；不得出现需要本文附录证明才能成立的命题；不得出现 proof 指向或延迟证明的叙事。
+3. 外部结论的呈现方式：外部论文结论在 Preliminaries 中只允许以 `definition` 或 `remark` 的形式引用（推荐 remark 标题含 “Cited result”），并在文字中明确说明出处。不得在本文（包括附录）复现该外部结论的证明过程。
+4. Method/Theory：承载本文原创或在本文设定下必要延伸才能成立的结论，并必须服务于本文方法优势叙事（参见第 3.5 节）。正文只保留清晰陈述、必要解释与证明入口。
+5. Appendix：只包含本文原创/延伸结论的完整证明与推导细节；不得出现纯引用结果的 proof 复现。
 
 ## 4. 风格与记号规范抽取
 
@@ -163,6 +172,7 @@
 1. Existing IS Correction Methods 仅保留定义与统一记号，不做对比评论。
 2. 对 $\mathcal{L}_{\pi_{\mathrm{roll}}}$ 与实现 surrogate 的关系，严格区分 “等价改写” 与 “实现近似”。
 3. 所有复杂等式使用 `align`，并在每一步末尾标注理由短语。
+4. Section 职能门禁：Preliminaries 只允许 definition/notation/assumption/cited statements。若需要引用外部结论，仅给出本文使用的 statement + citation，不写 proof，也不写 “proof in appendix”。凡需要本文证明链路支撑的内容必须移至 Method/Theory，并在 Appendix 给本文自己的 proof（参见第 3.6 节）。
 
 #### `tex/main/4-method.tex`
 
@@ -234,9 +244,8 @@ $$
 
 放置与证明策略：
 
-1. 正文只放 statement 与用途说明，并给出处引用。
-2. 若该结果完全来自 DPPO，则不在本文附录重复 proof。
-3. 若本文需要在 prefix/causal 设定下做延伸，则延伸版本放 Method/Theory，并在附录证明。
+1. 若该结果作为纯引用背景：在 Preliminaries 以 statement-only 的 `remark` 引用（带 citation），并说明该结论在本文中的用途；不得在本文附录重复其原始 proof。
+2. 若本文需要在 prefix/causal 设定下做延伸：延伸版本必须放在 Method/Theory，并在 Appendix 给出本文自己的 proof；Preliminaries 只保留对 DPPO 原结论的引用性 remark（参见第 3.6 节）。
 
 非平凡延伸要求：
 
@@ -249,8 +258,8 @@ $$
 
 放置与证明策略：
 
-1. 正文给 general partition lemma 的 statement，binary/top-k 作为 corollary。
-2. 若该结论完全来自 DPPO，则只引用不证明；若本文需扩展到 prefix 聚合 proxy，则扩展部分给 proof。
+1. 若该结论作为纯引用背景：在 Preliminaries 只给 general partition 的 statement（必要时给出 binary/top-k 作为随附陈述），并给 citation；不得在 Appendix 复现 DPPO proof。
+2. 若本文需扩展到 prefix 聚合 proxy：扩展版本必须放在 Method/Theory，并在 Appendix 给出本文自己的 proof；Preliminaries 只保留对 DPPO 原结论的引用性 statement + citation（参见第 3.6 节）。
 
 非平凡延伸要求：
 
@@ -300,6 +309,13 @@ DPPO 迁移结果不得成为装饰性背景，必须在 `tex/main/5-theory.tex`
 2. 对每个引用自参考论文的结论：只出现陈述与 citation，不出现 proof 复现；附录中不得出现对参考论文证明过程的逐步复刻。
 3. 抽查关键段落，确保不存在“符号替换式搬运”：若发现与参考论文在段落结构、推导顺序与表述上高度一致，则必须重写或移除。
 4. 检查引用占比与叙事主语：引用性结果不得遮蔽本文贡献；正文应以本文方法的优势与可证明机制为主线。
+
+### 8.5 Section 职能分工验收（自动化检索）
+
+以下检索作为结构门禁，确保 Preliminaries 不承载需要本文证明的结论：
+
+1. Preliminaries 不包含 theorem 类环境：运行 `rg -n "\\\\begin\\{(theorem|lemma|proposition|corollary)\\}" tex/main/3-preliminaries.tex`，结果必须为 0。
+2. Preliminaries 不包含 proof 指向或延迟证明叙事：运行 `rg -n "Proof|proof|Appendix|附录|defer|deferred|见附录" tex/main/3-preliminaries.tex`，结果必须为 0。
 
 ## 9. 提交与迭代策略
 
