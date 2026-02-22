@@ -169,6 +169,65 @@ where $\Dbar_t$ is the expected per-position TV divergence, and $\epsilon,\delta
 \Cref{def:max-div}. This bound operates at per-position granularity and preserves the causal structure of error accumulation, which
 motivates our prefix-level Causal Trust Region masking component.
 
+\subsection{Divergence Proxies and Coarse-Grained Lower Bounds}
+\label{sec:div-proxies}
+
+Long-horizon trust-region analyses for LLM-RL quantify policy drift via divergences between full next-token distributions (e.g.,
+\citet{li2025trm}). In practice, however, scalable systems may only expose sampled tokens and their log-probabilities. This subsection
+records several standard identities and lower bounds that connect sampled-token statistics to distributional divergences. Proofs are
+deferred to Appendix~\Cref{app:dppo-proxies}.
+
+\begin{lemma}[TV as an Expectation of the Ratio Residual]
+\label{lem:tv-ratio-identity}
+Under Assumption~\ref{asm:support}, for any context $c_t$,
+\begin{equation*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    = \frac{1}{2}\E_{y_t \sim \piroll(\cdot|c_t)}\!\left[\big|\rho_t - 1\big|\right],
+    \qquad
+    \rho_t = \frac{\pitheta(y_t|c_t)}{\piroll(y_t|c_t)}.
+\end{equation*}
+\end{lemma}
+
+\begin{lemma}[Coarse-Graining Lower Bounds]
+\label{lem:coarse-grain-lower}
+Let $\mathcal{V}$ be the vocabulary and let $\mathcal{C}=\{C_1,\ldots,C_m\}$ be any partition of $\mathcal{V}$. For a policy $\pi$,
+define the coarse-grained distribution $\pi^{\mathcal{C}}(\cdot|c_t)$ by $\pi^{\mathcal{C}}(C_j|c_t):=\sum_{v\in C_j}\pi(v|c_t)$.
+Then for any policies $\pi,\pi'$ and any context $c_t$,
+\begin{equation*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    \ge \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big),
+\end{equation*}
+and, if $\pi(\cdot|c_t)$ is absolutely continuous with respect to $\pi'(\cdot|c_t)$,
+\begin{equation*}
+    \DKL\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    \ge \DKL\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big).
+\end{equation*}
+\end{lemma}
+
+\begin{corollary}[Binary TV Lower Bound from a Sampled Token]
+\label{cor:binary-tv-lower}
+Fix a context $c_t$ and a token $y_t \in \mathcal{V}$ such that $\piroll(y_t|c_t)>0$. Consider the binary partition
+$\mathcal{C}=\{\{y_t\},\mathcal{V}\setminus\{y_t\}\}$. Then
+\begin{equation*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    \ge \big|\piroll(y_t|c_t) - \pitheta(y_t|c_t)\big|
+    = \piroll(y_t|c_t)\,\big|\rho_t-1\big|.
+\end{equation*}
+\end{corollary}
+
+\begin{lemma}[Sequence-Level TV Bound by Expected Token-Level TV]
+\label{lem:seq-tv-sum}
+Fix a prompt $x$ and recall that $P^{\pi}(\cdot|x)$ denotes the distribution over length-$T$ responses under policy $\pi$. Then
+\begin{equation*}
+    \DTV\big(P^{\piroll}(\cdot|x)\,\|\,P^{\pitheta}(\cdot|x)\big)
+    \le \sum_{t=1}^{T} \E_{c_t \sim d_t^{\piroll}}\!\big[\Dtvtok(c_t;\piroll,\pitheta)\big].
+\end{equation*}
+\end{lemma}
+
+\noindent These statements clarify the relationship between single-sample ratio statistics and distributional divergences. In particular,
+\Cref{lem:tv-ratio-identity} shows that the token-level ratio residual $|\rho_t-1|$ is an unbiased proxy for a TV divergence under
+rollout-time sampling, while \Cref{lem:coarse-grain-lower} characterizes divergence proxies computed on reduced (coarse-grained) supports.
+
 \subsection{Existing Importance Sampling Correction Methods}
 \label{sec:existing-is}
 

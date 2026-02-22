@@ -116,6 +116,15 @@ We adopt a trust-region masking viewpoint: when mismatch between $\piroll$ and $
 unreliable gradient contributions. Existing methods differ mainly in the granularity of this attenuation (see \Cref{sec:existing-is} and
 \Cref{tab:is-methods} for a unified notation).
 
+\textbf{Single-sample ratio statistics vs.\ distributional drift.} Although the per-token ratio residual $|\rho_t-1|$ is a single-sample
+quantity, it admits a clean divergence interpretation. Conditional on the context $c_t$, \Cref{lem:tv-ratio-identity} implies that
+$|\rho_t-1|$ has expectation $2\Dtvtok(c_t;\piroll,\pitheta)$ under $y_t\sim\piroll(\cdot|c_t)$, so thresholding $\rho_t$ can be viewed
+as thresholding a noisy proxy for a TV-based trust region. At the same time, the binary lower bound in \Cref{cor:binary-tv-lower} shows
+that the effect of a large ratio depends on the behavior-policy mass at the sampled token: for low-probability tokens, even a large
+$\rho_t$ can correspond to a small absolute probability shift. Finally, policy drift at the level of full response distributions admits an
+additive upper bound by the expected token-level TVs along the trajectory (\Cref{lem:seq-tv-sum}), which motivates per-position and
+prefix-structured filtering mechanisms.
+
 \textbf{Token-level truncation and masking.} Under this view, TIS and IcePop are token-level analogues of trust-region masking: they operate
 directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$ to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded
 weight at every position. IcePop instead masks out tokens whose ratio falls outside the interval, eliminating extreme-weight bias at the

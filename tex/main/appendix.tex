@@ -8,6 +8,11 @@ This appendix collects supplementary material for the main paper.
     \item \textbf{Implementation divergence and anchoring.} \Cref{app:mismatch} summarizes common sources of rollout--training mismatch and
     our anchoring choice. \Cref{app:ppo-clip-leak} explains why PPO clipping can leak gradients under implementation divergence.
 
+    \item \textbf{Divergence proxies and lower bounds.} \Cref{app:dppo-proxies} collects several supporting identities and coarse-graining
+    inequalities adapted from divergence-based trust-region analyses (e.g., \citet{qi2026rethinkingtrustregionllm}). These results connect
+    sampled-token ratio statistics to distributional divergences and provide proof entry points for
+    \Cref{lem:tv-ratio-identity,lem:coarse-grain-lower,lem:seq-tv-sum}.
+
     \item \textbf{REINFORCE Max details.} \Cref{app:rloo-proof} summarizes standard properties of the leave-one-out (RLOO) baseline.
     \Cref{app:gamma-one} gives a brief justification for setting $\gamma = 1.0$ under sparse terminal rewards. \Cref{app:numerical} and
     \Cref{app:uniform-scale} provide implementation-oriented numerical safeguards and an optional uniform scale mode.
@@ -99,6 +104,183 @@ policy improvements. For example, a routing discontinuity in a Mixture-of-Expert
 Such spikes reflect implementation-level divergence and can induce a massive, erroneous gradient contribution under the unclipped branch
 when $\hat{A}_t<0$. This motivates using a detached trust-region mask to discard mismatched tokens or trajectories rather than relying on a
 token-level clipping heuristic.
+
+\section{Divergence Proxies and Coarse-Grained Lower Bounds}
+\label[appsec]{app:dppo-proxies}
+
+This section provides proofs for the supporting statements in \Cref{sec:div-proxies}. The results are standard in divergence-based
+trust-region analyses for the LLM regime (e.g., \citet{qi2026rethinkingtrustregionllm}) and are rewritten here in the notation of this
+paper for completeness.
+
+\subsection{Proof of \texorpdfstring{\Cref{lem:tv-ratio-identity}}{Lemma}}
+
+\begin{proof}
+Fix a context $c_t$. By definition of total variation distance,
+\begin{align*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    &=
+    \DTV\big(\piroll(\cdot|c_t)\,\|\,\pitheta(\cdot|c_t)\big)
+    \\
+    &=
+    \frac{1}{2}\sum_{v} \big|\piroll(v|c_t) - \pitheta(v|c_t)\big|.
+\end{align*}
+For each token $v$ with $\piroll(v|c_t)>0$, define the ratio $\rho(v) := \pitheta(v|c_t)/\piroll(v|c_t)$. Then
+\begin{align*}
+    \big|\piroll(v|c_t) - \pitheta(v|c_t)\big|
+    =
+    \piroll(v|c_t)\,\big|1-\rho(v)\big|.
+\end{align*}
+Substituting this expression into the previous display yields
+\begin{align*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    &=
+    \frac{1}{2}\sum_{v} \piroll(v|c_t)\,\left|1-\frac{\pitheta(v|c_t)}{\piroll(v|c_t)}\right|
+    \\
+    &=
+    \frac{1}{2}\E_{y_t \sim \piroll(\cdot|c_t)}\!\left[\big|1-\rho_t\big|\right]
+    =
+    \frac{1}{2}\E_{y_t \sim \piroll(\cdot|c_t)}\!\left[\big|\rho_t-1\big|\right],
+\end{align*}
+where $\rho_t = \pitheta(y_t|c_t)/\piroll(y_t|c_t)$ is the per-token importance ratio along the sampled trajectory. This completes the
+proof.
+\end{proof}
+
+\subsection{Proof of \texorpdfstring{\Cref{lem:coarse-grain-lower} and \Cref{cor:binary-tv-lower}}{Lemma and Corollary}}
+
+\begin{proof}
+Fix a context $c_t$ and let $\mathcal{C}=\{C_1,\ldots,C_m\}$ be a partition of the vocabulary. For brevity, write
+$p(v) := \pi(v|c_t)$ and $q(v):=\pi'(v|c_t)$, and define the coarse-grained masses
+$p(C_j) := \sum_{v\in C_j} p(v)$ and $q(C_j) := \sum_{v\in C_j} q(v)$.
+
+\textbf{TV lower bound.} By the triangle inequality applied within each cell,
+\begin{align*}
+    \sum_{v\in C_j} |p(v)-q(v)|
+    &\ge
+    \left|\sum_{v\in C_j} (p(v)-q(v))\right|
+    =
+    |p(C_j)-q(C_j)|.
+\end{align*}
+Summing over cells and dividing by $2$ gives
+\begin{align*}
+    \DTV(p\|q)
+    =
+    \frac{1}{2}\sum_{v} |p(v)-q(v)|
+    &=
+    \frac{1}{2}\sum_{j=1}^{m}\sum_{v\in C_j} |p(v)-q(v)|
+    \\
+    &\ge
+    \frac{1}{2}\sum_{j=1}^{m} |p(C_j)-q(C_j)|
+    =
+    \DTV(p^{\mathcal{C}}\|q^{\mathcal{C}}),
+\end{align*}
+which is the claimed TV coarse-graining inequality.
+
+\textbf{KL lower bound.} Assume $p$ is absolutely continuous with respect to $q$. For each cell $C_j$, the log-sum inequality implies
+\begin{align*}
+    \sum_{v\in C_j} p(v)\log\frac{p(v)}{q(v)}
+    \ge
+    \left(\sum_{v\in C_j} p(v)\right)\log\frac{\sum_{v\in C_j} p(v)}{\sum_{v\in C_j} q(v)}
+    =
+    p(C_j)\log\frac{p(C_j)}{q(C_j)}.
+\end{align*}
+Summing over $j$ yields
+\begin{align*}
+    \DKL(p\|q)
+    =
+    \sum_{v} p(v)\log\frac{p(v)}{q(v)}
+    &=
+    \sum_{j=1}^{m}\sum_{v\in C_j} p(v)\log\frac{p(v)}{q(v)}
+    \\
+    &\ge
+    \sum_{j=1}^{m} p(C_j)\log\frac{p(C_j)}{q(C_j)}
+    =
+    \DKL(p^{\mathcal{C}}\|q^{\mathcal{C}}),
+\end{align*}
+which is the claimed KL coarse-graining inequality.
+
+\textbf{Binary corollary.} Now specialize to the binary partition
+$\mathcal{C}=\{\{y_t\},\mathcal{V}\setminus\{y_t\}\}$. The coarse-grained TV is
+\begin{align*}
+    \DTV(p^{\mathcal{C}}\|q^{\mathcal{C}})
+    &=
+    \frac{1}{2}\Big(
+        |p(y_t)-q(y_t)|
+        +
+        |(1-p(y_t))-(1-q(y_t))|
+    \Big)
+    =
+    |p(y_t)-q(y_t)|.
+\end{align*}
+Applying the TV lower bound with this partition gives $\DTV(p\|q)\ge |p(y_t)-q(y_t)|$. Finally, when $p(y_t)>0$,
+\begin{align*}
+    |p(y_t)-q(y_t)|
+    =
+    p(y_t)\left|1-\frac{q(y_t)}{p(y_t)}\right|
+    =
+    \piroll(y_t|c_t)\,\big|1-\rho_t\big|
+    =
+    \piroll(y_t|c_t)\,\big|\rho_t-1\big|.
+\end{align*}
+This proves \Cref{cor:binary-tv-lower}.
+\end{proof}
+
+\subsection{Proof of \texorpdfstring{\Cref{lem:seq-tv-sum}}{Lemma}}
+
+\begin{proof}
+Fix a prompt $x$ and define the sequence distributions
+\begin{equation*}
+    P(y) := P^{\piroll}(y\mid x) = \prod_{t=1}^{T}\piroll(y_t\mid c_t),
+    \qquad
+    Q(y) := P^{\pitheta}(y\mid x) = \prod_{t=1}^{T}\pitheta(y_t\mid c_t),
+\end{equation*}
+where $c_t=(x,y_{<t})$ is the context induced by the prefix of $y$.
+By definition of TV distance,
+\begin{equation*}
+    2\,\DTV(P\|Q)
+    =
+    \sum_{y} \left| \prod_{t=1}^{T}\piroll(y_t\mid c_t) - \prod_{t=1}^{T}\pitheta(y_t\mid c_t) \right|.
+\end{equation*}
+We use the telescoping product identity
+\begin{equation*}
+    \prod_{t=1}^{T} a_t - \prod_{t=1}^{T} b_t
+    =
+    \sum_{t=1}^{T}\left(\prod_{k=1}^{t-1} a_k\right)(a_t-b_t)\left(\prod_{j=t+1}^{T} b_j\right),
+\end{equation*}
+applied to $a_t=\piroll(y_t\mid c_t)$ and $b_t=\pitheta(y_t\mid c_t)$. By the triangle inequality,
+\begin{align*}
+    2\,\DTV(P\|Q)
+    &\le
+    \sum_{y}\sum_{t=1}^{T}
+    \left(\prod_{k=1}^{t-1}\piroll(y_k\mid c_k)\right)
+    \big|\piroll(y_t\mid c_t)-\pitheta(y_t\mid c_t)\big|
+    \left(\prod_{j=t+1}^{T}\pitheta(y_j\mid c_j)\right).
+\end{align*}
+Swap the order of summation and marginalize out the suffix $(y_{t+1},\ldots,y_T)$: for each fixed prefix $(y_1,\ldots,y_t)$, one has
+\begin{equation*}
+    \sum_{y_{t+1:T}} \prod_{j=t+1}^{T}\pitheta(y_j\mid c_j) = 1.
+\end{equation*}
+Therefore,
+\begin{align*}
+    2\,\DTV(P\|Q)
+    &\le
+    \sum_{t=1}^{T}\sum_{y_{\le t}}
+    \left(\prod_{k=1}^{t-1}\piroll(y_k\mid c_k)\right)
+    \big|\piroll(y_t\mid c_t)-\pitheta(y_t\mid c_t)\big|
+    \\
+    &=
+    \sum_{t=1}^{T}\sum_{y_{< t}}
+    \left(\prod_{k=1}^{t-1}\piroll(y_k\mid c_k)\right)
+    \sum_{y_t}\big|\piroll(y_t\mid c_t)-\pitheta(y_t\mid c_t)\big|.
+\end{align*}
+Recognizing the inner sum as $2\,\DTV(\piroll(\cdot|c_t)\,\|\,\pitheta(\cdot|c_t))$ and the outer sum as an expectation over
+$c_t\sim d_t^{\piroll}$ gives
+\begin{equation*}
+    2\,\DTV(P\|Q)
+    \le
+    2\sum_{t=1}^{T} \E_{c_t \sim d_t^{\piroll}}\!\big[\Dtvtok(c_t;\piroll,\pitheta)\big].
+\end{equation*}
+Dividing by $2$ completes the proof.
+\end{proof}
 
 \section{REINFORCE Max: Supplementary Details}
 
