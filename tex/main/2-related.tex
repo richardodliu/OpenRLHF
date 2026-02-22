@@ -12,9 +12,9 @@ Recent empirical analyses further argue that the trust region must be defined wi
 behavior policy that generated the data) rather than a recomputed anchor evaluated inside the training stack; anchoring to a recomputed
 on-policy distribution can lead to instability under training--inference mismatch~\citep{qi2026rethinkingtrustregionllm}.
 
-Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. IcePop~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token level and does not account for how deviations propagate through the sequence.
+Several importance sampling correction methods have been proposed to address this mismatch. Truncated Importance Sampling (TIS)~\citep{yao2025offpolicy} clamps the per-token importance weight to a fixed interval, preventing extreme corrections. Its limitation is that it ignores the causal structure of autoregressive generation: an early deviation affects all future tokens, but TIS treats each token independently. IcePop~\citep{zhang2025icepop} takes a harder approach: it zeroes out tokens whose importance weight falls outside the acceptable range. Like TIS, it operates at the token-level and does not account for how deviations propagate through the sequence.
 
-At the sequence level, Trust Region Masking (TRM)~\citep{li2025trm} discards entire trajectories that violate a trust region criterion defined
+At the sequence-level, Trust Region Masking (TRM)~\citep{li2025trm} discards entire trajectories that violate a trust region criterion defined
 by the maximum token-level divergence (e.g., $\max_t \Dkltok(c_t;\piroll,\pitheta)$). GSPO~\citep{gspo2025} instead computes a single
 sequence-level importance ratio coefficient (the geometric-mean ratio $\rhoseq$) and applies it uniformly across the sequence.
 \par
