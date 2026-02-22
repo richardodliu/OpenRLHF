@@ -112,16 +112,29 @@ correction).
 
 \subsection{Comparison with Other IS Correction Methods}
 
-\textbf{IS correction methods.} Token-level corrections (TIS, IcePop) operate directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$
-to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded weight at every position. IcePop instead masks out tokens whose
-ratio falls outside the interval, eliminating extreme-weight bias at the cost of discarding gradient signal. Both treat positions
-independently and therefore do not account for the downstream context shift caused by an early deviation (\Cref{prop:token-is-fails}).
+We adopt a trust-region masking viewpoint: when mismatch between $\piroll$ and $\pitheta$ is large, one should attenuate or reject
+unreliable gradient contributions. Existing methods differ mainly in the granularity of this attenuation (see \Cref{sec:existing-is} and
+\Cref{tab:is-methods} for a unified notation).
 
-Sequence-level corrections aggregate ratios over the whole trajectory. GSPO~\citep{gspo2025} clips the length-normalized sequence
-likelihood ratio $\rhoseq$ (a geometric mean of token ratios) and applies a single coefficient to all tokens, which aligns with
-sequence-level rewards but loses positional information and can dilute isolated deviations at long horizons (\Cref{prop:seq-is-fails}).
-TRM~\citep{li2025trm} applies a binary sequence gate (e.g., a max-KL trust-region criterion) and rejects entire trajectories, which is
-theoretically principled but sacrifices per-position granularity.
+\textbf{Token-level truncation and masking.} Under this view, TIS and IcePop are token-level analogues of trust-region masking: they operate
+directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$ to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded
+weight at every position. IcePop instead masks out tokens whose ratio falls outside the interval, eliminating extreme-weight bias at the
+cost of discarding gradient signal. Both treat positions independently and therefore do not account for the downstream context shift caused
+by an early deviation (\Cref{prop:token-is-fails}).
+
+\textbf{Sequence-level aggregation and gating.} Sequence-level corrections aggregate ratios over the whole trajectory. GSPO~\citep{gspo2025}
+clips the length-normalized sequence likelihood ratio $\rhoseq$ (a geometric mean of token ratios) and applies a single coefficient to all
+tokens, which aligns with sequence-level rewards but loses positional information and can dilute isolated deviations at long horizons
+(\Cref{prop:seq-is-fails}). TRM~\citep{li2025trm} applies a binary sequence gate (e.g., a max-KL trust-region criterion) and rejects entire
+trajectories, which is theoretically principled but sacrifices per-position granularity.
+
+\textbf{Prefix-level (causal) filtering.} Token- and sequence-level mechanisms leave a gap for long-horizon generation: token-level methods
+ignore how an early deviation propagates to future contexts (\Cref{prop:token-is-fails}), while sequence-level gates share a single
+decision across all positions. Our prefix mask $M_t^{\mathrm{pre}}$ (defined in \Cref{sec:prefix-is}) provides a causal, per-position gate
+constructed from prefix ratio statistics. Compared with TRM's sequence-level gate $M^{\mathrm{TRM}}(x,y)$, it preserves positional
+granularity by masking only the token-level loss terms whose prefixes violate the threshold, while still respecting the autoregressive
+order. The resulting filtering can detect both early deviations that propagate forward and cumulative drift from many small mismatches
+(\Cref{thm:prefix-tighter}).
 
 \textbf{REINFORCE Pro Max.} Taken together with the advantage-estimation choices discussed above, REINFORCE Pro Max targets all four
 dimensions discussed above. The RLOO

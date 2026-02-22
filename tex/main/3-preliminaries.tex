@@ -175,18 +175,6 @@ motivates our prefix-level Causal Trust Region masking component.
 Several methods have been proposed to stabilize policy-gradient updates by constraining the per-token importance ratio $\rho_t$ between the
 training policy $\pitheta$ and the behavior policy $\piroll$. We use the per-token log-ratio $\log\rho_t$ defined in
 \eqref{eq:log-ratio}.
-\par
-\noindent\textbf{A unified view by granularity.} We adopt a trust-region masking viewpoint: when mismatch between $\piroll$ and
-$\pitheta$ is large, one should attenuate or reject unreliable gradient contributions. Existing methods differ mainly in the
-\emph{granularity} of this attenuation: token-level truncation/masking (TIS, IcePop), sequence-level masking/aggregation (TRM, GSPO), and
-prefix-level (causal) filtering (our method in \Cref{sec:prefix-is}).
-\par
-\noindent\textbf{Interpretation.} Under this view, TIS and IcePop can be seen as token-level analogues of trust-region masking, while GSPO
-and TRM apply sequence-level decisions (a single ratio statistic or a binary rejection gate) shared across all positions.
-\par
-\noindent\textbf{Prefix-level Causal Trust Region masking.} Our prefix mask $M_t^{\mathrm{pre}}$ implements a causal, per-position gate
-constructed from prefix ratio statistics. Compared with TRM's sequence-level gate $M^{\mathrm{TRM}}(x,y)$, it preserves positional granularity by masking
-only the token-level loss terms whose prefixes violate the threshold.
 
 \noindent Table~\ref{tab:is-methods} summarizes these stabilization mechanisms under a unified notation.
 \begin{table}[ht]
@@ -227,9 +215,7 @@ trust region. A standard (max-based) criterion is
     M^{\mathrm{TRM}}(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
 \end{equation}
-Most existing methods in the critic-free LLM-RL setting share a common limitation: they either operate at token granularity (treating each
-position independently) or at sequence granularity (collapsing all positions into a single decision), neither of which explicitly respects
-the prefix-causal structure of autoregressive generation.
+We defer a comparative discussion of these mechanisms and their limitations to \Cref{sec:unified}.
 
 \begin{remark}[Context Shift Propagation]
 \label{lem:coupling}
