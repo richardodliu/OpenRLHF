@@ -132,6 +132,20 @@ and clarifies why long-horizon stability can benefit from controlling divergence
 trust-region statistic. This viewpoint is consistent with per-position long-horizon analyses such as TRM~\citep{li2025trm} and motivates
 causal, prefix-structured filtering mechanisms.
 
+\textbf{Coarse-grained divergence proxies as controllable trust-region gates.} Full next-token divergences (TV/KL) are expensive to
+compute over the entire vocabulary, motivating coarse-grained approximations such as Binary or Top-$K$ schemes. Formally, divergences
+computed on any partition are lower bounds on the true divergences (\Cref{lem:coarse-grain-lower}). Therefore, a gate that masks whenever
+a coarse-grained proxy exceeds a fixed threshold is \emph{conservative}: it does not reject updates that are provably within the trust
+region defined by the corresponding full-vocabulary divergence. The remaining question is when such proxies may under-detect drift.
+
+For TV divergence, the coarse-graining gap admits an explicit slack decomposition and a mass-based upper bound (\Cref{rem:tv-gap}). In
+particular, for Top-$K$ style partitions that isolate head tokens and aggregate the tail into a single ``other'' cell, the approximation
+error is controlled by the tail probability mass. When this aggregated tail mass is small, Top-$K$ TV can serve as a quantitatively
+controlled proxy for per-position divergence gating, and such per-position proxies can be aggregated along prefixes to yield a
+prefix-structured gate that respects the causal order of generation. For KL divergence, equality (and near-equality) of coarse-grained KL
+requires that the likelihood ratio is (approximately) constant within each aggregated cell (\Cref{rem:kl-equality}), clarifying when KL
+computed on a reduced support can faithfully represent the full-vocabulary KL.
+
 \textbf{Token-level truncation and masking.} Under this view, TIS and IcePop are token-level analogues of trust-region masking: they operate
 directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$ to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded
 weight at every position. IcePop instead masks out tokens whose ratio falls outside the interval, eliminating extreme-weight bias at the
