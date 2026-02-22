@@ -198,7 +198,7 @@ only the token-level loss terms whose prefixes violate the threshold.
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{llll}
 \toprule
-\textbf{Method} & \textbf{IS Statistic} & \textbf{Gate / Truncation} & \textbf{Granularity} \\
+\textbf{Method} & \textbf{IS Statistic} & \textbf{Truncation} & \textbf{Granularity} \\
 \midrule
 TIS & $\rho_t$ & $w_t^{\mathrm{tok}}=\mathrm{clip}(\rho_t,1-\epslow,1+\epshigh)$ & Token \\
 IcePop & $\rho_t$ & $M_t^{\mathrm{tok}}=\mathbb{I}[\rho_t \in [1-\epslow,1+\epshigh]]$ & Token \\
