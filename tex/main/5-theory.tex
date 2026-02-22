@@ -125,6 +125,13 @@ $\rho_t$ can correspond to a small absolute probability shift. Finally, policy d
 additive upper bound by the expected token-level TVs along the trajectory (\Cref{lem:seq-tv-sum}), which motivates per-position and
 prefix-structured filtering mechanisms.
 
+\textbf{Finite-horizon remainder bounds.} In the undiscounted, finite-horizon LLM setting, one can further bound the higher-order term in a
+rollout-based performance difference identity by a composite expression that is the minimum of a quadratic max-TV term and a linear
+expected-sum-TV term (\Cref{rem:fh-tr-bound}). The linear bound $4R_{\max}\sum_{t=1}^{T}\Dbar_t$ makes the per-position structure explicit
+and clarifies why long-horizon stability can benefit from controlling divergence along the trajectory rather than only via a single global
+trust-region statistic. This viewpoint is consistent with per-position long-horizon analyses such as TRM~\citep{li2025trm} and motivates
+causal, prefix-structured filtering mechanisms.
+
 \textbf{Token-level truncation and masking.} Under this view, TIS and IcePop are token-level analogues of trust-region masking: they operate
 directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$ to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded
 weight at every position. IcePop instead masks out tokens whose ratio falls outside the interval, eliminating extreme-weight bias at the

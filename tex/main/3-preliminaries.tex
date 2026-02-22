@@ -228,6 +228,70 @@ Fix a prompt $x$ and recall that $P^{\pi}(\cdot|x)$ denotes the distribution ove
 \Cref{lem:tv-ratio-identity} shows that the token-level ratio residual $|\rho_t-1|$ is an unbiased proxy for a TV divergence under
 rollout-time sampling, while \Cref{lem:coarse-grain-lower} characterizes divergence proxies computed on reduced (coarse-grained) supports.
 
+\subsection{Finite-Horizon Trust Region Bounds}
+\label{sec:fh-tr}
+
+LLM fine-tuning is naturally modeled as an undiscounted ($\gamma=1$), finite-horizon episodic problem with sequence-level rewards. In this
+setting, it is useful to record an exact performance difference identity and simple higher-order remainder bounds specialized to
+autoregressive generation. These results are standard in divergence-based analyses for the LLM regime (e.g.,
+\citet{qi2026rethinkingtrustregionllm}); we include them as background because they make explicit why per-position divergence control is
+particularly important when $T$ is large. Proofs are deferred to Appendix~\Cref{app:dppo-llm-tr}.
+
+\begin{definition}[A Finite-Horizon Surrogate for Sequence Rewards]
+\label{def:llm-surrogate}
+Define the rollout-based, sequence-reward surrogate
+\begin{equation*}
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    :=
+    \E_{x \sim P(x),\, y \sim P^{\piroll}(\cdot|x)}\!\left[
+        R(x,y)\cdot \sum_{t=1}^{T}(\rho_t-1)
+    \right],
+\end{equation*}
+and the remainder term
+\begin{equation*}
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    :=
+    \E_{x \sim P(x),\, y \sim P^{\piroll}(\cdot|x)}\!\left[
+        R(x,y)\cdot \sum_{t=1}^{T}(\rho_t-1)\left(1-\prod_{j=t+1}^{T}\rho_j\right)
+    \right],
+\end{equation*}
+where $\rho_t=\pitheta(y_t|c_t)/\piroll(y_t|c_t)$ and $P^{\piroll}(\cdot|x)$ denotes the rollout trajectory distribution.
+\end{definition}
+
+\begin{remark}[A Finite-Horizon Performance Difference Bound]
+\label{rem:fh-tr-bound}
+Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, one has the exact identity
+\begin{equation*}
+    J(\pitheta) - J(\piroll)
+    =
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    -
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta).
+\end{equation*}
+Moreover, the higher-order term admits the bounds
+\begin{equation*}
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    \le
+    2R_{\max}\,T(T-1)\,\epsilon^2,
+    \qquad
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    \le
+    4R_{\max}\sum_{t=1}^{T}\Dbar_t,
+\end{equation*}
+and hence
+\begin{equation*}
+    J(\pitheta) - J(\piroll)
+    \ge
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    -
+    \min\!\left(
+        2R_{\max}\,T(T-1)\,\epsilon^2,\;
+        4R_{\max}\sum_{t=1}^{T}\Dbar_t
+    \right).
+\end{equation*}
+This statement is adapted from finite-horizon trust-region analyses for LLM-RL (e.g., \citet{qi2026rethinkingtrustregionllm}).
+\end{remark}
+
 \subsection{Existing Importance Sampling Correction Methods}
 \label{sec:existing-is}
 
