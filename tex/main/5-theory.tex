@@ -99,6 +99,151 @@ mask requires one cumulative sum over the sequence,
 which is $O(T)$ per sample. All components are computed from cached rollout log-probabilities and current-policy log-probabilities,
 requiring no additional model evaluations beyond those already used to compute $\log\pitheta$.
 
+\subsection{Cited Supporting Results for IS Correction}
+\label{sec:cited-is-results}
+
+This subsection records several standard identities and bounds used in our comparisons of importance sampling (IS) correction mechanisms.
+All statements are adapted from existing trust-region analyses for LLM-RL (e.g., \citet{qi2026rethinkingtrustregionllm,li2025trm}). We
+include them for completeness and omit proofs.
+
+\begin{remark}[TV as an Expectation of the Ratio Residual]
+\label{lem:tv-ratio-identity}
+Under Assumption~\ref{asm:support}, for any context $c_t$,
+\begin{equation*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    = \frac{1}{2}\E_{y_t \sim \piroll(\cdot|c_t)}\!\left[\big|\rho_t - 1\big|\right],
+    \qquad
+    \rho_t = \frac{\pitheta(y_t|c_t)}{\piroll(y_t|c_t)}.
+\end{equation*}
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
+\begin{remark}[Coarse-Graining Lower Bounds]
+\label{lem:coarse-grain-lower}
+Let $\mathcal{V}$ be the vocabulary and let $\mathcal{C}=\{C_1,\ldots,C_m\}$ be any partition of $\mathcal{V}$. For a policy $\pi$,
+define the coarse-grained distribution $\pi^{\mathcal{C}}(\cdot|c_t)$ by $\pi^{\mathcal{C}}(C_j|c_t):=\sum_{v\in C_j}\pi(v|c_t)$.
+Then for any policies $\pi,\pi'$ and any context $c_t$,
+\begin{equation*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    \ge \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big),
+\end{equation*}
+and, if $\pi(\cdot|c_t)$ is absolutely continuous with respect to $\pi'(\cdot|c_t)$,
+\begin{equation*}
+    \DKL\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    \ge \DKL\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big).
+\end{equation*}
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
+\begin{remark}[Binary TV Lower Bound from a Sampled Token]
+\label{cor:binary-tv-lower}
+Fix a context $c_t$ and a token $y_t \in \mathcal{V}$ such that $\piroll(y_t|c_t)>0$. Consider the binary partition
+$\mathcal{C}=\{\{y_t\},\mathcal{V}\setminus\{y_t\}\}$. Then
+\begin{equation*}
+    \Dtvtok(c_t;\piroll,\pitheta)
+    \ge \big|\piroll(y_t|c_t) - \pitheta(y_t|c_t)\big|
+    = \piroll(y_t|c_t)\,\big|\rho_t-1\big|.
+\end{equation*}
+\end{remark}
+
+\begin{remark}[Sequence-Level TV Bound by Expected Token-Level TV]
+\label{lem:seq-tv-sum}
+Fix a prompt $x$ and recall that $P^{\pi}(\cdot|x)$ denotes the distribution over length-$T$ responses under policy $\pi$. Then
+\begin{equation*}
+    \DTV\big(P^{\piroll}(\cdot|x)\,\|\,P^{\pitheta}(\cdot|x)\big)
+    \le \sum_{t=1}^{T} \E_{c_t \sim d_t^{\piroll}}\!\big[\Dtvtok(c_t;\piroll,\pitheta)\big].
+\end{equation*}
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
+\begin{remark}[Coarse-Graining Gap for TV]
+\label{rem:tv-gap}
+Fix a context $c_t$ and a partition $\mathcal{C}=\{C_1,\ldots,C_m\}$. For policies $\pi,\pi'$, define the cell-wise slack
+\begin{equation*}
+    s_j(c_t)
+    :=
+    \sum_{v\in C_j} \big|\pi(v|c_t)-\pi'(v|c_t)\big|
+    -
+    \big|\pi(C_j|c_t)-\pi'(C_j|c_t)\big|.
+\end{equation*}
+Then $s_j(c_t)\ge 0$ and the gap between the true and coarse-grained TV divergences satisfies
+\begin{equation*}
+    \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
+    -
+    \DTV\big(\pi^{\mathcal{C}}(\cdot|c_t)\,\|\,{\pi'}^{\mathcal{C}}(\cdot|c_t)\big)
+    =
+    \frac{1}{2}\sum_{j=1}^{m} s_j(c_t).
+\end{equation*}
+Moreover, each slack term is bounded by the total mass of its cell:
+\begin{equation*}
+    0 \le s_j(c_t) \le \pi(C_j|c_t) + \pi'(C_j|c_t).
+\end{equation*}
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
+\begin{remark}[Equality Condition for Coarse-Grained KL]
+\label{rem:kl-equality}
+Under the absolute continuity condition in \Cref{lem:coarse-grain-lower}, equality in the KL coarse-graining inequality holds if and only
+if, for each cell $C_j$ with $\pi(C_j|c_t)>0$, the ratio $\pi(v|c_t)/\pi'(v|c_t)$ is constant over all $v\in C_j$ with $\pi(v|c_t)>0$.
+This is the equality condition of the log-sum inequality; see, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
+\begin{definition}[A Finite-Horizon Surrogate for Sequence Rewards]
+\label{def:llm-surrogate}
+Define the rollout-based, sequence-reward surrogate
+\begin{equation*}
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    :=
+    \E_{x \sim P(x),\, y \sim P^{\piroll}(\cdot|x)}\!\left[
+        R(x,y)\cdot \sum_{t=1}^{T}(\rho_t-1)
+    \right],
+\end{equation*}
+and the remainder term
+\begin{equation*}
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    :=
+    \E_{x \sim P(x),\, y \sim P^{\piroll}(\cdot|x)}\!\left[
+        R(x,y)\cdot \sum_{t=1}^{T}(\rho_t-1)\left(1-\prod_{j=t+1}^{T}\rho_j\right)
+    \right],
+\end{equation*}
+where $\rho_t=\pitheta(y_t|c_t)/\piroll(y_t|c_t)$ and $P^{\piroll}(\cdot|x)$ denotes the rollout trajectory distribution.
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{definition}
+
+\begin{remark}[A Finite-Horizon Performance Difference Bound]
+\label{rem:fh-tr-bound}
+Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, one has the exact identity
+\begin{equation*}
+    J(\pitheta) - J(\piroll)
+    =
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    -
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta).
+\end{equation*}
+Moreover, the higher-order term admits the bounds
+\begin{equation*}
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    \le
+    2R_{\max}\,T(T-1)\,\epsilon^2,
+    \qquad
+    \Delta^{\mathrm{LLM}}(\piroll,\pitheta)
+    \le
+    4R_{\max}\sum_{t=1}^{T}\Dbar_t,
+\end{equation*}
+and hence
+\begin{equation*}
+    J(\pitheta) - J(\piroll)
+    \ge
+    \mathcal{L}_{\piroll}^{\mathrm{LLM}}(\pitheta)
+    -
+    \min\!\left(
+        2R_{\max}\,T(T-1)\,\epsilon^2,\;
+        4R_{\max}\sum_{t=1}^{T}\Dbar_t
+    \right).
+\end{equation*}
+See, e.g., \citet{qi2026rethinkingtrustregionllm}.
+\end{remark}
+
 \subsection{Comparison with Other Advantage Estimation Methods}
 
 We compare REINFORCE Pro Max with existing critic-free LLM-RL methods along four dimensions: baseline type, advantage normalization
