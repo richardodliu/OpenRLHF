@@ -98,7 +98,7 @@ masked suffix. These behaviors align with the regimes in \Cref{thm:prefix-tighte
 
 \textbf{Without adaptive normalization.} Global normalization can flip the sign of token-expanded advantages when token-length weighting makes the token-level mean non-zero, while adaptive normalization preserves sign by using separate positive/negative scalings (\Cref{par:adv-sign-preservation}).
 
-\textbf{Without prefix masking.} Token-level masking only reacts to per-token outliers and may leave future tokens unfiltered even when the context has already drifted; prefix masking filters based on the prefix statistic, which is aligned with the causal accumulation structure (\Cref{lem:coupling}, \Cref{thm:prefix-tighter}).
+\textbf{Without prefix masking.} Token-level masking only reacts to per-token outliers and may leave future tokens unfiltered even when the context has already drifted; prefix masking filters based on the prefix statistic, which is aligned with the causal accumulation structure (\Cref{rem:coupling}, \Cref{thm:prefix-tighter}).
 
 \subsection{Sensitivity to Thresholds}
 

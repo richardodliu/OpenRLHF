@@ -215,10 +215,10 @@ trust region. A standard (max-based) criterion is
     M^{\mathrm{TRM}}(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
 \end{equation*}
-We defer a comparative discussion of these mechanisms and their limitations to \Cref{sec:unified}.
+A comparative discussion of these mechanisms and their limitations is provided in \Cref{sec:unified}.
 
 \begin{remark}[Context Shift Propagation]
-\label{lem:coupling}
+\label{rem:coupling}
 Let $s$ be the \emph{first} position at which two policies $\pi$ and $\pi'$ differ: $\pi(\cdot|c_{s'}) = \pi'(\cdot|c_{s'})$ for all reachable $c_{s'}$ with $s' < s$, and $\Dtvtok(c_s) > 0$ for some context $c_s$ satisfying $d_s^{\pi}(c_s) > 0$. If for all subsequent positions $t > s$ the policies assign positive probability to all tokens reachable under either policy (i.e., $\pi(y_t|c_t) > 0 \iff \pi'(y_t|c_t) > 0$ for all reachable $c_t$), then for all $t > s$, the context visitation distributions satisfy $\|d_t^{\pi} - d_t^{\pi'}\|_{\mathrm{TV}} > 0$. That is, a token-level divergence at the first point of disagreement propagates to all future context distributions.
 This propagation property is standard in autoregressive generation; see, e.g., \citet{li2025trm}.
 \end{remark}

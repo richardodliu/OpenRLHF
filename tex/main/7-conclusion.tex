@@ -5,13 +5,13 @@ We presented REINFORCE Pro Max, a unified framework for critic-free LLM reinforc
 high-variance advantage estimation and causal off-policy mismatch between behavior and training policies.
 
 The first component, REINFORCE Max, combines a leave-one-out baseline (statistically independent of each sample, enabling clean
-second-moment analysis, \Cref{prop:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while enforcing the
+second-moment analysis, \Cref{rem:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while enforcing the
 empirical constraints in \Cref{def:adaptive-norm}, \Cref{eq:alpha-beta}). The second component, REINFORCE Pro, introduces
 prefix-level Causal Trust Region masking (a ratio-based prefix proxy) that preserves the causal structure of autoregressive generation. We showed that the
 resulting prefix mask can provide tighter filtering than both token-level and sequence-level alternatives in the analyzed deviation
 patterns (\Cref{thm:prefix-tighter}), subject to the conditions stated therein. The connection to the Adaptive bound from the trust region
 framework highlights that prefix masking acts as a sample-level proxy for per-position Causal Trust Region filtering: the KL chain rule yields an
-expectation identity for the cumulative log-ratio (\Cref{lem:cumsum-kl}), while the prefix thresholding rule enforces a per-position
+expectation identity for the cumulative log-ratio (\Cref{rem:cumsum-kl}), while the prefix thresholding rule enforces a per-position
 sample constraint (\Cref{rem:prefix-proxy}).
 
 \textbf{Limitations and future work.} The prefix-mask thresholds $[1-\epslow, 1+\epshigh]$ are hyperparameters that require tuning. The

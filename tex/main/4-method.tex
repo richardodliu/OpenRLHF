@@ -212,7 +212,7 @@ $\max_t \DKL(c_t)$).
 \subsection{Limitations of Existing Methods}
 
 \begin{remark}[Token-Level Importance Sampling Ignores Causal Structure]
-\label{prop:token-is-fails}
+\label{rem:token-is-fails}
 This is a standard limitation of token-level ratio truncation and masking.
 Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$ and define the acceptance interval
 \[
@@ -233,11 +233,11 @@ contexts $(c_t)_{t\ge2}$ are sampled under the behavior distribution induced by 
 would be induced by the updated policy $\pitheta$ when $\rho_1 \neq 1$.
 \par
 \noindent The conclusion follows immediately from the definition of $M_t^{\mathrm{tok}}$ and context shift propagation
-(\Cref{lem:coupling}); see also \citet{li2025trm,yao2025offpolicy}.
+(\Cref{rem:coupling}); see also \citet{li2025trm,yao2025offpolicy}.
 \end{remark}
 
 \begin{remark}[Sequence-Level Importance Sampling Loses Positional Information]
-\label{prop:seq-is-fails}
+\label{rem:seq-is-fails}
 This is a standard limitation of sequence-level aggregation and gating.
 Let $\rhoseq$ denote the geometric-mean sequence likelihood ratio from \Cref{sec:existing-is}. Then its log is the sequence-average
 log-ratio,
@@ -441,7 +441,7 @@ We relate prefix masking to the per-position, causal structure that appears in t
 LLM-RL~\citep{li2025trm}. In our notation, these bounds analyze the policy pair $(\piroll,\pitheta)$.
 
 \begin{remark}[KL Chain Rule for the Cumulative Log-Ratio]
-\label{lem:cumsum-kl}
+\label{rem:cumsum-kl}
 Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, for any $t \le T$,
 \begin{equation}
     \E_{\piroll}\!\Big[\sum_{s=1}^{t} \log\rho_s\Big]
@@ -463,7 +463,7 @@ Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level const
     \\
     &\iff \frac{1}{t}\sum_{s=1}^{t}\log\rho_s \in [\log(1-\epslow), \log(1+\epshigh)].
 \end{align*}
-In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
+In contrast, \Cref{rem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for Causal Trust Region filtering rather than a population-level guarantee
 without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in Eq.~\eqref{eq:cumsum-kl} to a TV bound:
 \begin{equation*}
@@ -473,7 +473,7 @@ without additional assumptions. Separately, Pinsker's inequality relates the pop
 \end{remark}
 
 \begin{remark}[Per-Position Sample-Level Causal Trust Region Constraint]
-\label{cor:per-position-trust}
+\label{rem:per-position-trust}
 Under prefix Causal Trust Region masking with threshold $[1-\epslow, 1+\epshigh]$, for all accepted tokens ($M_t^{\mathrm{pre}} = 1$), the sample-level cumulative log-ratio satisfies:
 \begin{equation*}
     \log\rhoprefix{t}
