@@ -420,3 +420,69 @@ In practice, one may instantiate $B_t$ using TRM's computation method for $\Dklt
 sample-based proxy $k_3(\rho):=\rho-1-\log\rho$, which satisfies
 $\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition
 $\rho_t=\pitheta/\piroll$ and support overlap.
+
+\begin{lemma}[From Abnormal-Token Rate to a Prefix-Average Constraint]
+\label{lem:anom-rate-implies-pre}
+Fix a position $t\in\{1,\ldots,T\}$ and write $z_s := \log\rho_s$ for $s\le t$. Assume there exist finite constants
+$\Lambda_+,\Lambda_->0$ such that
+\begin{equation*}
+    -\Lambda_- \le z_s \le \Lambda_+,
+    \qquad
+    \forall s\le t.
+\end{equation*}
+Let $k_3(\rho):=\rho-1-\log\rho$ and define the abnormal-token indicator and its prefix rate by
+\begin{equation*}
+    B_s := \mathbb{I}\!\big[k_3(\rho_s) > \delta_0\big],
+    \qquad
+    \widehat{p}_t := \frac{1}{t}\sum_{s=1}^{t} B_s,
+    \qquad
+    \delta_0>0.
+\end{equation*}
+Then every inlier token ($B_s=0$) satisfies $|z_s|\le \tau_0$, where $\tau_0:=\sqrt{2\delta_0}$. Moreover, if $\widehat{p}_t \le \xi$ for
+some $\xi\in[0,1]$, then the prefix-average log-ratio obeys
+\begin{equation*}
+    \frac{1}{t}\sum_{s=1}^{t} \log\rho_s
+    \in
+    \Big[-\tau_0 - \xi(\Lambda_- - \tau_0),\;\tau_0 + \xi(\Lambda_+ - \tau_0)\Big].
+\end{equation*}
+In particular, choosing log-thresholds $(\tau_-,\tau_+)$ that satisfy
+\begin{equation*}
+    \tau_- \ge \tau_0 + \xi(\Lambda_- - \tau_0),
+    \qquad
+    \tau_+ \ge \tau_0 + \xi(\Lambda_+ - \tau_0)
+\end{equation*}
+ensures $\widehat{p}_t\le\xi$ implies the prefix-average constraint $\frac{1}{t}\sum_{s\le t}\log\rho_s\in[-\tau_-,\tau_+]$, and hence
+$\rhoprefix{t}\in [e^{-\tau_-}, e^{\tau_+}]$.
+\end{lemma}
+
+\begin{proof}
+Write $u := \log\rho$. Since $e^{u} \ge 1 + u + \tfrac{1}{2}u^2$ for all $u\in\R$, we have
+\begin{equation*}
+    k_3(\rho)
+    = \rho - 1 - \log\rho
+    = e^{u} - 1 - u
+    \ge \tfrac{1}{2}u^2.
+\end{equation*}
+Therefore, $B_s=0$ implies $\tfrac{1}{2}z_s^2 \le \delta_0$, i.e., $|z_s|\le \sqrt{2\delta_0}=\tau_0$.
+
+\smallskip
+Let $N_t := \sum_{s=1}^{t} B_s$ so that $\widehat{p}_t = N_t/t \le \xi$. For the upper bound, split the sum into inliers and outliers:
+\begin{equation*}
+    \sum_{s=1}^{t} z_s
+    \le
+    (t-N_t)\,\tau_0 + N_t\,\Lambda_+,
+\end{equation*}
+since inliers satisfy $z_s \le \tau_0$ and outliers satisfy $z_s \le \Lambda_+$. Dividing by $t$ and using $N_t/t\le\xi$ yields
+\begin{equation*}
+    \frac{1}{t}\sum_{s=1}^{t} z_s
+    \le
+    \tau_0 + \xi(\Lambda_+ - \tau_0).
+\end{equation*}
+Similarly, using $z_s \ge -\tau_0$ for inliers and $z_s \ge -\Lambda_-$ for outliers gives
+\begin{equation*}
+    \frac{1}{t}\sum_{s=1}^{t} z_s
+    \ge
+    -\tau_0 - \xi(\Lambda_- - \tau_0).
+\end{equation*}
+The final implication to $\rhoprefix{t}$ follows from $\log\rhoprefix{t} = \frac{1}{t}\sum_{s\le t}\log\rho_s$.
+\end{proof}

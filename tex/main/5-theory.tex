@@ -291,6 +291,11 @@ prefix-structured gate that respects the causal order of generation. For KL dive
 requires that the likelihood ratio is (approximately) constant within each aggregated cell (\Cref{rem:kl-equality}), clarifying when KL
 computed on a reduced support can faithfully represent the full-vocabulary KL.
 
+As a concrete causal instantiation, \Cref{app:mask-variants} includes a prefix abnormal-token rate gate (Variant~IV) based on TRM-style
+per-token divergence proxies. Under mild boundedness conditions on per-token log-ratios, controlling the prefix abnormal-token rate yields
+a deterministic prefix-average log-ratio bound (\Cref{lem:anom-rate-implies-pre}), making the coarse-grained gate a controllable proxy for
+prefix-level ratio filtering.
+
 \textbf{Token-level truncation and masking.} Under this view, TIS and IcePop are token-level analogues of trust-region masking: they operate
 directly on the per-token ratio $\rho_t$. TIS clamps $\rho_t$ to a fixed interval $[1-\epslow, 1+\epshigh]$, retaining a biased but bounded
 weight at every position. IcePop instead masks out tokens whose ratio falls outside the interval, eliminating extreme-weight bias at the
