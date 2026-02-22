@@ -119,7 +119,7 @@ and the ratio $\kappa$ in \Cref{def:adaptive-norm} can be written as
 =
 \frac{\sum_{i:\tilde r_i>0} T_i\,\tilde r_i}{-\sum_{i:\tilde r_i<0} T_i\,\tilde r_i}.
 \]
-Therefore the closed-form scales $(\alpha,\beta)$ in \eqref{eq:alpha-beta} depend not only on reward magnitudes but also on the ratio of
+Therefore the closed-form scales $(\alpha,\beta)$ in Eq.~\eqref{eq:alpha-beta} depend not only on reward magnitudes but also on the ratio of
 positive-token mass to negative-token mass within the same prompt group, which is directly affected by response lengths $(T_i)$.
 This is the sense in which the advantage scaling implicitly incorporates response-length information, rather than implementing any form of
 ratio clipping.
@@ -139,7 +139,7 @@ $t\in\{1,\ldots,T_i\}$. Then
 \qquad
 \kappa = \frac{|\mathcal P|}{|\mathcal N|}.
 \]
-Substituting into \eqref{eq:alpha-beta} yields
+Substituting into Eq.~\eqref{eq:alpha-beta} yields
 \[
 \alpha
 =
@@ -179,8 +179,8 @@ The per-token importance ratio between these two policies is
 \begin{equation}
     \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
 \end{equation}
-as defined in \eqref{eq:ratio}. Throughout this section, we restrict attention to masking strategies constructed solely from
-$(\rho_t)_{t=1}^T$ (equivalently, the log-ratios $(\log\rho_t)_{t=1}^T$ as in \eqref{eq:log-ratio}), and we do not introduce additional
+as defined in Eq.~\eqref{eq:ratio}. Throughout this section, we restrict attention to masking strategies constructed solely from
+$(\rho_t)_{t=1}^T$ (equivalently, the log-ratios $(\log\rho_t)_{t=1}^T$ as in Eq.~\eqref{eq:log-ratio}), and we do not introduce additional
 intermediate policies.
 
 \paragraph{A Causal Trust Region Viewpoint}
@@ -270,7 +270,7 @@ log-ratio magnitude.
 
 \begin{definition}[Prefix Cumulative Ratio Proxy]
 \label{def:prefix-is}
-For a response trajectory $y=(y_1,\ldots,y_T)$ with per-token log-ratios $\log\rho_t$ defined in \eqref{eq:log-ratio}, define the prefix
+For a response trajectory $y=(y_1,\ldots,y_T)$ with per-token log-ratios $\log\rho_t$ defined in Eq.~\eqref{eq:log-ratio}, define the prefix
 cumulative ratio statistic
 \begin{equation}
     \rhoprefix{t}
@@ -303,7 +303,7 @@ Three structural properties distinguish the prefix-level mask from existing meth
 
 \begin{lemma}[Stability of Prefix Geometric Means]
 \label{lem:prefix-stability}
-Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$, and define $\rhoprefix{t}$ as in \eqref{eq:prefix-is}. If
+Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$, and define $\rhoprefix{t}$ as in Eq.~\eqref{eq:prefix-is}. If
 \begin{equation}
     \rhoprefix{t}\in[1-\epslow,1+\epshigh]
     \qquad\text{and}\qquad
@@ -313,7 +313,7 @@ then $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{lemma}
 
 \begin{proof}
-Taking logarithms and using \eqref{eq:prefix-is}, we have
+Taking logarithms and using Eq.~\eqref{eq:prefix-is}, we have
 \begin{equation}
     \log\rhoprefix{t}
     = \frac{1}{t}\sum_{s=1}^{t} \log\rho_s.
@@ -467,7 +467,7 @@ Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level const
 \end{align}
 In contrast, \Cref{lem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for Causal Trust Region filtering rather than a population-level guarantee
-without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in \eqref{eq:cumsum-kl} to a TV bound:
+without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in Eq.~\eqref{eq:cumsum-kl} to a TV bound:
 \begin{equation}
     \|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\|_{\mathrm{TV}}
     \le \sqrt{\frac{\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\pitheta})}{2}}.
@@ -498,7 +498,7 @@ importance-weighted surrogate:
 \end{equation}
 Here $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-norm}, $M_t^{\mathrm{pre}}$ is the prefix-level
 Causal Trust Region mask from \Cref{def:prefix-trm-proxy},
-$\rho_t$ is the per-token ratio defined in \eqref{eq:ratio}.
+$\rho_t$ is the per-token ratio defined in Eq.~\eqref{eq:ratio}.
 
 \textbf{Gradient flow.} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{pre}}$ and the normalized advantage
 $\hat{A}_t$ are detached from the computation graph. When $M_t^{\mathrm{pre}} = 0$, the loss at position $t$ is zero and contributes

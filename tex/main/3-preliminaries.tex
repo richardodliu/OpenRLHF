@@ -85,7 +85,7 @@ The following assumptions are used throughout the paper:
 \begin{assumption}[Policy Support Overlap]
 \label{asm:support}
 For all contexts $c_t$ and tokens $y_t$ in the vocabulary, $\piroll(y_t|c_t) > 0 \implies \pitheta(y_t|c_t) > 0$. This ensures the
-per-token importance ratio $\rho_t$ in \eqref{eq:ratio} is well-defined, and that KL terms with $\piroll$ in the first argument are finite.
+per-token importance ratio $\rho_t$ in Eq.~\eqref{eq:ratio} is well-defined, and that KL terms with $\piroll$ in the first argument are finite.
 \end{assumption}
 
 \begin{assumption}[Bounded Rewards]
@@ -110,7 +110,7 @@ This yields the per-step surrogate
     \mathcal{L}_{\piroll}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\!\Big[\E_{y_t \sim \piroll(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piroll}(c_t, y_t)\big]\Big],
     \label{eq:surrogate}
 \end{equation}
-where $\rho_t$ is defined in \eqref{eq:ratio}.
+where $\rho_t$ is defined in Eq.~\eqref{eq:ratio}.
 
 \begin{definition}[Trajectory-Level Surrogate]
 \label{def:impl-surrogate}
@@ -129,7 +129,7 @@ The trajectory-level surrogate used in critic-free implementations is
 The per-step advantage $A_t^{\piroll}(c_t,y_t)$ depends on the full future trajectory conditioned on $(c_t,y_t)$, and is generally
 intractable without a learned value function. The surrogate $\tilde{\mathcal{L}}_{\piroll}$ in \Cref{def:impl-surrogate} replaces the
 future conditional advantage with a trajectory-wide scalar. Therefore $\tilde{\mathcal{L}}_{\piroll}$ should be viewed as an
-\emph{approximation} rather than an equivalent reformulation of $\mathcal{L}_{\piroll}$ in \eqref{eq:surrogate}.
+\emph{approximation} rather than an equivalent reformulation of $\mathcal{L}_{\piroll}$ in Eq.~\eqref{eq:surrogate}.
 \end{remark}
 
 \begin{remark}[On-Policy Unbiasedness vs.\ Surrogate Equivalence]
@@ -138,7 +138,7 @@ When $\piroll=\pitheta$ (on-policy) and $b$ is independent of the sampled trajec
     \E_{\pitheta}\!\Big[A \cdot \sum_{t=1}^T \nabla_\theta \log \pitheta(y_t \mid c_t)\Big] = \nabla_\theta J(\pitheta),
 \end{equation}
 which provides an unbiased estimator of the policy gradient $\nabla_\theta J(\pitheta)$. This does not imply that the trajectory-level
-surrogate $\tilde{\mathcal{L}}_{\piroll}$ is equivalent to the per-step surrogate $\mathcal{L}_{\piroll}$ in \eqref{eq:surrogate}.
+surrogate $\tilde{\mathcal{L}}_{\piroll}$ is equivalent to the per-step surrogate $\mathcal{L}_{\piroll}$ in Eq.~\eqref{eq:surrogate}.
 Accordingly, the error decomposition below is stated in terms of $\mathcal{L}_{\piroll}$, which yields a clean advantage/context-shift
 factorization, while the implemented loss uses $\tilde{\mathcal{L}}_{\piroll}$ as a practical approximation.
 \end{remark}
@@ -156,7 +156,7 @@ where
 \begin{equation}
     g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big]
 \end{equation}
-is the expected advantage shift. Classical bounds on \eqref{eq:error-decomp} scale as $O(T^2)$~\citep{kakade2002approximately,
+is the expected advantage shift. Classical bounds on Eq.~\eqref{eq:error-decomp} scale as $O(T^2)$~\citep{kakade2002approximately,
 achiam2017constrained}, rendering them theoretically vacuous for long-horizon LLM tasks with responses of thousands of tokens. Recent
 work~\citep{li2025trm} derives tighter bounds,
 including the Pinsker-Marginal bound ($O(T^{3/2})$), the Mixed bound ($O(T)$), and the data-dependent Adaptive bound.
@@ -174,7 +174,7 @@ motivates our prefix-level Causal Trust Region masking component.
 
 Several methods have been proposed to stabilize policy-gradient updates by constraining the per-token importance ratio $\rho_t$ between the
 training policy $\pitheta$ and the behavior policy $\piroll$. We use the per-token log-ratio $\log\rho_t$ defined in
-\eqref{eq:log-ratio}.
+Eq.~\eqref{eq:log-ratio}.
 
 \noindent Table~\ref{tab:is-methods} summarizes these stabilization mechanisms under a unified notation.
 \begin{table}[ht]
