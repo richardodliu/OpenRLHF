@@ -162,7 +162,7 @@ When all $n$ samples share the same reward, the leave-one-out baseline yields ze
 \emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
 See \Cref{app:uniform-scale} for details.
 \par
-\noindent\textbf{Numerical safeguards.} In implementation, we include simple numerical checks and clamping to prevent extreme or unstable
+\paragraph{Numerical safeguards} In implementation, we include simple numerical checks and clamping to prevent extreme or unstable
 scales; see \Cref{app:numerical}.
 
 
@@ -295,9 +295,9 @@ ratio setup based on $(\piroll,\pitheta)$.
 
 Three structural properties distinguish the prefix-level mask from existing methods:
 
-\textbf{Causality.} $\rhoprefix{t}$ depends only on the prefix ratios $(\rho_s)_{s \le t}$, respecting the autoregressive order.
+\paragraph{Causality} $\rhoprefix{t}$ depends only on the prefix ratios $(\rho_s)_{s \le t}$, respecting the autoregressive order.
 
-\textbf{Stability under in-bound increments.} The following lemma formalizes a basic stability property of prefix geometric means.
+\paragraph{Stability under in-bound increments} The following lemma formalizes a basic stability property of prefix geometric means.
 
 \begin{lemma}[Stability of Prefix Geometric Means]
 \label{lem:prefix-stability}
@@ -330,10 +330,10 @@ $\log\rhoprefix{t}$ and $\log\rho_{t+1}$ lie in $[\log(1-\epslow),\log(1+\epshig
 $\log\rhoprefix{t+1}\in[\log(1-\epslow),\log(1+\epshigh)]$, which implies $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{proof}
 
-\noindent\textbf{Granularity.} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
+\paragraph{Granularity} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
 positions while being masked at others. This can be viewed as a prefix-level refinement of the sequence-level rejection mechanism in TRM.
 
-\noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in
+\paragraph{Notation} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in
 \Cref{sec:preliminaries}. The ratio-truncation thresholds are denoted by $(\epslow,\epshigh)$, defining the acceptance interval
 \[
     [1-\epslow,\,1+\epshigh].
@@ -498,6 +498,6 @@ Here $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-
 Causal Trust Region mask from \Cref{def:prefix-trm-proxy},
 $\rho_t$ is the per-token ratio defined in Eq.~\eqref{eq:ratio}.
 
-\textbf{Gradient flow.} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{pre}}$ and the normalized advantage
+\paragraph{Gradient flow} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{pre}}$ and the normalized advantage
 $\hat{A}_t$ are detached from the computation graph. When $M_t^{\mathrm{pre}} = 0$, the loss at position $t$ is zero and contributes
 no gradient.
