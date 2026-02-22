@@ -383,6 +383,58 @@ prefix gate enforces a per-position bounded change-of-measure regime on the \emp
 acts as a prefix-level Causal Trust Region proxy: updates are filtered to exclude positions whose prefixes induce extreme reweighting of
 the rollout context distribution. Proofs are in \Cref{app:pre-causal-tr}.
 
+\par
+\noindent\textbf{A sub-Gaussian strengthening.}
+The mechanism view above is distributional: it identifies $W_t$ as the change-of-measure object that controls context shift.
+To turn \Cref{lem:tv-prefix-ratio} into an explicit per-position bound, we introduce a mild concentration assumption on the per-token
+log-ratio increments.
+
+\begin{assumption}[Conditionally sub-Gaussian log-ratio increments]
+\label{asm:subgaussian-logratio}
+Under the rollout distribution $y_t\sim \piroll(\cdot|c_t)$, define the centered increment
+\begin{equation*}
+    X_t := \log\rho_t - \E\!\left[\log\rho_t \mid c_t\right].
+\end{equation*}
+There exists a constant $\sigma^2>0$ such that for all $t\in\{1,\ldots,T\}$, all reachable contexts $c_t$, and all $\lambda\in\R$,
+\begin{equation*}
+    \E\!\left[\exp(\lambda X_t)\mid c_t\right]
+    \le
+    \exp\!\left(\frac{\lambda^2\sigma^2}{2}\right).
+\end{equation*}
+\end{assumption}
+
+\begin{lemma}[Second-moment control of the prefix density ratio]
+\label{lem:wt-second-moment}
+Assume \Cref{asm:support} and \Cref{asm:subgaussian-logratio}. Then for any $t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[W_t^2\right] \le \exp(2\sigma^2 t).
+\end{equation*}
+\end{lemma}
+
+\begin{corollary}[An explicit per-position context-shift bound]
+\label{cor:tv-prefix-subgaussian}
+Assume \Cref{asm:support} and \Cref{asm:subgaussian-logratio}. Then for any $t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \bigl\|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    \le
+    \frac{1}{2}\sqrt{\exp(2\sigma^2 t) - 1}.
+\end{equation*}
+\end{corollary}
+
+\begin{theorem}[A per-position surrogate-error bound under sub-Gaussian prefix drift]
+\label{thm:per-position-error-subgaussian}
+Assume \Cref{asm:support}, \Cref{asm:subgaussian-logratio}, and bounded rewards (i.e., $|R(x,y)|\le R_{\max}$). Then the surrogate error in
+Eq.~\eqref{eq:error-decomp} satisfies
+\begin{equation*}
+    |\mathrm{Error}(\pitheta)|
+    \le
+    2R_{\max}\sum_{t=1}^{T}\sqrt{\exp(2\sigma^2 (t-1)) - 1}.
+\end{equation*}
+\end{theorem}
+
+\noindent Proofs of \Cref{lem:wt-second-moment,cor:tv-prefix-subgaussian,thm:per-position-error-subgaussian} are in
+\Cref{app:subgaussian-perpos}.
+
 \textbf{REINFORCE Pro Max.} Taken together with the advantage-estimation choices discussed above, REINFORCE Pro Max targets all four
 dimensions discussed above. The RLOO
 baseline provides statistical independence (\Cref{rem:rloo-variance}); adaptive normalization preserves advantage sign while enforcing
