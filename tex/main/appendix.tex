@@ -26,19 +26,19 @@ Modern LLM-RL pipelines decouple inference from training: rollouts are produced 
 rollout policy $\piroll$, while gradient updates are computed in a separate training stack under the training policy $\pitheta$. This
 architectural separation can introduce off-policy mismatch even when parameters are nominally aligned.
 
-\paragraph{Mismatch sources.}
+\paragraph{Mismatch Sources}
 Common sources of mismatch include backend discrepancies (different attention kernels, precision formats, or reduction order), MoE routing
 discontinuities (Top-$K$ routing can flip under small perturbations), and distributed staleness (actor--learner lag between rollout and
 consumption). These effects can compound autoregressively over long horizons and lead to volatile per-token ratios.
 
-\paragraph{Anchoring and the apparent three-distribution structure.}
+\paragraph{Anchoring and the Apparent Three-Distribution Structure}
 Practical pipelines can exhibit an apparent three-distribution structure: (i) a rollout engine generates tokens according to an
 inference-time distribution, (ii) a training framework computes gradients under $\pitheta$, and (iii) some implementations recompute the
 behavior log-probabilities inside the training stack, yielding a recomputed anchor that can differ from the true rollout distribution even
 when parameters are identical. Importantly, this third object is not an additional policy in our theory; it is an alternative
 implementation-time anchor for the denominator of $\rho_t$.
 
-\paragraph{Trust Region Setup.}
+\paragraph{Trust Region Setup}
 \citet{qi2026rethinkingtrustregionllm} argue that the trust region (and hence the denominator of the importance ratio) must be defined with
 respect to the \emph{original} behavior policy that generated the data, rather than a recomputed policy distribution evaluated inside the
 training stack. Accordingly, we denote this rollout-time behavior policy by $\piroll$, define
@@ -46,7 +46,7 @@ $\rho_t := \pitheta(y_t\mid c_t) / \piroll(y_t\mid c_t)$, and assume access to r
 $\log \piroll(y_t\mid c_t)$. The theoretical development therefore involves only the policy pair $(\piroll,\pitheta)$, consistent with
 long-horizon trust-region analyses for LLM-RL (e.g., \citet{li2025trm}).
 
-\paragraph{PPO-style $\piold$ Mismatch.}
+\paragraph{PPO-Style $\piold$ Mismatch}
 In PPO-style implementations, the rollout snapshot used to generate data is often denoted by $\piold$; within a single policy update, this
 snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation). We use $\piold$ only for
 implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
@@ -54,7 +54,7 @@ implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
 \subsection{Why PPO Clipping Can Leak Gradients Under Mismatch}
 \label{app:ppo-clip-leak}
 
-\paragraph{PPO clipped surrogate.}
+\paragraph{PPO Clipped Surrogate}
 PPO~\citep{schulman2017proximal} constrains policy updates by clipping the per-token importance ratio. In the notation of this paper, the
 ratio is
 \begin{equation}
@@ -70,7 +70,7 @@ The clipped surrogate takes the form
 \end{equation}
 where $\hat{A}_t$ is an advantage estimator and $\epsilon_{\mathrm{clip}}>0$ is the clipping threshold.
 
-\paragraph{Asymmetry and gradient leakage.}
+\paragraph{Asymmetry and Gradient Leakage}
 The clipping operator is asymmetric in the sign of $\hat{A}_t$. When $\hat{A}_t<0$ and $\rho_t \gg 1+\epsilon_{\mathrm{clip}}$, the
 unclipped term can still be selected:
 \begin{equation}
@@ -82,11 +82,11 @@ unclipped term can still be selected:
 hence $\min(\cdot)$ returns $\rho_t\hat{A}_t$. In this regime, the gradient magnitude still scales with $\rho_t$, so extremely large ratios
 can produce large updates even though they lie far outside the nominal trust region.
 
-\paragraph{Why this is benign in standard RL.}
+\paragraph{Why This Is Benign in Standard RL}
 In classical on-policy settings, large ratios typically reflect genuine policy changes that over-emphasize low-quality actions; keeping the
 unclipped penalty for $\hat{A}_t<0$ can be desirable as it discourages such actions.
 
-\paragraph{Failure mode under implementation divergence.}
+\paragraph{Failure Mode Under Implementation Divergence}
 In LLM-RL pipelines with inference--training mismatch, large ratios can arise from numerical or backend discrepancies rather than meaningful
 policy improvements. For example, a routing discontinuity in a Mixture-of-Experts model can yield a token $v$ such that
 \begin{equation}
@@ -102,13 +102,13 @@ token-level clipping heuristic.
 
 \section{REINFORCE Max: Supplementary Details}
 
-\subsection{Leave-One-Out Baseline Properties: Summary}
+\subsection{Leave-One-Out Baseline Properties}
 \label{app:rloo-proof}
 
 We summarize standard properties of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}; see
 \citet{ahmadian2024back} for a detailed treatment.
 
-\begin{remark}[Properties of the Leave-One-Out Baseline: Prior Work]
+\begin{remark}[Properties of the Leave-One-Out Baseline]
 \label{prop:rloo-variance}
 Fix a prompt $x$ and draw $n \ge 2$ i.i.d.\ responses $\{y^{(1)}, \ldots, y^{(n)}\} \sim \pitheta(\cdot|x)$ with rewards
 $r_i = R(x, y^{(i)})$. Let
@@ -138,7 +138,7 @@ satisfies:
 \end{enumerate}
 \end{remark}
 
-\begin{remark}[Relationship between the two estimators]
+\begin{remark}[Relationship Between the Two Estimators]
 The deterministic proportionality $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$ implies that the mean-baseline estimator is a
 rescaled (and therefore biased) version of the leave-one-out estimator: its smaller raw variance is entirely due to the constant scaling
 factor. In practice, this shrinkage can be absorbed into the learning rate, but it breaks exact unbiasedness. The main advantage of the
@@ -157,7 +157,7 @@ The leave-one-out baseline is equivalent to the leave-one-out control variate fr
 \subsection{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
-\begin{remark}[On setting $\gamma = 1.0$ for sparse terminal rewards: Standard choice]
+\begin{remark}[On Setting $\gamma = 1.0$ for Sparse Terminal Rewards]
 When the extrinsic reward is sparse (assigned only at the final token) and the target objective is the undiscounted return
 $J(\pitheta) = \E[R(x,y)]$, it is standard to set $\gamma = 1.0$ so that the token-level return matches the terminal reward at every
 position. Choosing $\gamma < 1$ instead corresponds to optimizing a discounted objective that downweights earlier tokens; see
@@ -170,7 +170,7 @@ position. Choosing $\gamma < 1$ instead corresponds to optimizing a discounted o
 
 The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguards:
 
-\begin{remark}[Numerical thresholds vs.\ divergence bounds]
+\begin{remark}[Numerical Thresholds vs.\ Divergence Bounds]
 The symbols $\varepsilon_{\mathrm{num}}$ and $\varepsilon_{\mathrm{tol}}$ in this appendix denote implementation hyperparameters used for
 numerical stability and uniform-reward detection. They are unrelated to the divergence upper bound $\epsilon$ in \Cref{def:max-div}.
 \end{remark}
@@ -238,7 +238,7 @@ log-threshold interval as
 \end{equation}
 so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
 
-\paragraph{Mask definitions.} The three masks compared in \Cref{thm:prefix-tighter} are:
+\paragraph{Mask Definitions} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
     \item \textbf{Token-level (IcePop / token-level ratio mask):}
     \begin{equation}
@@ -353,7 +353,7 @@ For thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the log-threshold inte
     \tau_- := -\log(1-\epslow).
 \end{equation}
 
-\paragraph{Variant I: absorbing prefix-average mask.}
+\paragraph{Variant I: Absorbing Prefix-Average Mask}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
 once a prefix violates the threshold, all subsequent positions are rejected.
@@ -366,7 +366,7 @@ once a prefix violates the threshold, all subsequent positions are rejected.
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{pre}}.
 \end{equation}
 
-\paragraph{Variant II: prefix-max mask / max-filtering.}
+\paragraph{Variant II: Prefix-Max Mask / Max-Filtering}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
 \begin{equation}
@@ -380,7 +380,7 @@ The corresponding prefix-max statistic and mask are
 \end{equation}
 Equivalently, $M_t^{\mathrm{pre\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
-\paragraph{Variant III: prefix-score mask / bound-driven.}
+\paragraph{Variant III: Prefix-Score Mask / Bound-Driven}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
 \begin{equation}
@@ -398,7 +398,7 @@ and the corresponding mask is
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
 
-\paragraph{Variant IV: prefix abnormal-token rate / TRM-style.}
+\paragraph{Variant IV: Prefix Abnormal-Token Rate / TRM-Style}
 
 TRM~\citep{li2025trm} uses per-token divergence estimates (or their sample-based proxies) to decide whether a trajectory lies inside a
 trust region. We can adapt this idea to a prefix-level gate by counting \emph{abnormal} tokens in the prefix. Concretely, define the

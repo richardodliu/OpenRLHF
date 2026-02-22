@@ -94,14 +94,14 @@ closed-form scaling factors:
     \end{aligned}
 \end{equation}
 
-\paragraph{Advantage sign preservation.}
+\paragraph{Advantage Sign Preservation}
 \label{par:adv-sign-preservation}
 The adaptive normalization preserves the sign of the advantage at every token: $\sign(\hat{A}_{i,t}) = \sign(A_{i,t})$ for all $(i,t)$
 with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserved within the positive group $\mathcal{P}$ and within the
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
 $\beta>0$ on $\mathcal{N}$ (\Cref{eq:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
 
-\paragraph{Connection to response length.}
+\paragraph{Connection to Response Length}
 Our asymmetry comes from sign-dependent rescaling of advantages under the token-level expansion and the empirical constraints in
 \Cref{def:adaptive-norm}.
 Since \Cref{sec:token-expand} uses $A_{i,t}=\tilde r_i$ for all $t\in\{1,\ldots,T_i\}$, the prompt-group statistics in
@@ -157,7 +157,7 @@ penalty under token-level expansion. By shrinking the negative scaling factor $\
 normalization can mitigate over-penalization of long-horizon exploration induced by truncation-driven failures. This does not correct
 reward mislabeling; it only addresses the induced gradient imbalance under token-level training.
 
-\paragraph{Uniform scale mode.}
+\paragraph{Uniform Scale Mode}
 When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
 \emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
 See \Cref{app:uniform-scale} for details.
@@ -183,7 +183,7 @@ as defined in \eqref{eq:ratio}. Throughout this section, we restrict attention t
 $(\rho_t)_{t=1}^T$ (equivalently, the log-ratios $(\log\rho_t)_{t=1}^T$ as in \eqref{eq:log-ratio}), and we do not introduce additional
 intermediate policies.
 
-\paragraph{A Causal Trust Region viewpoint.}
+\paragraph{A Causal Trust Region Viewpoint}
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
 $M^{\mathrm{TRM}}(x,y)$, yielding a masked surrogate objective of the form
 \begin{equation}
@@ -211,8 +211,9 @@ $\max_t \DKL(c_t)$).
 
 \subsection{Limitations of Existing Methods}
 
-\begin{remark}[Token-Level IS Ignores Causal Structure: Standard limitation]
+\begin{remark}[Token-Level Importance Sampling Ignores Causal Structure]
 \label{prop:token-is-fails}
+This is a standard limitation of token-level ratio truncation and masking.
 Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$ and define the acceptance interval
 \[
     [1-\epslow,\,1+\epshigh].
@@ -236,8 +237,9 @@ would be induced by the updated policy $\pitheta$ when $\rho_1 \neq 1$.
 (\Cref{lem:coupling}); see also \citet{li2025trm,yao2025offpolicy}.
 \end{remark}
 
-\begin{remark}[Sequence-Level IS Loses Positional Information: Standard limitation]
+\begin{remark}[Sequence-Level Importance Sampling Loses Positional Information]
 \label{prop:seq-is-fails}
+This is a standard limitation of sequence-level aggregation and gating.
 Let $\rhoseq$ denote the geometric-mean sequence likelihood ratio from \Cref{sec:existing-is}. Then its log is the sequence-average
 log-ratio,
 \begin{equation}
@@ -254,7 +256,7 @@ $\rhoseq = (\rho_{t^*})^{1/T}\to 1$ as $T\to\infty$ for any fixed $\rho_{t^*}>0$
 \noindent This dilution is a direct consequence of averaging $\log\rho_t$ over the full horizon; see also \citet{gspo2025}.
 \end{remark}
 
-\begin{example}[Numerical dilution at long horizons]
+\begin{example}[Numerical Dilution at Long Horizons]
 Consider the pure single-spike case with $T=4096$, $\log\rho_{t^*}=3$, and $\log\rho_t=0$ for $t\neq t^*$. Then
 \begin{equation}
     \rhoseq = \exp(3/4096) \approx 1.00073,
@@ -299,7 +301,7 @@ Three structural properties distinguish the prefix-level mask from existing meth
 
 \textbf{Stability under in-bound increments.} The following lemma formalizes a basic stability property of prefix geometric means.
 
-\begin{lemma}[Stability of prefix geometric means]
+\begin{lemma}[Stability of Prefix Geometric Means]
 \label{lem:prefix-stability}
 Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$, and define $\rhoprefix{t}$ as in \eqref{eq:prefix-is}. If
 \begin{equation}
@@ -427,7 +429,7 @@ $\log\rhoprefix{t^*}=\log\rho_{t^*}/t^*$, so $\log\rhoprefix{t^*}\ge \log\rhoseq
 threshold, so both prefix and sequence masks reject all tokens.
 \end{proof}
 
-\begin{remark}[Same-sign but in-bound deviations]
+\begin{remark}[Same-Sign but In-Bound Deviations]
 When all $\log\rho_s$ share the same sign but do not all exceed the corresponding threshold, the prefix log-statistic $\log\rhoprefix{t}$ need not be
 monotone in $t$ and may return within bounds after crossing a threshold. In this regime there is no unconditional dominance ordering
 between prefix masking and token-level masking: token-level methods detect large single-token outliers, while prefix masking detects
@@ -440,7 +442,7 @@ cumulative drift from many moderate deviations.
 We relate prefix masking to the per-position, causal structure that appears in trust-region error bounds for long-horizon
 LLM-RL~\citep{li2025trm}. In our notation, these bounds analyze the policy pair $(\piroll,\pitheta)$.
 
-\begin{remark}[KL chain rule for the cumulative log-ratio: Standard identity]
+\begin{remark}[KL Chain Rule for the Cumulative Log-Ratio]
 \label{lem:cumsum-kl}
 Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, for any $t \le T$,
 \begin{equation}
@@ -454,7 +456,7 @@ where the final equality is the KL chain rule applied to the joint prefix distri
 \noindent This identity is the KL chain rule under autoregressive factorization; see, e.g., \citet{li2025trm}.
 \end{remark}
 
-\begin{remark}[Prefix filtering as a sample-level proxy]
+\begin{remark}[Prefix Filtering as a Sample-Level Proxy]
 \label{rem:prefix-proxy}
 Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level constraint on the prefix average log-ratio:
 \begin{align}

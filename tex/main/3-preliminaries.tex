@@ -49,7 +49,7 @@ log-probabilities $\log \piroll(y_t\mid c_t)$; see Appendix~\ref{app:mismatch} f
 We use token-level divergence measures between conditional token distributions, following the trust-region literature for long-horizon
 LLM-RL~\citep{li2025trm}. For two policies $\pi$ and $\pi'$, define the token-level total variation and KL divergences at context $c_t$:
 
-\begin{definition}[Token-level divergences]
+\begin{definition}[Token-Level Divergences]
 For a context $c_t = (x, y_{<t})$ and two policies $\pi$ and $\pi'$,
 \begin{align}
     \Dtvtok(c_t;\pi,\pi')
@@ -62,7 +62,7 @@ For a context $c_t = (x, y_{<t})$ and two policies $\pi$ and $\pi'$,
 When the policy pair is clear from context, we write $\Dtvtok(c_t)$ and $\Dkltok(c_t)$.
 \end{definition}
 
-\begin{definition}[Max token-level divergences and expected per-position TV]
+\begin{definition}[Max Token-Level Divergences and Expected Per-Position TV]
 \label{def:max-div}
 For the policy pair $(\piroll,\pitheta)$, define:
 \begin{align}
@@ -112,7 +112,7 @@ This yields the per-step surrogate
 \end{equation}
 where $\rho_t$ is defined in \eqref{eq:ratio}.
 
-\begin{definition}[Trajectory-level surrogate: Implementation]
+\begin{definition}[Trajectory-Level Surrogate]
 \label{def:impl-surrogate}
 Let $b$ be a baseline that is independent of the sampled trajectory $y$ (e.g., a prompt-level baseline computed from other samples in the
 same prompt group). Define the trajectory-level advantage
@@ -125,14 +125,14 @@ The trajectory-level surrogate used in critic-free implementations is
 \end{equation}
 \end{definition}
 
-\begin{remark}[Per-step surrogate vs.\ implementation surrogate]
+\begin{remark}[Per-Step Surrogate vs.\ Implementation Surrogate]
 The per-step advantage $A_t^{\piroll}(c_t,y_t)$ depends on the full future trajectory conditioned on $(c_t,y_t)$, and is generally
 intractable without a learned value function. The surrogate $\tilde{\mathcal{L}}_{\piroll}$ in \Cref{def:impl-surrogate} replaces the
 future conditional advantage with a trajectory-wide scalar. Therefore $\tilde{\mathcal{L}}_{\piroll}$ should be viewed as an
 \emph{approximation} rather than an equivalent reformulation of $\mathcal{L}_{\piroll}$ in \eqref{eq:surrogate}.
 \end{remark}
 
-\begin{remark}[On-policy unbiasedness vs.\ surrogate equivalence]
+\begin{remark}[On-Policy Unbiasedness vs.\ Surrogate Equivalence]
 When $\piroll=\pitheta$ (on-policy) and $b$ is independent of the sampled trajectory, the REINFORCE identity gives
 \begin{equation}
     \E_{\pitheta}\!\Big[A \cdot \sum_{t=1}^T \nabla_\theta \log \pitheta(y_t \mid c_t)\Big] = \nabla_\theta J(\pitheta),
@@ -169,7 +169,7 @@ where $\Dbar_t$ is the expected per-position TV divergence, and $\epsilon,\delta
 \Cref{def:max-div}. This bound operates at per-position granularity and preserves the causal structure of error accumulation, which
 motivates our prefix-level Causal Trust Region masking component.
 
-\subsection{Existing IS Correction Methods}
+\subsection{Existing Importance Sampling Correction Methods}
 \label{sec:existing-is}
 
 Several methods have been proposed to stabilize policy-gradient updates by constraining the per-token importance ratio $\rho_t$ between the

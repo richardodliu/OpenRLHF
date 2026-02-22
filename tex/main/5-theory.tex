@@ -20,7 +20,7 @@ divergence between prefix distributions (\Cref{lem:cumsum-kl}); together with th
 motivates viewing prefix masking as a sample-level proxy for Causal Trust Region filtering on the same policy pair $(\piroll,\pitheta)$ that
 appears in the error decomposition.
 
-\begin{remark}[Heuristic complementarity]
+\begin{remark}[Heuristic Complementarity]
 The discussion above should be interpreted as heuristic rather than as a formal inequality. It highlights that REINFORCE Max targets the
 advantage factor in \eqref{eq:error-decomp}, while REINFORCE Pro targets policy drift between $\piroll$ and $\pitheta$ through sample-level
 prefix filtering.
@@ -110,7 +110,7 @@ correction).
 
 \textbf{Baseline and normalization.} REINFORCE++~\citep{hu2025reinforce} and GRPO~\citep{shao2024deepseekmath} use the batch mean reward as a baseline, which introduces correlation between each sample and its own baseline (\Cref{app:rloo-proof}). Both apply global $\mu/\sigma$ normalization, which uses a single scaling factor for all advantages regardless of sign. In reasoning tasks where reward distributions are highly skewed (most samples fail, few succeed), this uniform scaling distorts the relative balance between positive and negative advantages. RLOO~\citep{ahmadian2024back} improves the baseline by using the leave-one-out estimator, which eliminates the self-correlation artifact, but applies no normalization and no ratio-based filtering, leaving both the advantage magnitude and policy-ratio drift uncontrolled.
 
-\subsection{Comparison with Other IS Correction Methods}
+\subsection{Comparison with Other Importance Sampling Correction Methods}
 
 We adopt a trust-region masking viewpoint: when mismatch between $\piroll$ and $\pitheta$ is large, one should attenuate or reject
 unreliable gradient contributions. Existing methods differ mainly in the granularity of this attenuation (see \Cref{sec:existing-is} and
