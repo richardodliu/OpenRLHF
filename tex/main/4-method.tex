@@ -211,7 +211,7 @@ $\max_t \DKL(c_t)$).
 
 \subsection{Limitations of Existing Methods}
 
-\begin{remark}[Token-Level IS Ignores Causal Structure (standard limitation)]
+\begin{remark}[Token-Level IS Ignores Causal Structure: Standard limitation]
 \label{prop:token-is-fails}
 Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$ and define the acceptance interval
 \[
@@ -236,7 +236,7 @@ would be induced by the updated policy $\pitheta$ when $\rho_1 \neq 1$.
 (\Cref{lem:coupling}); see also \citet{li2025trm,yao2025offpolicy}.
 \end{remark}
 
-\begin{remark}[Sequence-Level IS Loses Positional Information (standard)]
+\begin{remark}[Sequence-Level IS Loses Positional Information: Standard limitation]
 \label{prop:seq-is-fails}
 Let $\rhoseq$ denote the geometric-mean sequence likelihood ratio from \Cref{sec:existing-is}. Then its log is the sequence-average
 log-ratio,
@@ -440,7 +440,7 @@ cumulative drift from many moderate deviations.
 We relate prefix masking to the per-position, causal structure that appears in trust-region error bounds for long-horizon
 LLM-RL~\citep{li2025trm}. In our notation, these bounds analyze the policy pair $(\piroll,\pitheta)$.
 
-\begin{remark}[KL chain rule for the cumulative log-ratio (standard)]
+\begin{remark}[KL chain rule for the cumulative log-ratio: Standard identity]
 \label{lem:cumsum-kl}
 Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, for any $t \le T$,
 \begin{equation}

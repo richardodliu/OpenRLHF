@@ -102,13 +102,13 @@ token-level clipping heuristic.
 
 \section{REINFORCE Max: Supplementary Details}
 
-\subsection{Leave-One-Out Baseline Properties (Summary)}
+\subsection{Leave-One-Out Baseline Properties: Summary}
 \label{app:rloo-proof}
 
 We summarize standard properties of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}; see
 \citet{ahmadian2024back} for a detailed treatment.
 
-\begin{remark}[Properties of the Leave-One-Out Baseline (prior work)]
+\begin{remark}[Properties of the Leave-One-Out Baseline: Prior Work]
 \label{prop:rloo-variance}
 Fix a prompt $x$ and draw $n \ge 2$ i.i.d.\ responses $\{y^{(1)}, \ldots, y^{(n)}\} \sim \pitheta(\cdot|x)$ with rewards
 $r_i = R(x, y^{(i)})$. Let
@@ -157,7 +157,7 @@ The leave-one-out baseline is equivalent to the leave-one-out control variate fr
 \subsection{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
-\begin{remark}[On setting $\gamma = 1.0$ for sparse terminal rewards (standard)]
+\begin{remark}[On setting $\gamma = 1.0$ for sparse terminal rewards: Standard choice]
 When the extrinsic reward is sparse (assigned only at the final token) and the target objective is the undiscounted return
 $J(\pitheta) = \E[R(x,y)]$, it is standard to set $\gamma = 1.0$ so that the token-level return matches the terminal reward at every
 position. Choosing $\gamma < 1$ instead corresponds to optimizing a discounted objective that downweights earlier tokens; see
@@ -353,7 +353,7 @@ For thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the log-threshold inte
     \tau_- := -\log(1-\epslow).
 \end{equation}
 
-\paragraph{Variant I (absorbing prefix-average mask).}
+\paragraph{Variant I: absorbing prefix-average mask.}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
 once a prefix violates the threshold, all subsequent positions are rejected.
@@ -366,7 +366,7 @@ once a prefix violates the threshold, all subsequent positions are rejected.
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{pre}}.
 \end{equation}
 
-\paragraph{Variant II (prefix-max mask / max-filtering).}
+\paragraph{Variant II: prefix-max mask / max-filtering.}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
 \begin{equation}
@@ -380,7 +380,7 @@ The corresponding prefix-max statistic and mask are
 \end{equation}
 Equivalently, $M_t^{\mathrm{pre\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
-\paragraph{Variant III (prefix-score mask / bound-driven).}
+\paragraph{Variant III: prefix-score mask / bound-driven.}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
 \begin{equation}
@@ -398,7 +398,7 @@ and the corresponding mask is
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
 
-\paragraph{Variant IV (prefix abnormal-token rate / TRM-style).}
+\paragraph{Variant IV: prefix abnormal-token rate / TRM-style.}
 
 TRM~\citep{li2025trm} uses per-token divergence estimates (or their sample-based proxies) to decide whether a trajectory lies inside a
 trust region. We can adapt this idea to a prefix-level gate by counting \emph{abnormal} tokens in the prefix. Concretely, define the
