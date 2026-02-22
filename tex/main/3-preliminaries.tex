@@ -5,21 +5,21 @@
 
 A (stochastic) policy $\pi$ generates a response $y = (y_1, \ldots, y_T)$ conditioned on a prompt $x$. The induced trajectory
 probability admits the autoregressive factorization
-\begin{equation}
+\begin{equation*}
     P^{\pi}(y \mid x) = \prod_{t=1}^T \pi(y_t \mid x, y_{<t}).
-\end{equation}
+\end{equation*}
 For each position $t$, we define the context
-\begin{equation}
+\begin{equation*}
     c_t := (x, y_{<t}) = (x, \ylt).
-\end{equation}
+\end{equation*}
 The induced \emph{context visitation distribution} (the marginal distribution of length-$t$ prefixes) is
-\begin{equation}
+\begin{equation*}
     d_t^{\pi}(c_t) = P(x)\, P^{\pi}(y_{<t} \mid x) = P(x) \prod_{s=1}^{t-1} \pi(y_s \mid c_s).
-\end{equation}
+\end{equation*}
 Given a scalar reward $R(x, y)$, the objective of the current policy $\pitheta$ is
-\begin{equation}
+\begin{equation*}
     J(\pitheta) = \E_{x \sim P(x),\, y \sim \pitheta(\cdot|x)}\big[R(x, y)\big].
-\end{equation}
+\end{equation*}
 
 \subsection{Notation}
 
@@ -51,21 +51,21 @@ LLM-RL~\citep{li2025trm}. For two policies $\pi$ and $\pi'$, define the token-le
 
 \begin{definition}[Token-Level Divergences]
 For a context $c_t = (x, y_{<t})$ and two policies $\pi$ and $\pi'$,
-\begin{align}
+\begin{align*}
     \Dtvtok(c_t;\pi,\pi')
     &:= \DTV\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
     = \tfrac{1}{2}\sum_{v} \big|\pi(v|c_t) - \pi'(v|c_t)\big|, \\
     \Dkltok(c_t;\pi,\pi')
     &:= \DKL\big(\pi(\cdot|c_t)\,\|\,\pi'(\cdot|c_t)\big)
     = \sum_{v} \pi(v|c_t)\log\frac{\pi(v|c_t)}{\pi'(v|c_t)}.
-\end{align}
+\end{align*}
 When the policy pair is clear from context, we write $\Dtvtok(c_t)$ and $\Dkltok(c_t)$.
 \end{definition}
 
 \begin{definition}[Max Token-Level Divergences and Expected Per-Position TV]
 \label{def:max-div}
 For the policy pair $(\piroll,\pitheta)$, define:
-\begin{align}
+\begin{align*}
     \epsilon
     &:= \Dtvtokmax := \max_{t,\,c_t} \Dtvtok(c_t),
     \\
@@ -74,7 +74,7 @@ For the policy pair $(\piroll,\pitheta)$, define:
     \\
     \Dbar_t
     &:= \E_{c_t \sim d_t^{\piroll}}\!\big[\Dtvtok(c_t)\big].
-\end{align}
+\end{align*}
 \end{definition}
 
 \subsection{Assumptions}
@@ -101,10 +101,10 @@ The response length satisfies $T < \infty$ for all generated sequences.
 
 Samples are generated from a behavior policy $\piroll$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately},
 the standard surrogate objective uses the per-step advantage under $\piroll$,
-\begin{equation}
+\begin{equation*}
     A_t^{\piroll}(c_t, y_t)
     := \E_{\piroll}\!\big[R(x, y)\mid c_t, y_t\big] - \E_{\piroll}\!\big[R(x, y)\mid c_t\big].
-\end{equation}
+\end{equation*}
 This yields the per-step surrogate
 \begin{equation}
     \mathcal{L}_{\piroll}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\!\Big[\E_{y_t \sim \piroll(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piroll}(c_t, y_t)\big]\Big],
@@ -116,13 +116,13 @@ where $\rho_t$ is defined in Eq.~\eqref{eq:ratio}.
 \label{def:impl-surrogate}
 Let $b$ be a baseline that is independent of the sampled trajectory $y$ (e.g., a prompt-level baseline computed from other samples in the
 same prompt group). Define the trajectory-level advantage
-\begin{equation}
+\begin{equation*}
     A := R(x, y) - b.
-\end{equation}
+\end{equation*}
 The trajectory-level surrogate used in critic-free implementations is
-\begin{equation}
+\begin{equation*}
     \tilde{\mathcal{L}}_{\piroll}(\pitheta) := \E_{\piroll}\!\Big[A \cdot \sum_{t=1}^T \rho_t\Big].
-\end{equation}
+\end{equation*}
 \end{definition}
 
 \begin{remark}[Per-Step Surrogate vs.\ Implementation Surrogate]
@@ -134,9 +134,9 @@ future conditional advantage with a trajectory-wide scalar. Therefore $\tilde{\m
 
 \begin{remark}[On-Policy Unbiasedness vs.\ Surrogate Equivalence]
 When $\piroll=\pitheta$ (on-policy) and $b$ is independent of the sampled trajectory, the REINFORCE identity gives
-\begin{equation}
+\begin{equation*}
     \E_{\pitheta}\!\Big[A \cdot \sum_{t=1}^T \nabla_\theta \log \pitheta(y_t \mid c_t)\Big] = \nabla_\theta J(\pitheta),
-\end{equation}
+\end{equation*}
 which provides an unbiased estimator of the policy gradient $\nabla_\theta J(\pitheta)$. This does not imply that the trajectory-level
 surrogate $\tilde{\mathcal{L}}_{\piroll}$ is equivalent to the per-step surrogate $\mathcal{L}_{\piroll}$ in Eq.~\eqref{eq:surrogate}.
 Accordingly, the error decomposition below is stated in terms of $\mathcal{L}_{\piroll}$, which yields a clean advantage/context-shift
@@ -144,27 +144,27 @@ factorization, while the implemented loss uses $\tilde{\mathcal{L}}_{\piroll}$ a
 \end{remark}
 
 The approximation error of the per-step surrogate is
-\begin{equation}
+\begin{equation*}
     \mathrm{Error}(\pitheta) := J(\pitheta) - J(\piroll) - \mathcal{L}_{\piroll}(\pitheta).
-\end{equation}
+\end{equation*}
 Via the Performance Difference Identity~\citep{kakade2002approximately}, this error decomposes as:
 \begin{equation}
     |\mathrm{Error}(\pitheta)| \le \sum_{t=1}^T 2\|g_t\|_\infty \cdot \|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}},
     \label{eq:error-decomp}
 \end{equation}
 where
-\begin{equation}
+\begin{equation*}
     g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big]
-\end{equation}
+\end{equation*}
 is the expected advantage shift. Classical bounds on Eq.~\eqref{eq:error-decomp} scale as $O(T^2)$~\citep{kakade2002approximately,
 achiam2017constrained}, rendering them theoretically vacuous for long-horizon LLM tasks with responses of thousands of tokens. Recent
 work~\citep{li2025trm} derives tighter bounds,
 including the Pinsker-Marginal bound ($O(T^{3/2})$), the Mixed bound ($O(T)$), and the data-dependent Adaptive bound.
 
 The Adaptive bound is particularly relevant to our work:
-\begin{equation}
+\begin{equation*}
     B_{\mathrm{Adap}}^{*} = 4 \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big),
-\end{equation}
+\end{equation*}
 where $\Dbar_t$ is the expected per-position TV divergence, and $\epsilon,\delta$ are the max token-level divergences from
 \Cref{def:max-div}. This bound operates at per-position granularity and preserves the causal structure of error accumulation, which
 motivates our prefix-level Causal Trust Region masking component.
@@ -197,7 +197,7 @@ GSPO & $\rhoseq$ & $w^{\mathrm{seq}}=\mathrm{clip}(\rhoseq,1-\epslow,1+\epshigh)
 \end{table}
 
 \noindent Here $\rhoseq$ is the length-normalized sequence likelihood ratio (a geometric mean of token ratios),
-\begin{equation}
+\begin{equation*}
     \begin{aligned}
         \rhoseq
         &:= \left(\frac{P^{\pitheta}(y \mid x)}{P^{\piroll}(y \mid x)}\right)^{\frac{1}{T}}
@@ -205,16 +205,16 @@ GSPO & $\rhoseq$ & $w^{\mathrm{seq}}=\mathrm{clip}(\rhoseq,1-\epslow,1+\epshigh)
         &= \left(\prod_{t=1}^{T}\rho_t\right)^{\frac{1}{T}}
         = \exp\!\left(\frac{1}{T}\sum_{t=1}^{T}\log\rho_t\right),
     \end{aligned}
-\end{equation}
+\end{equation*}
 where $T=|y|$ is the response length. This definition matches the sequence-level ratio used in GSPO~\citep{gspo2025} (denoted $s_i(\theta)$
 in the GSPO paper) up to notation.
 
 TRM (Trust Region Masking, \citet{li2025trm}) uses a binary \emph{sequence-level} mask $M^{\mathrm{TRM}}(x,y)$ to discard trajectories that violate the
 trust region. A standard (max-based) criterion is
-\begin{equation}
+\begin{equation*}
     M^{\mathrm{TRM}}(x,y)
     := \mathbb{I}\!\Big[\max_{t}\,\Dkltok(c_t;\piroll,\pitheta) \le \delta_{\mathrm{TRM}}\Big].
-\end{equation}
+\end{equation*}
 We defer a comparative discussion of these mechanisms and their limitations to \Cref{sec:unified}.
 
 \begin{remark}[Context Shift Propagation]

@@ -57,28 +57,28 @@ implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
 \paragraph{PPO Clipped Surrogate}
 PPO~\citep{schulman2017proximal} constrains policy updates by clipping the per-token importance ratio. In the notation of this paper, the
 ratio is
-\begin{equation}
+\begin{equation*}
     \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}.
-\end{equation}
+\end{equation*}
 The clipped surrogate takes the form
-\begin{equation}
+\begin{equation*}
     \mathcal{L}^{\mathrm{CLIP}}(\pitheta)
     = \E_{\piroll}\!\left[\sum_{t=1}^{T}\min\!\Big(
         \rho_t \hat{A}_t,\;
         \mathrm{clip}(\rho_t, 1-\epsilon_{\mathrm{clip}}, 1+\epsilon_{\mathrm{clip}})\,\hat{A}_t
     \Big)\right],
-\end{equation}
+\end{equation*}
 where $\hat{A}_t$ is an advantage estimator and $\epsilon_{\mathrm{clip}}>0$ is the clipping threshold.
 
 \paragraph{Asymmetry and Gradient Leakage}
 The clipping operator is asymmetric in the sign of $\hat{A}_t$. When $\hat{A}_t<0$ and $\rho_t \gg 1+\epsilon_{\mathrm{clip}}$, the
 unclipped term can still be selected:
-\begin{equation}
+\begin{equation*}
     \rho_t > 1+\epsilon_{\mathrm{clip}},\ \hat{A}_t<0
     \quad\Longrightarrow\quad
     \rho_t\hat{A}_t < (1+\epsilon_{\mathrm{clip}})\hat{A}_t
     = \mathrm{clip}(\rho_t, 1-\epsilon_{\mathrm{clip}}, 1+\epsilon_{\mathrm{clip}})\,\hat{A}_t,
-\end{equation}
+\end{equation*}
 hence $\min(\cdot)$ returns $\rho_t\hat{A}_t$. In this regime, the gradient magnitude still scales with $\rho_t$, so extremely large ratios
 can produce large updates even though they lie far outside the nominal trust region.
 
@@ -89,13 +89,13 @@ unclipped penalty for $\hat{A}_t<0$ can be desirable as it discourages such acti
 \paragraph{Failure Mode Under Implementation Divergence}
 In LLM-RL pipelines with inference--training mismatch, large ratios can arise from numerical or backend discrepancies rather than meaningful
 policy improvements. For example, a routing discontinuity in a Mixture-of-Experts model can yield a token $v$ such that
-\begin{equation}
+\begin{equation*}
     \piroll(v\mid c_t) \approx 0.001,
     \qquad
     \pitheta(v\mid c_t) \approx 0.9,
     \qquad
     \rho_t \approx 900.
-\end{equation}
+\end{equation*}
 Such spikes reflect implementation-level divergence and can induce a massive, erroneous gradient contribution under the unclipped branch
 when $\hat{A}_t<0$. This motivates using a detached trust-region mask to discard mismatched tokens or trajectories rather than relying on a
 token-level clipping heuristic.
@@ -112,14 +112,14 @@ We summarize standard properties of the leave-one-out baseline estimator used in
 \label{prop:rloo-variance}
 Fix a prompt $x$ and draw $n \ge 2$ i.i.d.\ responses $\{y^{(1)}, \ldots, y^{(n)}\} \sim \pitheta(\cdot|x)$ with rewards
 $r_i = R(x, y^{(i)})$. Let
-\begin{equation}
+\begin{equation*}
     f_i = \nabla_\theta \log P^{\pitheta}(y^{(i)} \mid x)
-\end{equation}
+\end{equation*}
 denote the trajectory score function for sample $i$, and define the per-sample policy gradient contribution with baseline $b$ as
 $g_i(b) = (r_i - b) f_i$. With the leave-one-out baseline $b_i = \frac{1}{n-1}\sum_{j \neq i} r_j$, the estimator
-\begin{equation}
+\begin{equation*}
     \hat{g} = \frac{1}{n}\sum_{i=1}^{n} g_i(b_i)
-\end{equation}
+\end{equation*}
 satisfies:
 \begin{enumerate}
     \item \textbf{Unbiasedness:} $\E[\hat{g}] = \nabla_\theta J(\pitheta)$.
@@ -130,11 +130,10 @@ satisfies:
     $\hat{g}^{\mathrm{mean}} = \frac{n-1}{n}\hat{g}$, and hence $\E[\hat{g}^{\mathrm{mean}}] = \frac{n-1}{n}\nabla_\theta J(\pitheta)$.
     \item \textbf{Second-moment decomposition:} Let $\mu(x) = \E[r_i \mid x]$ and $\sigma^2(x) = \Var(r_i \mid x)$. Then
     $\Var(b_i \mid x) = \sigma^2(x)/(n-1)$, and
-    \begin{equation}
-        \E\!\big[(r_i - b_i)^2 f_i f_i^\top \mid x\big]
-        = \E\!\big[(r_i - \mu(x))^2 f_i f_i^\top \mid x\big] + \Var(b_i \mid x)\, \E[f_i f_i^\top \mid x].
-        \label{eq:rloo-second-moment}
-    \end{equation}
+	    \begin{equation*}
+	        \E\!\big[(r_i - b_i)^2 f_i f_i^\top \mid x\big]
+	        = \E\!\big[(r_i - \mu(x))^2 f_i f_i^\top \mid x\big] + \Var(b_i \mid x)\, \E[f_i f_i^\top \mid x].
+	    \end{equation*}
 \end{enumerate}
 \end{remark}
 
@@ -229,37 +228,37 @@ when $r_i < 0$ it decreases them.
 
 We provide a complete proof of \Cref{thm:prefix-tighter} under the definitions in \Cref{sec:prefix-is}. For convenience, write the
 log-threshold interval as
-\begin{equation}
+\begin{equation*}
     [\log(1-\epslow), \log(1+\epshigh)] = [-\tau_-, \tau_+],
     \qquad
     \tau_+ := \log(1+\epshigh),
     \qquad
     \tau_- := -\log(1-\epslow),
-\end{equation}
+\end{equation*}
 so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
 
 \paragraph{Mask Definitions} The three masks compared in \Cref{thm:prefix-tighter} are:
 \begin{itemize}
     \item \textbf{Token-level (IcePop / token-level ratio mask):}
-    \begin{equation}
+    \begin{equation*}
         M_t^{\mathrm{tok}}
         := \mathbb{I}\!\big[\rho_t \in [1-\epslow,1+\epshigh]\big]
         = \mathbb{I}\!\big[\log\rho_t \in [-\tau_-,\tau_+]\big].
-    \end{equation}
+    \end{equation*}
     \item \textbf{Sequence-level (GSPO / sequence-level ratio gate):}
-    \begin{equation}
+    \begin{equation*}
         M_t^{\mathrm{seq}}
         := \mathbb{I}\!\big[\log\rhoseq \in [-\tau_-,\tau_+]\big],
         \qquad
         \log\rhoseq := \frac{1}{T}\sum_{s=1}^{T}\log\rho_s,
-    \end{equation}
+    \end{equation*}
     for all $t$.
     \item \textbf{Prefix-level (Causal Trust Region proxy):}
-    \begin{equation}
+    \begin{equation*}
         M_t^{\mathrm{pre}}
         := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big]
         = \mathbb{I}\!\big[\log\rhoprefix{t} \in [-\tau_-,\tau_+]\big],
-    \end{equation}
+    \end{equation*}
     where $\rhoprefix{t}$ is defined in Eq.~\eqref{eq:prefix-is}.
 \end{itemize}
 
@@ -267,34 +266,34 @@ so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\
 \noindent\textbf{Part (a): Early deviation.}
 Assume $\rho_1 \notin [1-\epslow,1+\epshigh]$ and $|\log\rho_t| \le \varepsilon$ for all $t>1$, with
 $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. Then for every $t>1$,
-\begin{equation}
+\begin{equation*}
     \log\rho_t \in [-\varepsilon,\varepsilon] \subseteq [-\tau_-,\tau_+],
-\end{equation}
+\end{equation*}
 so $M_t^{\mathrm{tok}}=1$ for all $t>1$, while $M_1^{\mathrm{tok}}=0$ (since $\rho_1 \notin [1-\epslow,1+\epshigh]$). Hence token-level
 IcePop masks only position $t=1$.
 
 \smallskip
 For the prefix mask, note first that $M_1^{\mathrm{pre}}=0$ because $\rhoprefix{1}=\rho_1\notin[1-\epslow,1+\epshigh]$. To quantify how
 long the rejection can persist, use Eq.~\eqref{eq:prefix-is}:
-\begin{equation}
+\begin{equation*}
     \log\rhoprefix{t}
     = \frac{1}{t}\sum_{s=1}^{t} \log\rho_s
     = \frac{1}{t}\left(\log\rho_1 + \sum_{s=2}^{t}\log\rho_s\right).
-\end{equation}
+\end{equation*}
 If $\log\rho_1>\tau_+$, then $\log\rho_s \ge -\varepsilon$ for all $s\ge2$, hence $\sum_{s=2}^{t}\log\rho_s \ge -(t-1)\varepsilon$ and therefore
-\begin{align}
+\begin{align*}
     \log\rhoprefix{t}
     &\ge \frac{1}{t}\big(\log\rho_1-(t-1)\varepsilon\big)
     = \frac{\log\rho_1+\varepsilon}{t} - \varepsilon.
-\end{align}
+\end{align*}
 Thus, if $t < (\log\rho_1+\varepsilon)/(\tau_+ + \varepsilon)$, then $\log\rhoprefix{t}>\tau_+$ and hence $M_t^{\mathrm{pre}}=0$.
 The lower-violation case $\log\rho_1<-\tau_-$ is symmetric: since $\log\rho_s \le \varepsilon$ for $s\ge2$, we have
 $\sum_{s=2}^{t}\log\rho_s \le \varepsilon(t-1)$ and therefore
-\begin{align}
+\begin{align*}
     \log\rhoprefix{t}
     &\le \frac{1}{t}\big(\log\rho_1+\varepsilon(t-1)\big)
     = \frac{\log\rho_1-\varepsilon}{t} + \varepsilon.
-\end{align}
+\end{align*}
 If $t < (-\log\rho_1+\varepsilon)/(\tau_-+\varepsilon)$, then $\log\rhoprefix{t} < -\tau_-$ and hence $M_t^{\mathrm{pre}}=0$.
 This proves the sufficient conditions in \Cref{eq:early-upper-sufficient,eq:early-lower-sufficient}.
 
@@ -306,9 +305,9 @@ $0 \le \varepsilon \le \min(\tau_+,\tau_-)$. For any $t<t^*$, all active log-rat
 Since $\log\rhoprefix{t} = \frac{1}{t}\sum_{s=1}^{t}\log\rho_s$ is an average of values in $[-\tau_-,\tau_+]$, it follows that
 $\log\rhoprefix{t} \in [-\tau_-,\tau_+]$, and hence $M_t^{\mathrm{pre}}=1$ for all $t<t^*$. Therefore prefix masking can only occur
 for positions $t\ge t^*$, which implies
-\begin{equation}
+\begin{equation*}
     \big|\{t : M_t^{\mathrm{pre}} = 0\}\big| \le T - t^* + 1.
-\end{equation}
+\end{equation*}
 The sequence-level IS mask $M_t^{\mathrm{seq}}$ is constant across positions by definition, so it either rejects all tokens or rejects none.
 
 For the claimed regime where prefix rejects but sequence-level accepts, consider the pure single-spike case where $\rho_t=1$ for
@@ -319,11 +318,11 @@ $t\neq t^*$ and $\rho_{t^*}>1$. Then
     \log\rhoprefix{t^*} = \frac{1}{t^*}\log\rho_{t^*}.
 \]
 Since $t^* \le T$ and $\log\rho_{t^*}>0$, we have $\log\rhoprefix{t^*} \ge \log\rhoseq$. Thus whenever
-\begin{equation}
+\begin{equation*}
     \frac{1}{t^*}\log\rho_{t^*} > \tau_+
     \quad\text{and}\quad
     \frac{1}{T}\log\rho_{t^*} \le \tau_+,
-\end{equation}
+\end{equation*}
 we obtain $M_{t^*}^{\mathrm{pre}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$. (The lower-threshold case is analogous with $-\tau_-$.)
 
 \par
@@ -340,61 +339,61 @@ is symmetric.
 This appendix collects several masking variants that are compatible with the ratio setup in the main text
 (\Cref{sec:offpolicy-problem}). Throughout, samples are generated by the behavior policy $\piroll$ and gradients are computed under the
 training policy $\pitheta$. We write the per-token importance ratio as
-\begin{equation}
+\begin{equation*}
     \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)}.
-\end{equation}
+\end{equation*}
 We also reuse the prefix statistic $\rhoprefix{t}$ from \Cref{def:prefix-is}.
 For thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the log-threshold interval
-\begin{equation}
+\begin{equation*}
     [\log(1-\epslow),\log(1+\epshigh)] = [-\tau_-,\tau_+],
     \qquad
     \tau_+ := \log(1+\epshigh),
     \qquad
     \tau_- := -\log(1-\epslow).
-\end{equation}
+\end{equation*}
 
 \paragraph{Variant I: Absorbing Prefix-Average Mask}
 
 The main text uses a pointwise prefix gate at each position $t$. A more rejection-style variant enforces an \emph{absorbing} semantics:
 once a prefix violates the threshold, all subsequent positions are rejected.
 
-\begin{equation}
+\begin{equation*}
     \widetilde{M}_t^{\mathrm{pre}}
     := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow,1+\epshigh]\big],
     \qquad
     M_t^{\mathrm{abs\text{-}pre}}
     := \prod_{u=1}^{t}\widetilde{M}_u^{\mathrm{pre}}.
-\end{equation}
+\end{equation*}
 
 \paragraph{Variant II: Prefix-Max Mask / Max-Filtering}
 
 Max-based trust-region criteria can be expressed via a sample-based proxy $k_2(\rho)$:
-\begin{equation}
+\begin{equation*}
     k_2(\rho) := \tfrac{1}{2}(\log\rho)^2.
-\end{equation}
+\end{equation*}
 The corresponding prefix-max statistic and mask are
-\begin{equation}
+\begin{equation*}
     S_t^{\max} := \max_{1\le s\le t} k_2(\rho_s),
     \qquad
     M_t^{\mathrm{pre\text{-}max}} := \mathbb{I}\!\big[S_t^{\max} \le \delta_{\max}\big].
-\end{equation}
+\end{equation*}
 Equivalently, $M_t^{\mathrm{pre\text{-}max}}=1$ iff $\max_{s\le t}|\log\rho_s| \le \sqrt{2\delta_{\max}}$.
 
 \paragraph{Variant III: Prefix-Score Mask / Bound-Driven}
 
 Score-based masking controls a prefix-level aggregate of per-token ratio deviations. Define a nonnegative per-token deviation
-\begin{equation}
+\begin{equation*}
     a_t := |\rho_t - 1|
-\end{equation}
+\end{equation*}
 and deterministic nonnegative weights $(w_t)_{t\ge1}$ with $\sum_{s\le t} w_s > 0$. The prefix score is
-\begin{equation}
+\begin{equation*}
     \widetilde{W}_t
     := \frac{\sum_{s=1}^{t} w_s a_s}{\sum_{s=1}^{t} w_s},
-\end{equation}
+\end{equation*}
 and the corresponding mask is
-\begin{equation}
+\begin{equation*}
     M_t^{\mathrm{pre\text{-}score}} := \mathbb{I}\!\big[\widetilde{W}_t \le \delta_W\big].
-\end{equation}
+\end{equation*}
 A special case is the uniform-weight choice $w_s\equiv 1$, which yields $\widetilde{W}_T = \frac{1}{T}\sum_{t=1}^{T}|\rho_t-1|$ at the
 full horizon.
 
@@ -403,20 +402,20 @@ full horizon.
 TRM~\citep{li2025trm} uses per-token divergence estimates (or their sample-based proxies) to decide whether a trajectory lies inside a
 trust region. We can adapt this idea to a prefix-level gate by counting \emph{abnormal} tokens in the prefix. Concretely, define the
 abnormal-token indicator
-\begin{equation}
+\begin{equation*}
     B_t := \mathbb{I}\!\big[\Dkltok(c_t;\piroll,\pitheta) > \delta_{\mathrm{TRM}}\big],
-\end{equation}
+\end{equation*}
 and the prefix abnormal count and rate
-\begin{equation}
+\begin{equation*}
     N_t := \sum_{s=1}^{t} B_s,
     \qquad
     \widehat{p}_t := \frac{N_t}{t}.
-\end{equation}
+\end{equation*}
 Given a rate threshold $\xi\in[0,1]$, the corresponding prefix mask is
-\begin{equation}
+\begin{equation*}
     M_t^{\mathrm{pre\text{-}anom}}
     := \mathbb{I}\!\big[\widehat{p}_t \le \xi\big].
-\end{equation}
+\end{equation*}
 In practice, one may instantiate $B_t$ using TRM's computation method for $\Dkltok(c_t;\piroll,\pitheta)$; for example, via the
 sample-based proxy $k_3(\rho):=\rho-1-\log\rho$, which satisfies
 $\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition

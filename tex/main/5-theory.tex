@@ -4,9 +4,9 @@
 \subsection{Why the Two Components Are Complementary}
 
 The error decomposition (\Cref{eq:error-decomp}) has two factors at each position $t$:
-\begin{equation}
+\begin{equation*}
     |\mathrm{Error}| \le \sum_{t=1}^T \underbrace{2\|g_t\|_\infty}_{\text{advantage factor}} \cdot \underbrace{\|d_t^{\pitheta} - d_t^{\piroll}\|_{\mathrm{TV}}}_{\text{context shift factor}}.
-\end{equation}
+\end{equation*}
 
 \textbf{Component 1 (REINFORCE Max)} controls the advantage factor. The leave-one-out baseline provides statistical independence between
 each sample and its baseline (\Cref{prop:rloo-variance}), and the adaptive normalization enforces zero empirical mean and unit empirical
