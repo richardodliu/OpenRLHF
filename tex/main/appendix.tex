@@ -1,7 +1,25 @@
 \newpage
 \appendix
 
-\section{Details on Off-Policy Mismatch in LLM-RL}
+\section{Appendix Roadmap}
+
+This appendix collects supplementary material for the main paper.
+\begin{itemize}
+    \item \textbf{Implementation divergence and anchoring.} \Cref{app:mismatch} summarizes common sources of rollout--training mismatch and
+    our anchoring choice. \Cref{app:ppo-clip-leak} explains why PPO clipping can leak gradients under implementation divergence.
+
+    \item \textbf{REINFORCE Max details.} \Cref{app:rloo-proof} summarizes standard properties of the leave-one-out (RLOO) baseline.
+    \Cref{app:gamma-one} gives a brief justification for setting $\gamma = 1.0$ under sparse terminal rewards. \Cref{app:numerical} and
+    \Cref{app:uniform-scale} provide implementation-oriented numerical safeguards and an optional uniform scale mode.
+
+    \item \textbf{REINFORCE Pro proofs and variants.} \Cref{app:prefix-proof} provides the complete proof of
+    \Cref{thm:prefix-tighter}. \Cref{app:mask-variants} collects additional prefix masking variants compatible with the ratio setup in the
+    main text.
+\end{itemize}
+
+\section{Implementation Divergence and Trust-Region Anchoring}
+
+\subsection{Details on Off-Policy Mismatch in LLM-RL}
 \label{app:mismatch}
 
 Modern LLM-RL pipelines decouple inference from training: rollouts are produced by an inference engine (e.g., vLLM or SGLang) under the
@@ -33,7 +51,7 @@ In PPO-style implementations, the rollout snapshot used to generate data is ofte
 snapshot coincides with the data-generating policy $\piroll$ (so $\piold \equiv \piroll$ in our notation). We use $\piold$ only for
 implementation mapping and keep the theory in terms of $(\piroll,\pitheta)$.
 
-\section{Why PPO Clipping Can Leak Gradients Under Mismatch}
+\subsection{Why PPO Clipping Can Leak Gradients Under Mismatch}
 \label{app:ppo-clip-leak}
 
 \paragraph{PPO clipped surrogate.}
@@ -82,7 +100,9 @@ Such spikes reflect implementation-level divergence and can induce a massive, er
 when $\hat{A}_t<0$. This motivates using a detached trust-region mask to discard mismatched tokens or trajectories rather than relying on a
 token-level clipping heuristic.
 
-\section{Leave-One-Out Baseline Properties (Summary)}
+\section{REINFORCE Max: Supplementary Details}
+
+\subsection{Leave-One-Out Baseline Properties (Summary)}
 \label{app:rloo-proof}
 
 We summarize standard properties of the leave-one-out baseline estimator used in \Cref{sec:reinforce-max}; see
@@ -134,7 +154,7 @@ The leave-one-out baseline is equivalent to the leave-one-out control variate fr
 
 
 
-\section{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
+\subsection{Optimality of \texorpdfstring{$\gamma = 1.0$}{gamma = 1.0}}
 \label{app:gamma-one}
 
 \begin{remark}[On setting $\gamma = 1.0$ for sparse terminal rewards (standard)]
@@ -145,7 +165,66 @@ position. Choosing $\gamma < 1$ instead corresponds to optimizing a discounted o
 \end{remark}
 
 
-\section{Proof of Theorem~\ref{thm:prefix-tighter}}
+\subsection{Numerical Stability}
+\label{app:numerical}
+
+The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguards:
+
+\begin{remark}[Numerical thresholds vs.\ divergence bounds]
+The symbols $\varepsilon_{\mathrm{num}}$ and $\varepsilon_{\mathrm{tol}}$ in this appendix denote implementation hyperparameters used for
+numerical stability and uniform-reward detection. They are unrelated to the divergence upper bound $\epsilon$ in \Cref{def:max-div}.
+\end{remark}
+
+\begin{enumerate}
+    \item \textbf{Sum threshold:} If $\sum_{(i,t)\in\mathcal{P}} A_{i,t} < \varepsilon_{\mathrm{num}}$ or
+    $-\sum_{(i,t)\in\mathcal{N}} A_{i,t} < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is
+    skipped and the original advantages are returned.
+
+    \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
+
+    \item \textbf{Intermediate overflow protection:} The quantity
+    $\kappa^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2$ (where $\kappa$ is defined in \Cref{def:adaptive-norm}) is clamped to $10^8$ before
+    computing $\alpha$.
+
+    \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
+\end{enumerate}
+
+These safeguards may cause the normalized advantages to deviate slightly from the exact empirical constraints in
+\Cref{def:adaptive-norm}. These thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
+
+\textbf{Fallback conditions.} Normalization is skipped entirely when:
+\begin{itemize}
+    \item All advantages have the same sign ($\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), indicating the group has uniform quality and the leave-one-out-shaped advantages are already meaningful.
+    \item The uniform scale mode (\Cref{app:uniform-scale}) is active and the group has uniform rewards.
+\end{itemize}
+
+
+\subsection{Uniform Scale Mode}
+\label{app:uniform-scale}
+
+The uniform scale mode is an optional technique to improve sample utilization. When all $n$ samples for a prompt have identical rewards (all correct or all incorrect), the leave-one-out baseline yields $\tilde{r}_i = 0$ for all $i$, eliminating the gradient signal. Uniform scale mode recovers this signal.
+
+\begin{definition}[Uniform Scale]
+For prompt groups where $\mathrm{std}(\{r_1, \ldots, r_n\}) < \varepsilon_{\mathrm{tol}}$ (uniform-reward groups), the shaped reward is set to $\tilde{r}_i = r_i / n$, and the adaptive normalization (\Cref{sec:adaptive-norm}) is skipped.
+\end{definition}
+
+\begin{proposition}
+Under uniform scale mode, the gradient for uniform-reward groups is proportional to $r_i \sum_t \nabla_\theta \log \pitheta(y_{i,t}|c_{i,t})$, which pushes the policy toward all sampled responses when $r_i > 0$ (all correct) and away from them when $r_i < 0$ (all incorrect), preserving gradient signal that the leave-one-out baseline would otherwise eliminate.
+\end{proposition}
+
+\begin{proof}
+With $\tilde{r}_i = r_i/n$ and no normalization, the sample-$i$ contribution to the REINFORCE gradient is proportional to
+\[
+    \frac{r_i}{n} \sum_t \nabla_\theta \log \pitheta(y_{i,t}\mid c_{i,t}).
+\]
+Hence $\sign(r_i)$ determines the update direction: when $r_i > 0$ the policy increases the log-probability of the sampled tokens, and
+when $r_i < 0$ it decreases them.
+\end{proof}
+
+
+\section{REINFORCE Pro: Proofs and Variants}
+
+\subsection{Proof of Theorem~\ref{thm:prefix-tighter}}
 \label{app:prefix-proof}
 
 We provide a complete proof of \Cref{thm:prefix-tighter} under the definitions in \Cref{sec:prefix-is}. For convenience, write the
@@ -255,7 +334,7 @@ $\log\rhoseq$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ f
 is symmetric.
 \end{proof}
 
-\section{Alternative Trust-Region Masking Variants}
+\subsection{Alternative Trust-Region Masking Variants}
 \label{app:mask-variants}
 
 This appendix collects several masking variants that are compatible with the ratio setup in the main text
@@ -342,60 +421,3 @@ In practice, one may instantiate $B_t$ using TRM's computation method for $\Dklt
 sample-based proxy $k_3(\rho):=\rho-1-\log\rho$, which satisfies
 $\E_{\piroll}[k_3(\rho_t)\mid c_t]=\DKL(\piroll(\cdot\mid c_t)\,\|\,\pitheta(\cdot\mid c_t))$ under the ratio definition
 $\rho_t=\pitheta/\piroll$ and support overlap.
-
-
-\section{Numerical Stability}
-\label{app:numerical}
-
-The adaptive normalization (\Cref{sec:adaptive-norm}) includes several safeguards:
-
-\begin{remark}[Numerical thresholds vs.\ divergence bounds]
-The symbols $\varepsilon_{\mathrm{num}}$ and $\varepsilon_{\mathrm{tol}}$ in this appendix denote implementation hyperparameters used for
-numerical stability and uniform-reward detection. They are unrelated to the divergence upper bound $\epsilon$ in \Cref{def:max-div}.
-\end{remark}
-
-\begin{enumerate}
-    \item \textbf{Sum threshold:} If $\sum_{(i,t)\in\mathcal{P}} A_{i,t} < \varepsilon_{\mathrm{num}}$ or
-    $-\sum_{(i,t)\in\mathcal{N}} A_{i,t} < \varepsilon_{\mathrm{num}}$ (default $\varepsilon_{\mathrm{num}} = 10^{-8}$), normalization is
-    skipped and the original advantages are returned.
-
-    \item \textbf{Scale clamping:} $\alpha$ and $\beta$ are clamped to $[\varepsilon_{\mathrm{num}}, s_{\max}]$ (default $s_{\max} = 10$) to prevent extreme scaling.
-
-    \item \textbf{Intermediate overflow protection:} The quantity
-    $\kappa^2 \sum_{(i,t)\in\mathcal{N}} A_{i,t}^2$ (where $\kappa$ is defined in \Cref{def:adaptive-norm}) is clamped to $10^8$ before
-    computing $\alpha$.
-
-    \item \textbf{Finiteness check:} If $\alpha$ or $\beta$ is NaN or $\pm\infty$ after computation, normalization is skipped.
-\end{enumerate}
-
-These safeguards may cause the normalized advantages to deviate slightly from the exact empirical constraints in
-\Cref{def:adaptive-norm}. These thresholds are heuristic defaults; formal validation is deferred to the experimental evaluation.
-
-\textbf{Fallback conditions.} Normalization is skipped entirely when:
-\begin{itemize}
-    \item All advantages have the same sign ($\mathcal{P} = \emptyset$ or $\mathcal{N} = \emptyset$), indicating the group has uniform quality and the leave-one-out-shaped advantages are already meaningful.
-    \item The uniform scale mode (\Cref{app:uniform-scale}) is active and the group has uniform rewards.
-\end{itemize}
-
-
-\section{Uniform Scale Mode}
-\label{app:uniform-scale}
-
-The uniform scale mode is an optional technique to improve sample utilization. When all $n$ samples for a prompt have identical rewards (all correct or all incorrect), the leave-one-out baseline yields $\tilde{r}_i = 0$ for all $i$, eliminating the gradient signal. Uniform scale mode recovers this signal.
-
-\begin{definition}[Uniform Scale]
-For prompt groups where $\mathrm{std}(\{r_1, \ldots, r_n\}) < \varepsilon_{\mathrm{tol}}$ (uniform-reward groups), the shaped reward is set to $\tilde{r}_i = r_i / n$, and the adaptive normalization (\Cref{sec:adaptive-norm}) is skipped.
-\end{definition}
-
-\begin{proposition}
-Under uniform scale mode, the gradient for uniform-reward groups is proportional to $r_i \sum_t \nabla_\theta \log \pitheta(y_{i,t}|c_{i,t})$, which pushes the policy toward all sampled responses when $r_i > 0$ (all correct) and away from them when $r_i < 0$ (all incorrect), preserving gradient signal that the leave-one-out baseline would otherwise eliminate.
-\end{proposition}
-
-\begin{proof}
-With $\tilde{r}_i = r_i/n$ and no normalization, the sample-$i$ contribution to the REINFORCE gradient is proportional to
-\[
-    \frac{r_i}{n} \sum_t \nabla_\theta \log \pitheta(y_{i,t}\mid c_{i,t}).
-\]
-Hence $\sign(r_i)$ determines the update direction: when $r_i > 0$ the policy increases the log-probability of the sampled tokens, and
-when $r_i < 0$ it decreases them.
-\end{proof}
