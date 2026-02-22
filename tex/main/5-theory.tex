@@ -316,6 +316,73 @@ granularity by masking only the token-level loss terms whose prefixes violate th
 order. The resulting filtering can detect both early deviations that propagate forward and cumulative drift from many small mismatches
 (\Cref{thm:prefix-tighter}).
 
+\textbf{A per-position mechanism view of prefix causal trust regions.}
+To connect prefix filtering to the context-shift factor in Eq.~\eqref{eq:error-decomp}, it is convenient to make explicit the change of
+measure between prefix context visitation distributions under $\piroll$ and $\pitheta$. For each $t\in\{1,\ldots,T\}$, define the prefix
+density ratio random variable
+\begin{equation*}
+    W_t := \prod_{s=1}^{t}\rho_s,
+    \qquad
+    \log W_t = \sum_{s=1}^{t}\log\rho_s.
+\end{equation*}
+The next two lemmas show that $W_t$ is exactly the Radon--Nikodym derivative between the length-$(t+1)$ context distributions and that
+the resulting context shift admits a clean ratio-residual identity.
+
+\begin{lemma}[Prefix density-ratio factorization]
+\label{lem:prefix-density-ratio}
+Under Assumption~\ref{asm:support}, for any $t\in\{1,\ldots,T\}$ and any reachable context $c_{t+1}=(x,y_{\le t})$ such that
+$d_{t+1}^{\piroll}(c_{t+1})>0$,
+\begin{equation*}
+    \frac{d_{t+1}^{\pitheta}(c_{t+1})}{d_{t+1}^{\piroll}(c_{t+1})}
+    = \prod_{s=1}^{t} \frac{\pitheta(y_s\mid c_s)}{\piroll(y_s\mid c_s)}
+    = W_t.
+\end{equation*}
+\end{lemma}
+
+\begin{lemma}[Context-shift TV as an expectation of the prefix ratio residual]
+\label{lem:tv-prefix-ratio}
+Under Assumption~\ref{asm:support}, for any $t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \bigl\|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    =
+    \frac{1}{2}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[\big|W_t - 1\big|\right].
+\end{equation*}
+\end{lemma}
+
+The prefix gate further enforces a deterministic per-position envelope on this drift along the accepted prefixes.
+
+\begin{theorem}[Per-position drift control on accepted prefixes]
+\label{thm:pre-causal-mechanism}
+Fix $\epslow\in(0,1)$ and $\epshigh>0$, and write $\tau_+ := \log(1+\epshigh)$ and $\tau_- := -\log(1-\epslow)$. Let
+$M_t^{\mathrm{pre}}$ be defined as in Eq.~\eqref{eq:prefix-mask}. Then for any $t\in\{1,\ldots,T\}$, on the event
+$\{M_t^{\mathrm{pre}}=1\}$,
+\begin{equation*}
+    e^{-t\tau_-} \le W_t \le e^{t\tau_+},
+    \qquad
+    \big|W_t-1\big|
+    \le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}.
+\end{equation*}
+Consequently,
+\begin{align*}
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\big|W_t-1\big|\right]
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}\,
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]
+    \\
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}.
+\end{align*}
+\end{theorem}
+
+\noindent\textbf{Why this matters for our method.}
+\Cref{lem:prefix-density-ratio} makes explicit the causal object that prefix filtering controls: the cumulative product of token ratios is
+exactly the density ratio between prefix context distributions. \Cref{lem:tv-prefix-ratio} then rewrites the context-shift factor in
+Eq.~\eqref{eq:error-decomp} as an expectation of a \emph{prefix} ratio residual. Finally, \Cref{thm:pre-causal-mechanism} shows that our
+prefix gate enforces a per-position bounded change-of-measure regime on the \emph{accepted} prefixes. This is the sense in which the mask
+acts as a prefix-level Causal Trust Region proxy: updates are filtered to exclude positions whose prefixes induce extreme reweighting of
+the rollout context distribution. Proofs are in \Cref{app:pre-causal-tr}.
+
 \textbf{REINFORCE Pro Max.} Taken together with the advantage-estimation choices discussed above, REINFORCE Pro Max targets all four
 dimensions discussed above. The RLOO
 baseline provides statistical independence (\Cref{rem:rloo-variance}); adaptive normalization preserves advantage sign while enforcing

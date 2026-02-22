@@ -333,6 +333,109 @@ $\log\rhoseq$ is also strictly larger than $\tau_+$, so $M_t^{\mathrm{seq}}=0$ f
 is symmetric.
 \end{proof}
 
+\subsection{Prefix Causal Trust Region Mechanism Bounds}
+\label[appsec]{app:pre-causal-tr}
+
+This subsection proves \Cref{lem:prefix-density-ratio,lem:tv-prefix-ratio,thm:pre-causal-mechanism}, which formalize a per-position
+mechanism interpretation of prefix Causal Trust Region masking.
+
+\begin{proof}[Proof of \Cref{lem:prefix-density-ratio}]
+Fix $t\in\{1,\ldots,T\}$ and a reachable context $c_{t+1}=(x,y_{\le t})$ with $d_{t+1}^{\piroll}(c_{t+1})>0$. By the definition of the
+context visitation distribution, for any policy $\pi$,
+\begin{align*}
+    d_{t+1}^{\pi}(c_{t+1})
+    &= P(x)\,P^{\pi}(y_{\le t}\mid x)
+    \\
+    &= P(x)\prod_{s=1}^{t}\pi(y_s\mid c_s),
+\end{align*}
+where $c_s=(x,y_{<s})$ and the second line is the autoregressive factorization.
+Under Assumption~\ref{asm:support}, the ratio $d_{t+1}^{\pitheta}(c_{t+1})/d_{t+1}^{\piroll}(c_{t+1})$ is well-defined for all such
+contexts. Therefore,
+\begin{align*}
+    \frac{d_{t+1}^{\pitheta}(c_{t+1})}{d_{t+1}^{\piroll}(c_{t+1})}
+    &=
+    \prod_{s=1}^{t} \frac{\pitheta(y_s\mid c_s)}{\piroll(y_s\mid c_s)}
+    \\
+    &= \prod_{s=1}^{t}\rho_s
+    = W_t,
+\end{align*}
+as claimed.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{lem:tv-prefix-ratio}]
+Fix $t\in\{1,\ldots,T\}$. By definition of total variation distance,
+\begin{align*}
+    \bigl\|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    &=
+    \frac{1}{2}\sum_{c_{t+1}} \bigl|d_{t+1}^{\pitheta}(c_{t+1}) - d_{t+1}^{\piroll}(c_{t+1})\bigr|.
+\end{align*}
+By \Cref{lem:prefix-density-ratio}, for every reachable $c_{t+1}$ with $d_{t+1}^{\piroll}(c_{t+1})>0$,
+\begin{equation*}
+    d_{t+1}^{\pitheta}(c_{t+1})
+    =
+    d_{t+1}^{\piroll}(c_{t+1})\,W_t.
+\end{equation*}
+Substituting this into the previous display yields
+\begin{align*}
+    \bigl\|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    &=
+    \frac{1}{2}\sum_{c_{t+1}} d_{t+1}^{\piroll}(c_{t+1})\,\bigl|W_t - 1\bigr|
+    \\
+    &=
+    \frac{1}{2}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[\bigl|W_t - 1\bigr|\right],
+\end{align*}
+which proves the claim.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{thm:pre-causal-mechanism}]
+Fix $t\in\{1,\ldots,T\}$. Recall that $\tau_+ := \log(1+\epshigh)$ and $\tau_- := -\log(1-\epslow)$.
+
+\smallskip
+\noindent\textbf{Step 1: Rewrite the acceptance event.}
+By definition of the prefix mask in Eq.~\eqref{eq:prefix-mask},
+\begin{equation*}
+    M_t^{\mathrm{pre}}=1
+    \quad\Longleftrightarrow\quad
+    \log\rhoprefix{t}\in[-\tau_-,\tau_+].
+\end{equation*}
+Using Eq.~\eqref{eq:prefix-is}, this is equivalent to the cumulative log-ratio constraint
+\begin{equation*}
+    -t\tau_- \le \sum_{s=1}^{t}\log\rho_s \le t\tau_+.
+\end{equation*}
+
+\smallskip
+\noindent\textbf{Step 2: Convert to a bound on the prefix density ratio.}
+Recall that $W_t = \prod_{s=1}^{t}\rho_s$. Equivalently,
+\begin{equation*}
+    W_t = \exp\!\Big(\sum_{s=1}^{t}\log\rho_s\Big).
+\end{equation*}
+Therefore, the previous display implies that, on $\{M_t^{\mathrm{pre}}=1\}$,
+\begin{equation*}
+    e^{-t\tau_-} \le W_t \le e^{t\tau_+}.
+\end{equation*}
+
+\smallskip
+\noindent\textbf{Step 3: Bound the ratio residual and take expectations.}
+If a scalar $w$ lies in an interval $[a,b]$ with $0<a\le b$, then $|w-1|\le \max\{b-1,1-a\}$. Applying this with
+$a=e^{-t\tau_-}$ and $b=e^{t\tau_+}$ yields that on $\{M_t^{\mathrm{pre}}=1\}$,
+\begin{equation*}
+    \bigl|W_t-1\bigr|
+    \le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}.
+\end{equation*}
+Multiplying by $M_t^{\mathrm{pre}}$ and taking expectations under $c_{t+1}\sim d_{t+1}^{\piroll}$ gives
+\begin{align*}
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\bigl|W_t-1\bigr|\right]
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}\,
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]
+    \\
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\},
+\end{align*}
+which completes the proof.
+\end{proof}
+
 \subsection{Alternative Trust-Region Masking Variants}
 \label[appsec]{app:mask-variants}
 
