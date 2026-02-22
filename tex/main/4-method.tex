@@ -330,7 +330,7 @@ $\log\rhoprefix{t}$ and $\log\rho_{t+1}$ lie in $[\log(1-\epslow),\log(1+\epshig
 $\log\rhoprefix{t+1}\in[\log(1-\epslow),\log(1+\epshigh)]$, which implies $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{proof}
 
-\textbf{Granularity.} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
+\noindent\textbf{Granularity.} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
 positions while being masked at others. This can be viewed as a prefix-level refinement of the sequence-level rejection mechanism in TRM.
 
 \noindent\textbf{Notation.} To avoid overloading symbols, we reserve $(\epsilon,\delta)$ for the divergence quantities in
@@ -501,19 +501,3 @@ $\rho_t$ is the per-token ratio defined in Eq.~\eqref{eq:ratio}.
 \textbf{Gradient flow.} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{pre}}$ and the normalized advantage
 $\hat{A}_t$ are detached from the computation graph. When $M_t^{\mathrm{pre}} = 0$, the loss at position $t$ is zero and contributes
 no gradient.
-
-\begin{remark}[Gradient Form of the Implementation Surrogate]
-\label{rem:grad-impl-surrogate}
-For context, consider the trajectory-level surrogate $\tilde{\mathcal{L}}_{\piroll}(\pitheta)=\E_{\piroll}[A\cdot \sum_{t=1}^{T}\rho_t]$
-from \Cref{def:impl-surrogate}. During a policy update, the behavior policy $\piroll$ is treated as fixed and rewards/baselines are
-detached. Therefore, for a parameterized policy $\pi_\theta$ (denoted $\pitheta$), the gradient takes the score-function form
-\begin{equation*}
-    \nabla_\theta \tilde{\mathcal{L}}_{\piroll}(\pitheta)
-    =
-    \E_{\piroll}\!\left[
-        A \cdot \sum_{t=1}^{T} \rho_t\, \nabla_\theta \log \pitheta(y_t\mid c_t)
-    \right],
-\end{equation*}
-which follows from $\nabla_\theta \rho_t = \rho_t \nabla_\theta \log \pitheta(y_t\mid c_t)$ and is standard in policy-gradient
-analyses (see, e.g., \citet{qi2026rethinkingtrustregionllm}).
-\end{remark}

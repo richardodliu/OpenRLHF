@@ -107,7 +107,7 @@ All statements are adapted from existing trust-region analyses for LLM-RL (e.g.,
 include them for completeness and omit proofs.
 
 \begin{remark}[TV as an Expectation of the Ratio Residual]
-\label{lem:tv-ratio-identity}
+\label{rem:tv-ratio-identity}
 Under Assumption~\ref{asm:support}, for any context $c_t$,
 \begin{equation*}
     \Dtvtok(c_t;\piroll,\pitheta)
@@ -119,7 +119,7 @@ See, e.g., \citet{qi2026rethinkingtrustregionllm}.
 \end{remark}
 
 \begin{remark}[Coarse-Graining Lower Bounds]
-\label{lem:coarse-grain-lower}
+\label{rem:coarse-grain-lower}
 Let $\mathcal{V}$ be the vocabulary and let $\mathcal{C}=\{C_1,\ldots,C_m\}$ be any partition of $\mathcal{V}$. For a policy $\pi$,
 define the coarse-grained distribution $\pi^{\mathcal{C}}(\cdot|c_t)$ by $\pi^{\mathcal{C}}(C_j|c_t):=\sum_{v\in C_j}\pi(v|c_t)$.
 Then for any policies $\pi,\pi'$ and any context $c_t$,
@@ -136,7 +136,7 @@ See, e.g., \citet{qi2026rethinkingtrustregionllm}.
 \end{remark}
 
 \begin{remark}[Binary TV Lower Bound from a Sampled Token]
-\label{cor:binary-tv-lower}
+\label{rem:binary-tv-lower}
 Fix a context $c_t$ and a token $y_t \in \mathcal{V}$ such that $\piroll(y_t|c_t)>0$. Consider the binary partition
 $\mathcal{C}=\{\{y_t\},\mathcal{V}\setminus\{y_t\}\}$. Then
 \begin{equation*}
@@ -147,7 +147,7 @@ $\mathcal{C}=\{\{y_t\},\mathcal{V}\setminus\{y_t\}\}$. Then
 \end{remark}
 
 \begin{remark}[Sequence-Level TV Bound by Expected Token-Level TV]
-\label{lem:seq-tv-sum}
+\label{rem:seq-tv-sum}
 Fix a prompt $x$ and recall that $P^{\pi}(\cdot|x)$ denotes the distribution over length-$T$ responses under policy $\pi$. Then
 \begin{equation*}
     \DTV\big(P^{\piroll}(\cdot|x)\,\|\,P^{\pitheta}(\cdot|x)\big)
@@ -183,7 +183,7 @@ See, e.g., \citet{qi2026rethinkingtrustregionllm}.
 
 \begin{remark}[Equality Condition for Coarse-Grained KL]
 \label{rem:kl-equality}
-Under the absolute continuity condition in \Cref{lem:coarse-grain-lower}, equality in the KL coarse-graining inequality holds if and only
+Under the absolute continuity condition in \Cref{rem:coarse-grain-lower}, equality in the KL coarse-graining inequality holds if and only
 if, for each cell $C_j$ with $\pi(C_j|c_t)>0$, the ratio $\pi(v|c_t)/\pi'(v|c_t)$ is constant over all $v\in C_j$ with $\pi(v|c_t)>0$.
 This is the equality condition of the log-sum inequality; see, e.g., \citet{qi2026rethinkingtrustregionllm}.
 \end{remark}
@@ -262,12 +262,12 @@ unreliable gradient contributions. Existing methods differ mainly in the granula
 \Cref{tab:is-methods} for a unified notation).
 
 \textbf{Single-sample ratio statistics vs.\ distributional drift.} Although the per-token ratio residual $|\rho_t-1|$ is a single-sample
-quantity, it admits a clean divergence interpretation. Conditional on the context $c_t$, \Cref{lem:tv-ratio-identity} implies that
+quantity, it admits a clean divergence interpretation. Conditional on the context $c_t$, \Cref{rem:tv-ratio-identity} implies that
 $|\rho_t-1|$ has expectation $2\Dtvtok(c_t;\piroll,\pitheta)$ under $y_t\sim\piroll(\cdot|c_t)$, so thresholding $\rho_t$ can be viewed
-as thresholding a noisy proxy for a TV-based trust region. At the same time, the binary lower bound in \Cref{cor:binary-tv-lower} shows
+as thresholding a noisy proxy for a TV-based trust region. At the same time, the binary lower bound in \Cref{rem:binary-tv-lower} shows
 that the effect of a large ratio depends on the behavior-policy mass at the sampled token: for low-probability tokens, even a large
 $\rho_t$ can correspond to a small absolute probability shift. Finally, policy drift at the level of full response distributions admits an
-additive upper bound by the expected token-level TVs along the trajectory (\Cref{lem:seq-tv-sum}), which motivates per-position and
+additive upper bound by the expected token-level TVs along the trajectory (\Cref{rem:seq-tv-sum}), which motivates per-position and
 prefix-structured filtering mechanisms.
 
 \textbf{Finite-horizon remainder bounds.} In the undiscounted, finite-horizon LLM setting, one can further bound the higher-order term in a
@@ -279,7 +279,7 @@ causal, prefix-structured filtering mechanisms.
 
 \textbf{Coarse-grained divergence proxies as controllable trust-region gates.} Full next-token divergences (TV/KL) are expensive to
 compute over the entire vocabulary, motivating coarse-grained approximations such as Binary or Top-$K$ schemes. Formally, divergences
-computed on any partition are lower bounds on the true divergences (\Cref{lem:coarse-grain-lower}). Therefore, a gate that masks whenever
+computed on any partition are lower bounds on the true divergences (\Cref{rem:coarse-grain-lower}). Therefore, a gate that masks whenever
 a coarse-grained proxy exceeds a fixed threshold is \emph{conservative}: it does not reject updates that are provably within the trust
 region defined by the corresponding full-vocabulary divergence. The remaining question is when such proxies may under-detect drift.
 
