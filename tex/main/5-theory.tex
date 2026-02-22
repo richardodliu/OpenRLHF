@@ -432,8 +432,77 @@ Eq.~\eqref{eq:error-decomp} satisfies
 \end{equation*}
 \end{theorem}
 
-\noindent Proofs of \Cref{lem:wt-second-moment,cor:tv-prefix-subgaussian,thm:per-position-error-subgaussian} are in
-\Cref{app:subgaussian-perpos}.
+\par
+\noindent\textbf{Acceptance-coupled filtered drift bounds.}
+The Pro Max loss (Eq.~\eqref{eq:promax-loss}) multiplies each per-token surrogate term by the prefix gate $M_t^{\mathrm{pre}}$, so gradient
+signal is received only from \emph{accepted} prefixes. To quantify policy drift on this filtered subset, define the accepted-prefix context
+measure (a sub-probability measure)
+\begin{equation*}
+    \bar{d}_{t+1}^{\pi}(c_{t+1})
+    :=
+    d_{t+1}^{\pi}(c_{t+1})\,M_t^{\mathrm{pre}}(c_{t+1}),
+    \qquad
+    t\in\{1,\ldots,T\},
+\end{equation*}
+where we view $M_t^{\mathrm{pre}}$ as a deterministic function of the length-$t$ prefix $c_{t+1}=(x,y_{\le t})$ under the fixed policy pair
+$(\piroll,\pitheta)$. Its total mass under rollout is the acceptance rate
+\begin{equation*}
+    \alpha_t
+    :=
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]
+    =
+    \sum_{c_{t+1}}\bar{d}_{t+1}^{\piroll}(c_{t+1}).
+\end{equation*}
+
+\begin{lemma}[TV identity for accepted-prefix context measures]
+\label{lem:tv-accepted-prefix}
+Assume \Cref{asm:support}. Then for any $t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    =
+    \frac{1}{2}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\big|W_t-1\big|\right].
+\end{equation*}
+\end{lemma}
+
+\begin{corollary}[Filtered drift bound with acceptance rate]
+\label{cor:tv-accepted-subgaussian}
+Assume \Cref{asm:support} and \Cref{asm:subgaussian-logratio}. Then for any $t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\big|W_t-1\big|\right]
+    \le
+    \sqrt{\alpha_t}\,\sqrt{\exp(2\sigma^2 t)-1}.
+\end{equation*}
+Equivalently,
+\begin{equation*}
+    \bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    \le
+    \frac{1}{2}\sqrt{\alpha_t}\,\sqrt{\exp(2\sigma^2 t)-1}.
+\end{equation*}
+\end{corollary}
+
+\begin{corollary}[Gate-induced effective horizon]
+\label{cor:effective-horizon}
+Assume \Cref{asm:support} and \Cref{asm:subgaussian-logratio}. Define the effective horizon
+\begin{equation*}
+    H_{\mathrm{eff}} := \sum_{t=1}^{T}\alpha_t = \sum_{t=1}^{T}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right].
+\end{equation*}
+Then the cumulative accepted-prefix drift satisfies
+\begin{align*}
+    \sum_{t=1}^{T}\bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    &\le
+    \frac{1}{2}\sum_{t=1}^{T}\sqrt{\alpha_t}\,\sqrt{\exp(2\sigma^2 t)-1}
+    \\
+    &\le
+    \frac{1}{2}\sqrt{H_{\mathrm{eff}}}\,
+    \sqrt{\sum_{t=1}^{T}\bigl(\exp(2\sigma^2 t)-1\bigr)}.
+\end{align*}
+\end{corollary}
+
+\noindent In particular, \Cref{cor:effective-horizon} makes explicit the $\sqrt{\alpha_t}$ per-position attenuation and summarizes its
+aggregate effect through $H_{\mathrm{eff}}$, formalizing a ``gate + concentration'' effective-horizon view.
+
+\noindent Proofs of \Cref{lem:wt-second-moment,cor:tv-prefix-subgaussian,thm:per-position-error-subgaussian} and
+\Cref{lem:tv-accepted-prefix,cor:tv-accepted-subgaussian,cor:effective-horizon} are in \Cref{app:subgaussian-perpos}.
 
 \textbf{REINFORCE Pro Max.} Taken together with the advantage-estimation choices discussed above, REINFORCE Pro Max targets all four
 dimensions discussed above. The RLOO

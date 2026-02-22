@@ -439,7 +439,7 @@ which completes the proof.
 \subsection{Sub-Gaussian Strengthening: Per-Position Bounds via Prefix Density Ratios}
 \label[appsec]{app:subgaussian-perpos}
 
-This subsection proves \Cref{lem:wt-second-moment,cor:tv-prefix-subgaussian,thm:per-position-error-subgaussian}, which strengthen the
+This subsection proves \Cref{lem:wt-second-moment,cor:tv-prefix-subgaussian,thm:per-position-error-subgaussian,lem:tv-accepted-prefix,cor:tv-accepted-subgaussian,cor:effective-horizon}, which strengthen the
 prefix density-ratio mechanism view with explicit per-position bounds under a conditional concentration assumption.
 
 \begin{proof}[Proof of \Cref{lem:wt-second-moment}]
@@ -595,6 +595,81 @@ Substituting the bounds from Steps~1--2 into the error decomposition yields
     2R_{\max}\sum_{t=1}^{T}\sqrt{\exp(2\sigma^2 (t-1)) - 1},
 \end{align*}
 which completes the proof.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{lem:tv-accepted-prefix}]
+Fix $t\in\{1,\ldots,T\}$. Recall the accepted-prefix context measure
+\begin{equation*}
+    \bar{d}_{t+1}^{\pi}(c_{t+1}) := d_{t+1}^{\pi}(c_{t+1})\,M_t^{\mathrm{pre}}(c_{t+1}).
+\end{equation*}
+By definition of total variation distance,
+\begin{align*}
+    \bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    &=
+    \frac{1}{2}\sum_{c_{t+1}} \bigl|\bar{d}_{t+1}^{\pitheta}(c_{t+1}) - \bar{d}_{t+1}^{\piroll}(c_{t+1})\bigr|
+    \\
+    &=
+    \frac{1}{2}\sum_{c_{t+1}} M_t^{\mathrm{pre}}(c_{t+1})\,\bigl|d_{t+1}^{\pitheta}(c_{t+1}) - d_{t+1}^{\piroll}(c_{t+1})\bigr|.
+\end{align*}
+By \Cref{lem:prefix-density-ratio}, for every reachable $c_{t+1}$ with $d_{t+1}^{\piroll}(c_{t+1})>0$ one has
+$d_{t+1}^{\pitheta}(c_{t+1})=d_{t+1}^{\piroll}(c_{t+1})W_t$. Substituting yields
+\begin{align*}
+    \bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    &=
+    \frac{1}{2}\sum_{c_{t+1}} d_{t+1}^{\piroll}(c_{t+1})\,M_t^{\mathrm{pre}}(c_{t+1})\,\bigl|W_t-1\bigr|
+    \\
+    &=
+    \frac{1}{2}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\bigl|W_t-1\bigr|\right],
+\end{align*}
+which proves the claim.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{cor:tv-accepted-subgaussian}]
+Fix $t\in\{1,\ldots,T\}$ and write $\alpha_t := \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]$. By
+Cauchy--Schwarz,
+\begin{align*}
+    \E\!\left[M_t^{\mathrm{pre}}\,\bigl|W_t-1\bigr|\right]
+    &\le
+    \sqrt{\E\!\left[M_t^{\mathrm{pre}}\right]}\,\sqrt{\E\!\left[(W_t-1)^2\right]}
+    =
+    \sqrt{\alpha_t}\,\sqrt{\E\!\left[(W_t-1)^2\right]}.
+\end{align*}
+As in the proof of \Cref{cor:tv-prefix-subgaussian}, one has $\E[W_t]=1$ and hence
+\begin{equation*}
+    \E\!\left[(W_t-1)^2\right]
+    =
+    \E[W_t^2] - 1.
+\end{equation*}
+By \Cref{lem:wt-second-moment}, $\E[W_t^2]\le \exp(2\sigma^2 t)$, so $\E[(W_t-1)^2]\le \exp(2\sigma^2 t)-1$.
+Substituting into the previous display gives
+\begin{equation*}
+    \E\!\left[M_t^{\mathrm{pre}}\,\bigl|W_t-1\bigr|\right]
+    \le
+    \sqrt{\alpha_t}\,\sqrt{\exp(2\sigma^2 t)-1}.
+\end{equation*}
+The equivalent TV bound follows immediately from \Cref{lem:tv-accepted-prefix}.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{cor:effective-horizon}]
+Define $\alpha_t := \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]$ and
+$H_{\mathrm{eff}}:=\sum_{t=1}^{T}\alpha_t$.
+Applying \Cref{cor:tv-accepted-subgaussian} for each $t$ and summing yields
+\begin{equation*}
+    \sum_{t=1}^{T}\bigl\|\bar{d}_{t+1}^{\pitheta} - \bar{d}_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    \le
+    \frac{1}{2}\sum_{t=1}^{T}\sqrt{\alpha_t}\,\sqrt{\exp(2\sigma^2 t)-1}.
+\end{equation*}
+For the compressed effective-horizon form, apply Cauchy--Schwarz to the right-hand side with
+$b_t:=\sqrt{\exp(2\sigma^2 t)-1}$:
+\begin{align*}
+    \sum_{t=1}^{T}\sqrt{\alpha_t}\,b_t
+    &\le
+    \sqrt{\sum_{t=1}^{T}\alpha_t}\,\sqrt{\sum_{t=1}^{T}b_t^2}
+    \\
+    &=
+    \sqrt{H_{\mathrm{eff}}}\,\sqrt{\sum_{t=1}^{T}\bigl(\exp(2\sigma^2 t)-1\bigr)},
+\end{align*}
+which proves the claim.
 \end{proof}
 
 \subsection{Alternative Trust-Region Masking Variants}
