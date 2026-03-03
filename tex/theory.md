@@ -62,6 +62,7 @@
   5. 得到 theorem 的最终形式。
 - **Technique tags**：telescoping（product difference）/ change-of-measure / “future ratio term” remainder。
 - **U/O/C**：**O**（经典 LLM regime PDI 变体；本文可**引用 statement**但不能复现其 proof）。
+- **与本文挂钩点**：本文已采用类似的 error decomposition / surrogate + remainder 框架；DPPO 的价值主要在 proof technique 与叙事结构，而不是直接迁移定理。
 - **本文落点建议**：
   - 若要在本文使用：Preliminaries/Related Work 给 statement-only + citation 即可。
   - 若要做本文“prefix-causal”延伸：必须改写 remainder 的结构（从 suffix ratio 变成 prefix causal measure），并给**本文原创 proof**（附录）。
@@ -84,6 +85,7 @@
   5. 内层 $\sum_{y_t}|\pi_{\mathrm{roll}}-\pi_{\mathrm{train}}|$ 恰是 $2D_{\mathrm{TV}}$；外层前缀求和变成对 $s_t$ 的 rollout 期望。
 - **Technique tags**：telescoping / triangle inequality / integrate-out future（把 suffix 归一化掉）。
 - **U/O/C**：**O**（通用 building block；本文只需引用）。
+- **与本文挂钩点**：对应本文 `tex/main/5-theory.tex` 的 `rem:seq-tv-sum`（只陈述用途，不复现 proof）。
 - **本文落点建议**：适合做一个 cited remark（解释“sequence TV 可由 per-step TV 累积控制”），但不要在本文复现 proof。
 
 ---
@@ -165,6 +167,7 @@
   3. equality 条件：组内 ratio $x_a/y_a$ 为常数。
 - **Technique tags**：partition / triangle inequality / log-sum inequality / lower bound & equality characterization。
 - **U/O/C**：**O**（引用型工具定理；本文若要用，必须只引用 statement）。
+- **与本文挂钩点**：对应本文 `tex/main/5-theory.tex` 的 `rem:coarse-grain-lower`、`rem:tv-gap`、`rem:kl-equality`。
 - **本文落点建议**：可在 Preliminaries 用 remark 引用“Binary/Top-K 是 lower bound”，但不能复现 proof；若要做 prefix-level coarse-grain，需要本文新增点与 proof。
 
 ---
@@ -183,6 +186,8 @@
   3. 识别为期望 $\tfrac12 \E_{\pi_{\mathrm{roll}}}[|r-1|]$。
 - **Technique tags**：RN derivative / TV-as-expectation identity。
 - **U/O/C**：**O**（引用性恒等式）。
+- **与本文挂钩点**：对应本文 `tex/main/5-theory.tex` 的 `rem:tv-ratio-identity`（仅 statement + citation）。
+- **优势映射**：为本文“prefix gate 是 ratio-based causal proxy”的解释提供出发点。
 - **本文落点建议**：适合做一句 cited remark：解释“ratio clipping 是 TV 的单样本 proxy”。
 
 ---
@@ -269,6 +274,7 @@
 
 ### TRM-4：Advantage Bound（`lem:advantage-bound`，full proof）
 
+- **Source**：`tex/literature/TRM/main_arxiv.tex`，Lemma “Advantage Bound”（正文）与附录 proof。
 - **Statement（paraphrase）**：当 $R\in[0,1]$ 时，$g_t(c_t)=\E_{y_t\sim\pi_\theta}[A_t^{\pi_{\mathrm{roll}}}]$ 的无穷范数由 token divergence 控制：
   \[
     \|g_t\|_\infty \le 2\min\big(1,\epsilon,\sqrt{\delta/2}\big).
@@ -281,11 +287,15 @@
   5. 再用 $D_{\mathrm{TV}}\le 1$ 与 Pinsker：$D_{\mathrm{TV}}\le \sqrt{D_{\mathrm{KL}}/2}$，得到 cap 形式。
 - **Technique tags**：advantage as signed measure / TV bound / Pinsker cap。
 - **U/O/C**：**O**（可引用 building block；proof technique 可借鉴）。
+- **与本文挂钩点**：对齐本文 `Preliminaries` 中 error decomposition 的 advantage factor 解释口径。
+- **优势映射**：用于解释“我们主要通过 advantage estimator 稳定 advantage factor”，但不构成本文创新点。
+- **本文落点建议**：引用性说明即可（statement-only + citation），避免在本文复现 proof。
 
 ---
 
 ### TRM-5：Context Shift（`lem:context-shift`，full proof）
 
+- **Source**：`tex/literature/TRM/main_arxiv.tex`，Lemma “Context Shift”（正文）与附录 proof。
 - **Statement（paraphrase）**：prefix context visitation 分布的 TV shift 有 5 条 route 上界（trivial / coupling / Pinsker-on-marginal-KL / data-processing / Pinsker-on-seq-KL），最后取 min。
 - **Proof outline（五条 route）**
   1. **Trivial**：TV $\le 1$。
@@ -302,6 +312,8 @@
   5. **Pinsker on sequence KL**：用 $D_{\mathrm{KL}}(d_t^{\mathrm{roll}}\|d_t^\theta)\le D_{\mathrm{KL}}^{\mathrm{seq}}$ 再 Pinsker。
 - **Technique tags**：product measure TV recursion / KL chain rule / data processing / multi-route min。
 - **U/O/C**：**O**（典型“context shift factor” control）。
+- **与本文挂钩点**：对应本文 prefix-level filtering 的“因果传播”叙事，解释 token-level 与 seq-level gate 的结构性缺陷。
+- **本文落点建议**：作为 cited building block（statement-only + citation）即可；本文件仅记录 proof technique。
 
 ---
 
@@ -345,6 +357,7 @@
 
 - **Source**：`tex/literature/TRM/main_arxiv.tex`，Appendix “Proof of the Adaptive Bound”。
 - **为什么值得单独记录**：这套 proof aesthetics（Step 1–5）是 TRM 的“黄金模板”，适合迁移到本文 prefix-causal trust region 的附录证明写法。
+- **与本文挂钩点**：用于重写/增强本文 appendix 中与 prefix causal gate 相关的 proof aesthetics（Step/Bound/Case）。
 - **Step 1（`lem:exact-identity`）Exact Error Identity**
   - 关键：对重要性比率序列 $(\rho_1,\dots,\rho_T)$ 用 telescoping：
     \[
