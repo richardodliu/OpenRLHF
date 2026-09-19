@@ -2048,11 +2048,12 @@ Recall the error decomposition in Eq.~\eqref{eq:error-decomp}:
 \noindent\textbf{Step 1: Bound the advantage factor by bounded rewards.}
 Fix $t$ and a context $c_t$. By definition,
 \begin{equation*}
-    g_t(c_t) := \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big],
-    \qquad
+    \begin{aligned}
+    g_t(c_t) &:= \E_{y_t \sim \pitheta(\cdot\mid c_t)}\!\big[A_t^{\piroll}(c_t, y_t)\big],\\
     A_t^{\piroll}(c_t, y_t)
-    :=
-    \E_{\piroll}\!\big[R(x,y)\mid c_t, y_t\big] - \E_{\piroll}\!\big[R(x,y)\mid c_t\big].
+    &:= \E_{\piroll}\!\big[R(x,y)\mid c_t, y_t\big]
+       - \E_{\piroll}\!\big[R(x,y)\mid c_t\big].
+    \end{aligned}
 \end{equation*}
 Under bounded rewards $|R(x,y)|\le R_{\max}$, both conditional expectations lie in $[-R_{\max},R_{\max}]$, hence
 $|A_t^{\piroll}(c_t,y_t)|\le 2R_{\max}$ and consequently $|g_t(c_t)|\le 2R_{\max}$. Therefore $\|g_t\|_\infty \le 2R_{\max}$.
@@ -2573,9 +2574,11 @@ The product telescoping identity gives
 \end{equation*}
 Multiplying by $p(y)R(x,y)$ and summing over trajectories yields
 \begin{equation*}
+    \begin{aligned}
     \sum_y q(y)R(x,y)-\sum_y p(y)R(x,y)
-    = \sum_y p(y)R(x,y)\,\mathrm{Surrogate}(y)
-      -\sum_y p(y)R(x,y)\,\mathrm{Remainder}(y).
+    &= \sum_y p(y)R(x,y)\,\mathrm{Surrogate}(y)\\
+    &\quad-\sum_y p(y)R(x,y)\,\mathrm{Remainder}(y).
+    \end{aligned}
 \end{equation*}
 The surrogate is therefore the additive, rollout-estimable part, while the
 remainder records the interaction with ratios at later positions. This is an
