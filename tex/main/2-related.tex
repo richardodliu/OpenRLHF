@@ -32,4 +32,10 @@ Trust region methods constrain the policy update to remain close to the current 
 
 \subsection{Summary of Differences}
 
-Compared with existing critic-free methods, REINFORCE Pro Max differs along four dimensions: (1)~\emph{baseline}: RLOO (independent of each sample) vs.\ mean (correlated); (2)~\emph{normalization}: adaptive asymmetric $\alpha/\beta$ vs.\ global $\mu/\sigma$; (3)~\emph{IS granularity}: prefix cumulative (per-position) vs.\ token-level or sequence-level; (4)~\emph{causal structure}: prefix masking respects autoregressive ordering, while the ratio-based stabilization methods considered in this paper do not.
+Compared with existing critic-free methods, REINFORCE Pro Max differs along four dimensions: (1)~\emph{baseline}: RLOO, whose leave-one-out baseline is conditionally independent of the sample's own response given the prompt, vs.\ mean (which includes that response); (2)~\emph{normalization}: adaptive asymmetric $\alpha/\beta$ vs.\ global $\mu/\sigma$; (3)~\emph{IS granularity}: prefix cumulative (per-position) vs.\ token-level or sequence-level; (4)~\emph{causal structure}: prefix masking respects autoregressive ordering, while the ratio-based stabilization methods considered in this paper do not.
+The baseline distinction concerns the raw estimator. With the same ideal
+asymmetric normalization and active-token weights, the mean-baseline and
+RLOO coefficients coincide exactly
+(\Cref{prop:normalization-scale-invariance}). The normalization rule and
+prefix gate, rather than this removable common scale, distinguish the
+normalized method.

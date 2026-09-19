@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Keep all toolchains, downloads, compiler outputs and caches on the mounted volume.
+LEAN_VOLUME_ROOT="${LEAN_VOLUME_ROOT:-/volume/pt-train/users/rbliu/tools/lean}"
+export ELAN_HOME="$LEAN_VOLUME_ROOT/elan"
+export TMPDIR="$LEAN_VOLUME_ROOT/tmp"
+export XDG_CACHE_HOME="$LEAN_VOLUME_ROOT/cache"
+export MATHLIB_CACHE_DIR="$LEAN_VOLUME_ROOT/cache/mathlib"
+export LAKE_HOME="$LEAN_VOLUME_ROOT/lake"
+export PATH="$ELAN_HOME/bin:$PATH"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME" "$MATHLIB_CACHE_DIR" "$LAKE_HOME"
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+
+# Account for the container quota, not the host's visible CPU/RAM totals.
+cpu_jobs=$(nproc)
+if [[ -r /sys/fs/cgroup/cpu.max ]]; then
+    read -r cpu_quota cpu_period < /sys/fs/cgroup/cpu.max || true
+    if [[ "${cpu_quota:-max}" != max && "${cpu_period:-0}" -gt 0 ]]; then
+        quota_jobs=$(( cpu_quota / cpu_period ))
+        (( quota_jobs > 0 )) || quota_jobs=1
+        (( cpu_jobs <= quota_jobs )) || cpu_jobs=$quota_jobs
+    fi
+fi
+mem_jobs=2
+if [[ -r /sys/fs/cgroup/memory.max && -r /sys/fs/cgroup/memory.current ]]; then
+    read -r mem_limit < /sys/fs/cgroup/memory.max
+    read -r mem_current < /sys/fs/cgroup/memory.current
+    if [[ "$mem_limit" != max ]]; then
+        # Budget at most a quarter of currently available container memory,
+        # allowing 2 GiB per worker. Keep at least one worker for small runs.
+        mem_jobs=$(( (mem_limit - mem_current) / (8 * 1024 * 1024 * 1024) ))
+        (( mem_jobs > 0 )) || mem_jobs=1
+    fi
+fi
+auto_jobs=$(( cpu_jobs < mem_jobs ? cpu_jobs : mem_jobs ))
+(( auto_jobs <= 4 )) || auto_jobs=4
+LEAN_JOBS="${LEAN_JOBS:-$auto_jobs}"
+if ! [[ "$LEAN_JOBS" =~ ^[1-9][0-9]*$ ]] || (( LEAN_JOBS > cpu_jobs )); then
+    echo "LEAN_JOBS must be between 1 and the effective CPU count ($cpu_jobs)" >&2
+    exit 2
+fi
+# Lean 4.19 reads LEAN_NUM_THREADS; Lake 5 does not support -j or LAKE_JOBS.
+export LEAN_NUM_THREADS="$LEAN_JOBS"
+# Lean 4.19's legacy -M option does not register correctly. Use an OS virtual
+# memory ceiling instead; it is inherited by the Lake/Lean child processes.
+# ProMax.lean contains the finite-support checks and its native compilation
+# needs a bounded but slightly larger single-process address space.  Keep the
+# cap finite so a verification run cannot consume the whole container.
+process_mib=12288
+if [[ "${mem_limit:-max}" != max ]]; then
+    available_mib=$(( (mem_limit - mem_current) / (4 * 1024 * 1024) ))
+    (( process_mib <= available_mib )) || process_mib=$available_mib
+fi
+if (( process_mib < 1024 )); then
+    echo "Insufficient free container memory for this audit; no build started." >&2
+    exit 2
+fi
+ulimit -v "$(( process_mib * 1024 ))"
+exec lake "$@"

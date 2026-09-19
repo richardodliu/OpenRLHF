@@ -24,9 +24,12 @@ logger = init_logger(__name__)
 def _adaptive_token_normalization_single_group(group_adv, group_mask, group_idx=0, eps=1e-8, max_scale=10.0):
     """Apply adaptive alpha/beta normalization to advantages of a single prompt group.
 
-    For a group with both positive and negative advantages, solve for alpha and beta such that:
+    For a group with both positive and negative advantages, the ideal factors solve:
       - mean(A_hat) = 0 and var(A_hat) = 1 (on non-zero tokens)
       - A_hat = alpha * A if A > 0, beta * A if A < 0, 0 if A = 0
+
+    The additive stabilizer and clamps below change the exact moment constraints;
+    the ideal unit-variance identity does not describe every implementation branch.
 
     Fallback: return original advantages when normalization cannot be applied
     (e.g., all same sign, numerical issues).
@@ -81,7 +84,7 @@ def _adaptive_token_normalization_single_group(group_adv, group_mask, group_idx=
     ratio = sum_pos / sum_neg  # S+/S-, sum_pos > 0, sum_neg < 0 → ratio < 0
 
     # N = number of non-zero tokens only
-    # This ensures var(A_hat) = 1 is computed over non-zero tokens only
+    # The ideal unit-variance target uses non-zero tokens; safeguards can change it.
     token_nonzero = token_pos + token_neg
 
     # alpha = sqrt(N / (Q+ + (S+/S-)^2 * Q-))
@@ -837,7 +840,8 @@ class RemoteExperienceMaker:
                 all_same_mask = all_same_groups_mask.unsqueeze(-1).expand_as(rewards)
 
                 # For all-same groups: use reward / n instead of RLOO
-                # This preserves gradient signal for uniformly good/bad responses
+                # Nonzero uniform rewards supply coefficients; all-zero groups remain zero.
+                # The expected effect depends on the reward zero point (see the uniform-scale proof).
                 fallback_rewards = rewards / args.n_samples_per_prompt
 
                 # Combine: use RLOO for mixed groups, fallback for all-same groups

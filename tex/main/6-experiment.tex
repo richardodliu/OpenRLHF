@@ -1,11 +1,11 @@
 \section{Experiments}
 \label{sec:experiments}
 
-This section provides controlled simulations that validate two core design claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization stabilize advantage statistics without flipping advantage sign; and (ii)~prefix-level masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. Large-scale LLM benchmark results (e.g., AIME/MATH with a specific backbone) are orthogonal to these structural properties and are left as future work.
+This section reports controlled checks for two structural claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization have the stated advantage-statistics properties; and (ii)~prefix-level masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. The checks are deliberately synthetic and do not constitute a language-model benchmark. The executable protocol is in \path{reinforce_pro_max/structural_experiment.py}; its fixed-seed output is saved in \path{reinforce_pro_max/structural_experiment_20260918.json}. Benchmark results (e.g., AIME/MATH with a specified backbone) remain future work.
 
 \subsection{Experimental Setup}
 
-We simulate prompt groups with $n=8$ samples. Rewards are drawn from a skewed mixture that mimics sparse-success reasoning settings: with probability $p=0.15$ a sample is drawn from a ``success'' cluster centered near $1$, otherwise from a ``failure'' cluster centered near $0$, both with Gaussian noise $\sigma_{\mathrm{rew}}=0.10$. To reflect token-level weighting effects after expansion (\Cref{sec:token-expand}), we assign longer sequences to lower-quality samples (failure trajectories), setting lengths to
+We specify a simulation protocol with $n=8$ samples per prompt. Rewards are drawn from a skewed mixture that mimics sparse-success reasoning settings: with probability $p=0.15$ a sample is drawn from a ``success'' cluster centered near $1$, otherwise from a ``failure'' cluster centered near $0$. We use bounded perturbations $\eta_i\sim\mathrm{Unif}[-0.10,0.10]$ around these centers and clip the resulting rewards to $[-0.10,1.10]$, so the simulation satisfies the bounded-reward assumption used by the finite-sample guarantees. To reflect token-level weighting effects after expansion (\Cref{sec:token-expand}), we assign longer sequences to lower-quality samples (failure trajectories), setting lengths to
 \[
     T_i = \begin{cases}
         256 + u_i, & \text{success sample},\\
@@ -33,7 +33,7 @@ masking based on the prefix proxy in \Cref{def:prefix-is}.
 
 \subsection{Metrics}
 
-\textbf{Baseline self-correlation.} We measure $\mathrm{corr}(r_i, b_i)$ between each sample reward $r_i$ and its baseline $b_i$. A
+\textbf{Baseline self-correlation.} We measure the pooled Pearson correlation over all $8{,}000$ sampled responses, $\mathrm{corr}(r_i, b_i)$ between each sample reward $r_i$ and its baseline $b_i$. A
 correlated baseline can couple a sample with its own control variate, complicating the clean second-moment analysis enabled by RLOO (see
 \Cref{app:rloo-proof}).
 
@@ -42,23 +42,89 @@ correlated baseline can couple a sample with its own control variate, complicati
 \textbf{Masked-token coverage.} For each synthetic log-ratio pattern, we report the number of masked tokens and the first/last masked
 positions for IcePop, sequence-level IS masking, and prefix masking.
 
-\subsection{Main Results}
+\subsection{Formal and Deterministic Checks}
 
 \begin{table}[ht]
 \centering
-\caption{Controlled simulation of baseline correlation and sign flips under token weighting. Numbers are estimated over $20{,}000$ prompt groups with $n=8$.}
+\caption{Deterministic properties checked by the Lean formalization.}
 \renewcommand{\arraystretch}{1.2}
+\small
 \begin{tabular}{lcc}
 \toprule
-\textbf{Metric} & \textbf{Mean / global} & \textbf{RLOO / adaptive} \\
+\textbf{Property} & \textbf{Mean / global} & \textbf{RLOO / adaptive} \\
 \midrule
-$\mathrm{corr}(r_i, b_i)$ & $0.350$ & $-0.008$ \\
-Sign flip rate (token-weighted) & $6.6\%$ & $0.0\%$ \\
+Raw baseline scaling & $(n-1)/n$ & $1$ \\
+Within-group shaped-reward sum & $0$ & $0$ \\
+Sign preservation under normalization & not guaranteed & exact for non-zero active advantages \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent The mean baseline exhibits substantial self-correlation, while RLOO makes the baseline effectively independent of the current sample. Under token-length weighting, global normalization introduces non-negligible sign flips, whereas adaptive normalization preserves sign by construction (\Cref{par:adv-sign-preservation}).
+\noindent The first row describes the raw estimators before normalization,
+using the exact deterministic proportionality between the mean-baseline and leave-one-out signals (
+\path{rloo_scaling}); the second row follows from the mean-baseline and RLOO
+conservation identities (\path{mean_baseline_shaped_sum_zero} and
+\path{rloo_shaped_sum_zero}); and the third row follows from positive sign-dependent scaling (
+\path{positive_scaling_preserves_sign}). The sign statement concerns active
+tokens; padding positions are removed by the action mask before normalization.
+The zero-sum row concerns response-level rewards before token expansion or
+normalization; it holds for both baselines. Unequal response lengths can
+produce a nonzero token-weighted mean for either baseline.
+Finite-iid population baseline moments and the RLOO score cross-moment are
+also checked in \path{formal/RLOOMoments.lean}; these probability identities
+are distinct from numerical simulation results.
+
+\begin{table}[ht]
+\centering
+\caption{Fixed-seed structural simulation ($1{,}000$ prompt groups, $n=8$). These are synthetic checks, not RLVR benchmark results.}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Measured quantity} & \textbf{Value} \\
+\midrule
+Mean-baseline/reward correlation & $0.3547$ \\
+RLOO-baseline/reward correlation & $0.00235$ \\
+Adaptive-normalization sign-flip rate & $0$ \\
+Global-normalization sign-flip rate & $0.0465$ \\
+Adaptive non-zero-token mean & $1.8\times10^{-9}$ \\
+Adaptive non-zero-token population variance & $1.0000$ \\
+Maximum absolute RLOO group-sum residual & $6.3\times10^{-7}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The correlations use the ordinary within-group mean baseline and the
+leave-one-out baseline on the same sampled rewards. The latter is nearly
+uncorrelated with the held-out reward in this iid simulation, whereas the
+ordinary mean baseline includes that reward by construction. The adaptive
+statistics are computed on non-zero active tokens, matching the ideal
+normalization definition; implementation safeguards are excluded from this simulation and their exact-real formulas are formalized as residual bounds. These measurements do not validate the full training implementation. The sign-flip denominator contains $3{,}785{,}796$ nonzero active tokens; adaptive normalization flips $0$ and global normalization flips $176{,}197$. The small nonzero moment and group-sum residuals reflect floating-point arithmetic, not exact mathematical equalities. These measurements
+support the structural claims only for this synthetic protocol.
+
+Using the same ideal asymmetric normalization for both baselines removes
+their common scale and produces identical coefficients, as proved in
+\Cref{prop:normalization-scale-invariance}. A baseline ablation must
+therefore record the normalization rule and active numerical safeguards.
+For exact two-level rewards, \Cref{prop:binary-rloo-normalization} gives
+the normalized amplitudes $+\sqrt{N/P}$ and $-\sqrt{P/N}$ and the factor
+ratio $\bar T_+/\bar T_-$. These formulas provide deterministic checks
+for reward-frequency and response-length sweeps; they do not constitute
+measured improvements on an LLM benchmark.
+For exact binary rewards, token-weighted standardization within the same
+prompt is an equivalent ideal operation
+(\Cref{cor:binary-token-standardization}), so it cannot be treated as a
+different ideal normalization baseline. The proposed perturbed-reward
+protocol is multivalued; the general sign-preservation comparison can differ
+in that setting. The finite RLOO example in
+\Cref{par:multivalued-sign-example} verifies such a difference exactly.
+
+The optional uniform-scale ablation must also record the reward zero point.
+\Cref{prop:uniform-population} gives its added expected score term for
+binary rewards, and Eq.~\eqref{eq:uniform-offset-counterexample} provides
+an exact two-response check: shifting $0/1$ rewards to $3/4$ preserves
+their ordering and reward gradient but can reverse the update with uniform
+scale enabled. All-zero reward groups remain zero in either mode.
 
 \begin{table}[ht]
 \centering
@@ -92,7 +158,7 @@ Thus $\log\rhoprefix{t}>\tau_+$ for $t\in\{1,\ldots,7\}$, while $\log\rhoseq$ re
 \noindent\textbf{Late deviation.} For a single spike at $t^*=24$, prefix masking is strictly suffix-local (it can only start at $t\ge t^*$),
 while sequence-level masking remains all-or-nothing. With $\log\rho_{24}=32\tau_+$ and $\log\rho_t=0$ otherwise, the sequence statistic
 satisfies $\log\rhoseq=\tau_+$ and is accepted, but the prefix average exceeds $\tau_+$ for $t\in\{24,\ldots,31\}$, yielding a localized
-masked suffix. These behaviors align with the regimes in \Cref{thm:prefix-tighter}.
+masked suffix. These behaviors align with the regimes in \Cref{thm:prefix-tighter}. The Lean certificates \path{early_table_counts}, \path{late_table_counts}, and \path{drift_table_counts} verify all three rows for any positive upper log-threshold and nonpositive lower log-threshold. The position certificates use zero-based indices, corresponding to the one-based positions in the table.
 
 \subsection{Ablation Studies}
 
@@ -111,10 +177,11 @@ suffix positions starting at $t=24$.
 \subsection{Reproducibility Checklist}
 
 \begin{itemize}
-    \item Random seed: $0$.
-    \item Monte Carlo trials: $20{,}000$ prompt groups; $n=8$ samples per group.
-    \item Reward distribution: mixture with $p=0.15$ and Gaussian noise $\sigma_{\mathrm{rew}}=0.10$.
+    \item The Monte Carlo protocol uses $1{,}000$ groups, $n=8$ samples per prompt, and seed $20260918$, with CPU PyTorch 2.4.0 float32 arithmetic and three intra-op threads. Correlations pool responses; sign-flip rates divide by the number of active tokens with nonzero raw advantage. Normalization is performed within each prompt group; reported moments pool its expanded tokens and use population variance.
+    \item Reward distribution: mixture with $p=0.15$, bounded perturbation $\eta_i\sim\mathrm{Unif}[-0.10,0.10]$, and clipping to $[-0.10,1.10]$.
     \item Token lengths: success $T_i = 256 + u_i$, failure $T_i = 512 + u_i$, $u_i \sim \mathrm{Unif}\{-32,\ldots,32\}$.
     \item Thresholds: default $(\epslow,\epshigh)=(0.1,0.1)$ (i.e., $[1-\epslow,1+\epshigh]=[0.9,1.1]$); sensitivity example $(\epslow,\epshigh)=(0.05,0.05)$ (i.e., $[0.95,1.05]$).
-    \item Code version: git commit \texttt{9a3879e}.
+    \item The deterministic masking table can be reproduced directly from the formulas in
+    \Cref{thm:prefix-tighter}. Exact-real counts and rejection positions are also checked in
+    \path{formal/StructuralExamples.lean}; the executable script reproduces both tables. No language-model benchmark checkpoint is included.
 \end{itemize}

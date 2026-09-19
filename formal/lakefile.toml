@@ -1,0 +1,167 @@
+name = "reinforce_promax_audit"
+version = "0.1.0"
+defaultTargets = ["ProMax", "ErrorDecomp", "CoarseGrain", "KLChain", "SequenceTV", "KLEquality", "RLOOProbability", "SurrogateBridge", "ProMaxObjective", "AutoregressiveTree", "TreeSurrogate", "PromptMixture", "PrefixConcentration", "PrefixMasking", "PaddedPrefix", "NormalizationSafeguards", "TreeKL", "AxiomAudit"]
+
+[[lean_lib]]
+name = "ProMax"
+
+[[lean_lib]]
+name = "ErrorDecomp"
+
+[[lean_lib]]
+name = "CoarseGrain"
+
+[[lean_lib]]
+name = "KLChain"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.19.0"
+
+[[lean_lib]]
+name = "SequenceTV"
+
+[[lean_lib]]
+name = "KLEquality"
+
+[[lean_lib]]
+name = "CoarseKL"
+
+[[lean_lib]]
+name = "K3Inlier"
+
+[[lean_lib]]
+name = "SparseReturn"
+
+[[lean_lib]]
+name = "Pinsker"
+
+[[lean_lib]]
+name = "TreePinsker"
+
+[[lean_lib]]
+name = "RLOOProbability"
+
+[[lean_lib]]
+name = "RLOOGeneral"
+
+[[lean_lib]]
+name = "RLOOMoments"
+
+[[lean_lib]]
+name = "PolicyGradient"
+
+[[lean_lib]]
+name = "PromptGradient"
+
+[[lean_lib]]
+name = "PromptGradientMeasure"
+
+[[lean_lib]]
+name = "TreePolicyGradient"
+
+[[lean_lib]]
+name = "BatchReduction"
+
+[[lean_lib]]
+name = "BatchPerformance"
+
+[[lean_lib]]
+name = "FiniteSelection"
+
+[[lean_lib]]
+name = "ProMaxCertificate"
+
+[[lean_lib]]
+name = "SurrogateEnergy"
+
+[[lean_lib]]
+name = "EmpiricalCertificate"
+
+[[lean_lib]]
+name = "RLOOCovariance"
+
+[[lean_lib]]
+name = "GroupCertificate"
+
+[[lean_lib]]
+name = "PolicyCover"
+
+[[lean_lib]]
+name = "ProMaxBatch"
+
+[[lean_lib]]
+name = "RLOOSurrogate"
+
+[[lean_lib]]
+name = "SurrogateBridge"
+
+[[lean_lib]]
+name = "ProMaxObjective"
+
+[[lean_lib]]
+name = "PPODerivative"
+
+[[lean_lib]]
+name = "AutoregressiveTree"
+
+[[lean_lib]]
+name = "TreeSurrogate"
+
+[[lean_lib]]
+name = "PromptMixture"
+
+[[lean_lib]]
+name = "PrefixConcentration"
+
+[[lean_lib]]
+name = "PrefixMasking"
+
+[[lean_lib]]
+name = "PaddedPrefix"
+
+[[lean_lib]]
+name = "NormalizationSafeguards"
+
+[[lean_lib]]
+name = "AdaptiveMechanism"
+
+[[lean_lib]]
+name = "LogitBounds"
+
+[[lean_lib]]
+name = "UniformScale"
+
+[[lean_lib]]
+name = "BinaryUpdate"
+
+[[lean_lib]]
+name = "BinaryLength"
+
+[[lean_lib]]
+name = "BinaryAscent"
+
+[[lean_lib]]
+name = "TreeKL"
+
+[[lean_lib]]
+name = "TreeTV"
+
+[[lean_lib]]
+name = "AdaptiveBound"
+
+[[lean_lib]]
+name = "TreePrefixGate"
+
+[[lean_lib]]
+name = "AxiomAudit"
+
+[[lean_lib]]
+name = "StructuralExamples"
+
+[[lean_lib]]
+name = "GroupFiltering"
+
+[[lean_lib]]
+name = "ImplementationBridge"

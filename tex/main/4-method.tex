@@ -1,14 +1,14 @@
-\section{REINFORCE Max: Variance-Reduced Advantage Estimation}
+\section{REINFORCE Max: Adaptive Advantage Normalization}
 \label{sec:reinforce-max}
 
 \subsection{Token-Level Expansion}
 \label{sec:token-expand}
 
 Given a prompt $x$, we sample $n$ responses $\{y^{(1)}, \ldots, y^{(n)}\}$ with rewards $\{r_1, \ldots, r_n\}$. Each response
-$y^{(i)}$ consists of $T_i$ action tokens. REINFORCE Max combines three ingredients: a leave-one-out baseline
+$y^{(i)}$ consists of $T_i\ge 1$ active action tokens (the action that emits EOS counts as active when EOS is used). REINFORCE Max combines three ingredients: a leave-one-out baseline
 (\Cref{eq:rloo-baseline}), token-level expansion (\Cref{sec:token-expand}), and adaptive normalization (\Cref{sec:adaptive-norm}).
 
-We adopt the leave-one-out (RLOO) baseline~\citep{ahmadian2024back} for its statistical independence, which avoids correlated baseline artifacts present in the mean baseline (see \Cref{app:rloo-proof} for a brief summary and references).
+We use the standard leave-one-out (RLOO) baseline~\citep{ahmadian2024back}; independence of each response and its baseline conditioned on the prompt supports the raw-surrogate analysis in \Cref{app:rloo-proof}. The effect of subsequent normalization is analyzed separately below.
 
 \begin{definition}[Leave-One-Out Baseline]
 \label{def:rloo}
@@ -19,15 +19,46 @@ Assume $n \ge 2$. For sample $i$, the baseline and shaped reward are:
 \end{equation}
 \end{definition}
 
+For an exact RLOO group with $n\ge2$, the shaped rewards satisfy the deterministic conservation identity
+\begin{equation*}
+    \sum_{i=1}^{n}\tilde r_i = 0.
+\end{equation*}
+Consequently, if all shaped rewards have one weak sign, they are all zero; a non-degenerate group necessarily contains both a positive
+and a negative advantage. This identity is checked on finite groups by the Lean theorems
+\path{rloo_shaped_sum_zero} and \path{rloo_shaped_sum_zero_erase}.
+
 Since the reward is a scalar per response and we use $\gamma = 1.0$ (see \Cref{app:gamma-one} for a brief note), the token-level advantage is simply the shaped reward itself:
 \begin{equation*}
     A_{i,t} = \tilde{r}_i = r_i - b_i, \quad \forall\, t \in \{1, \ldots, T_i\}.
 \end{equation*}
 
+The theorem-level REINFORCE Max analysis in this paper uses the sparse
+extrinsic-reward configuration: the reference-model KL coefficient is set to
+$0$, no separate KL loss is added, and the scalar reward is not clipped after
+RLOO shaping. A configured length penalty is included in the scalar reward
+before the RLOO baseline is formed. This scope is needed for the displayed
+identity $A_{i,t}=\tilde r_i$. If KL regularization or post-RLOO reward clipping
+is enabled in the implementation, the effective token return changes, so the
+same formulas require an explicitly modified return definition; the KL-free,
+unclipped statements below do not claim that extension automatically.
+
+This is a theorem scope condition rather than the command-line default. In the
+current CLI, ``--init\_kl\_coef`` defaults to $0.01$ and
+``--reward\_clip\_range`` defaults to $[-10,10]$. A run intended to instantiate
+the displayed sparse-reward theorems must set the KL coefficient to zero, disable
+the KL loss, and choose a reward-clip interval that is inactive on the stated
+reward support (or otherwise replace the return definition in the analysis).
+Runs using the CLI defaults are valid algorithm configurations, but their
+post-shaping returns are outside the exact $A_{i,t}=\tilde r_i$ theorem unless
+the clipping interval is provably inactive.
+
 \subsection{Adaptive Asymmetric Normalization}
 \label{sec:adaptive-norm}
 
-Standard normalization $\hat{A} = (A - \mu)/\sigma$ applies a uniform scaling to all advantages. In reasoning tasks, the advantage distribution is typically highly skewed: most samples fail (negative advantages) while few succeed (positive advantages). Uniform scaling distorts the relative balance between reinforcement and punishment signals.
+Standard normalization $\hat{A}=(A-\mu)/\sigma$ combines centering with a common positive scale. The scale preserves relative
+magnitudes; the centering can change signs when the token-weighted mean is nonzero. Because response lengths weight the token
+statistics, the RLOO zero-sum property over responses alone does not solve the token-level constraints. We therefore use separate
+positive scales to balance token mass while preserving the original signs.
 
 \begin{definition}[Adaptive Normalization]
 \label{def:adaptive-norm}
@@ -100,6 +131,8 @@ The adaptive normalization preserves the sign of the advantage at every token: $
 with $A_{i,t} \neq 0$. Moreover, the relative ordering of magnitudes is preserved within the positive group $\mathcal{P}$ and within the
 negative group $\mathcal{N}$. This follows immediately because the normalization scales $A_{i,t}$ by $\alpha>0$ on $\mathcal{P}$ and by
 $\beta>0$ on $\mathcal{N}$ (\Cref{eq:alpha-beta}), and multiplication by a positive constant preserves both sign and ordering.
+These are scalar advantage properties. Different positive and negative scales can change the direction of the summed policy-gradient
+vector; they do not imply preservation of the full batch gradient direction.
 
 \paragraph{Connection to Response Length}
 Our asymmetry comes from sign-dependent rescaling of advantages under the token-level expansion and the empirical constraints in
@@ -124,46 +157,136 @@ positive-token mass to negative-token mass within the same prompt group, which i
 This is the sense in which the advantage scaling implicitly incorporates response-length information, rather than implementing any form of
 ratio clipping.
 
-This length dependence can be beneficial in long-horizon reasoning settings, where token-level expansion makes each response contribute
-roughly in proportion to its length. When success is rare, most tokens in a prompt group come from incorrect responses; without additional
-balancing, the negative-token mass can dominate the effective gradient budget. The sign-dependent scaling $(\alpha,\beta)$ adapts to this
-imbalance by reweighting positive and negative token groups based on their empirical token mass, stabilizing the relative strength of
-reinforcement versus punishment signals within each prompt group.
+For binary correctness rewards, the role of length can be characterized
+exactly using the actual RLOO advantages, without replacing them by equal
+magnitudes of opposite signs.
 
-To make this effect explicit, consider an idealized prompt group where $\tilde r_i\in\{+1,-1\}$ and hence $A_{i,t}=\tilde r_i$ for all
-$t\in\{1,\ldots,T_i\}$. Then
+\begin{proposition}[Binary RLOO normalization and response-length balance]
+\label{prop:binary-rloo-normalization}
+Suppose a prompt group contains $k\ge1$ responses with scalar reward $r_+$
+and $m\ge1$ with reward $r_-<r_+$, and write $n=k+m$ and
+$\Delta=r_+-r_->0$. Work in the RLOO branch and use the ideal factors in
+Eq.~\eqref{eq:alpha-beta}. Let $P$ and $N$ be the total active-token counts
+in the higher- and lower-reward responses, respectively; assume $P,N>0$.
+Then the raw RLOO advantages are $a_+$ and $-a_-$, where
 \[
-\sum_{(i,t)\in\mathcal P} A_{i,t}^2 = |\mathcal P|,
-\qquad
-\sum_{(i,t)\in\mathcal N} A_{i,t}^2 = |\mathcal N|,
-\qquad
-\kappa = \frac{|\mathcal P|}{|\mathcal N|}.
+    a_+=\frac{m\Delta}{n-1},\qquad
+    a_-=\frac{k\Delta}{n-1}.
 \]
-Substituting into Eq.~\eqref{eq:alpha-beta} yields
-\[
-\alpha
-=
-\sqrt{\frac{|\mathcal P|+|\mathcal N|}{|\mathcal P|+\kappa^2|\mathcal N|}},
-\qquad
-\beta=\alpha\kappa.
-\]
-In the sparse-success regime $|\mathcal P|\ll|\mathcal N|$, this implies $\alpha\approx\sqrt{|\mathcal N|/|\mathcal P|}$ while
-$\beta\approx\sqrt{|\mathcal P|/|\mathcal N|}$: positive tokens are amplified and abundant negative tokens are attenuated in a way that
-automatically compensates for length-induced imbalance.
+Every active token in the two classes has normalized advantage
+\begin{equation}
+    \hat A_+=\alpha a_+=\sqrt{N/P},\qquad
+    \hat A_-=-\beta a_-=-\sqrt{P/N}.
+    \label{eq:binary-normalized-amplitudes}
+\end{equation}
+Writing $\bar T_+=P/k$ and $\bar T_-=N/m$ for the class-conditional mean
+response lengths, the factor ratio and aggregate coefficient balance satisfy
+\begin{equation}
+    \frac{\beta}{\alpha}=\kappa
+      =\frac{Pa_+}{Na_-}=\frac{\bar T_+}{\bar T_-},\qquad
+    P\hat A_+=-N\hat A_-.
+    \label{eq:binary-length-balance}
+\end{equation}
+These conclusions concern scalar advantages before importance weighting,
+prefix filtering, or multiplication by score vectors.
+\end{proposition}
 
-This balancing is particularly helpful when long candidate solutions are more likely to be truncated and judged incorrect. Such
-trajectories can contribute a large negative-token mass (large $T_i$ with $\tilde r_i<0$), which would otherwise impose an outsized
-penalty under token-level expansion. By shrinking the negative scaling factor $\beta$ when negative-token mass dominates, adaptive
-normalization can mitigate over-penalization of long-horizon exploration induced by truncation-driven failures. This does not correct
-reward mislabeling; it only addresses the induced gradient imbalance under token-level training.
+The proof in \Cref{app:adaptive-mechanism} starts from the finite group reward
+sum and applies the normalization to its actual length-weighted RLOO
+moments. If lower-reward responses are longer on average, then
+$\beta<\alpha$: they receive a smaller scaling factor relative to the
+higher-reward responses. If the two average lengths are equal, the factors
+are equal even when successes are rare. Thus rarity alone does not imply
+that the negative factor is less than one. For example, one reward-$1$
+response and nine reward-$0$ responses of equal length have raw advantages
+$1$ and $-1/9$, and both ideal factors equal $3$.
+The method balances the aggregate scalar coefficients; this does not assert
+cancellation or dominance of the corresponding gradient vectors.
+
+\begin{proposition}[Scale invariance of ideal normalization]
+\label{prop:normalization-scale-invariance}
+Fix a finite active-token set with both advantage signs present and use the
+ideal normalization of \Cref{def:adaptive-norm}. For every $c>0$, replacing
+all advantages by $cA$ leaves every normalized advantage unchanged.
+Consequently, for any nondegenerate group with $n\ge2$, applying the same ideal asymmetric
+normalization to the mean-baseline and RLOO signals gives identical token
+coefficients, including with unequal response lengths:
+\begin{equation}
+    A_i^{\mathrm{mean}}=\frac{n-1}{n}A_i^{\mathrm{RLOO}}
+    \quad\Longrightarrow\quad
+    \mathcal N(A^{\mathrm{mean}})=\mathcal N(A^{\mathrm{RLOO}}),
+    \label{eq:normalized-baseline-equivalence}
+\end{equation}
+where $\mathcal N$ denotes this ideal normalization with the same active
+positions. This excludes numerical safeguards and fallback branches.
+\end{proposition}
+
+The proof is in \Cref{app:adaptive-mechanism}. RLOO remains the independent
+baseline used in the raw-surrogate and group-variance analysis. Its common
+scale relative to a mean baseline does not itself distinguish the ideal
+normalized method; the normalization rule and its response-length weighting
+are the relevant choices. With only the additive stabilizer active,
+both ideal normalized amplitudes are multiplied by the common factor
+$\sqrt{D/(D+\varepsilon_{\mathrm{num}})}$, where $D$ is the denominator
+inside the ideal square root in Eq.~\eqref{eq:alpha-beta}.
+Product and factor clamps, or fallback decisions, require the residual
+analysis in \Cref{prop:normalization-safeguards}.
+
+\begin{corollary}[Equivalence to token-weighted standardization for binary rewards]
+\label{cor:binary-token-standardization}
+Under \Cref{prop:binary-rloo-normalization}, let $\mu_{\mathrm{tok}}$ and
+$\sigma_{\mathrm{tok}}>0$ be the empirical mean and population standard
+deviation of the raw advantages over the active tokens of this prompt group.
+Then the ideal asymmetric coefficients also satisfy
+$\hat A_{i,t}=(A_{i,t}-\mu_{\mathrm{tok}})/\sigma_{\mathrm{tok}}$.
+\end{corollary}
+
+The proof is in \Cref{app:adaptive-mechanism}. For exact binary rewards,
+the distinction from response-weighted or cross-prompt standardization is
+the token weighting and prompt grouping. For general multivalued rewards,
+token centering can change advantage signs, whereas positive sign-dependent
+scaling preserves them. The binary equivalence is restricted to the same
+group, token weights, and ideal moment convention.
+A bounded three-reward RLOO example in \Cref{par:multivalued-sign-example}
+exhibits a positive raw advantage that token standardization makes negative,
+while asymmetric normalization keeps it positive.
 
 \paragraph{Uniform Scale Mode}
-When all $n$ samples share the same reward, the leave-one-out baseline yields zero advantages, eliminating gradient signal. An optional
-\emph{uniform scale} mode recovers this signal by setting $\tilde{r}_i = r_i/n$ and skipping normalization, improving sample utilization.
-See \Cref{app:uniform-scale} for details.
+When the implementation's reward-uniformity test is satisfied (exactly equal rewards
+are the ideal case, while its tolerance may also admit near-uniform rewards), the
+ordinary leave-one-out signal is replaced by an optional \emph{uniform scale} rule
+$\tilde{r}_i = r_i/n$ and adaptive normalization is skipped. For exactly equal
+rewards the ordinary leave-one-out advantages are zero. This rule supplies
+nonzero coefficients when that common reward is nonzero; an all-zero group
+still contributes zero. For binary $0/1$ rewards, its additional expected
+on-policy sequence-score update is a nonnegative multiple of the
+per-prompt reward gradient (\Cref{prop:uniform-population}). Under the
+additional class-dependent-length condition, the complete token-reduced
+update, including the implemented stabilizer and clamps, is a strictly
+positive multiple of that gradient (\Cref{prop:binary-complete-update}).
+With arbitrary content-dependent lengths, an explicit within-class
+covariance margin instead guarantees a positive reward directional
+derivative and strict improvement for sufficiently small steps along the
+population update (\Cref{cor:binary-local-improvement}). This statement
+retains the on-policy, accepted-gate and inactive-clipping premises and
+holds with uniform scale either enabled or disabled.
+The multiplier and its dependence on the reward zero point are explicit; the
+optional branch does not inherit RLOO's invariance to reward translation.
+See \Cref{app:uniform-scale} for the conditions and an offset counterexample.
 \par
 \paragraph{Numerical safeguards} In implementation, we include simple numerical checks and clamping to prevent extreme or unstable
-scales; see \Cref{app:numerical}.
+scales; see \Cref{app:numerical}. Equations~\eqref{eq:alpha-beta} and the two
+moment constraints describe the ideal factors, without the additive numerical
+stabilizer or clamps. The implementation always adds
+$\varepsilon_{\mathrm{num}}>0$ to the denominator of $\alpha^2$.
+Even when no clamp activates, it therefore has zero empirical mean but
+second moment $D/(D+\varepsilon_{\mathrm{num}})<1$, where
+$D=\sum_{\mathcal P}A_{i,t}^2+\kappa^2\sum_{\mathcal N}A_{i,t}^2$.
+\Cref{prop:normalization-safeguards} gives the exact stabilizer deficit,
+product-cap formula, and factor-clamp residual bounds. Sign preservation on
+active positions survives positive factor clamps and identity fallbacks;
+the finite-batch objective decomposition in \Cref{prop:promax-objective-split}
+treats the resulting $\hat A$ directly.
 
 
 \section{REINFORCE Pro: Prefix Causal Trust Region Masking}
@@ -175,13 +298,16 @@ scales; see \Cref{app:numerical}.
 In PPO-style LLM-RL, samples are generated by a fixed rollout policy $\piroll$, and gradients are computed under a training policy
 $\pitheta$ that is updated by gradient steps. This matches the trust-region setup in~\citet{li2025trm}.
 
-The per-token importance ratio between these two policies is
+For the theoretical comparison, the per-token importance ratio between these
+two policies is
 \begin{equation*}
     \rho_t := \frac{\pitheta(y_t \mid c_t)}{\piroll(y_t \mid c_t)},
 \end{equation*}
-as defined in Eq.~\eqref{eq:ratio}. Throughout this section, we restrict attention to masking strategies constructed solely from
-$(\rho_t)_{t=1}^T$ (equivalently, the log-ratios $(\log\rho_t)_{t=1}^T$ as in Eq.~\eqref{eq:log-ratio}), and we do not introduce additional
-intermediate policies.
+as defined in Eq.~\eqref{eq:ratio}. The finite-sequence comparison below
+uses only this selected policy pair. The implementation mapping to the
+intermediate PPO snapshot $\piold$ is given in
+\Cref{sec:preliminaries} and the implementation bridge after
+\Cref{lem:prefix-stability}.
 
 \paragraph{A Causal Trust Region Viewpoint}
 Trust Region Masking (TRM; \citet{li2025trm}) introduces a \emph{sequence-level} rejection mechanism via a binary mask
@@ -208,6 +334,12 @@ where the gate is applied at token granularity. Our implementation uses a per-to
 advantages; see \Cref{sec:combined-loss} for the exact objective. Importantly, our prefix criterion is a tractable sample-level
 \emph{proxy} for Causal Trust Region filtering and is not the sequence-level max-divergence criterion used in TRM (based on
 $\max_t \DKL(c_t)$).
+
+In the implementation, $M_t^{\mathrm{pre}}$ is evaluated from
+$w_t^{\piold/\piroll}$, while the differentiable PPO term uses
+$r_t^{\theta/\piold}$. Thus the abstract comparison applies directly to the
+cached rollout/snapshot pair, and its interpretation for the current policy
+uses the finite-prefix coupling condition stated above.
 
 \subsection{Limitations of Existing Methods}
 
@@ -279,6 +411,19 @@ cumulative ratio statistic
     \label{eq:prefix-is}
 \end{equation}
 The statistic $\rhoprefix{t}$ is the geometric mean of per-token importance ratios over the length-$t$ prefix.
+Here $t$ counts active action positions. EOS-padding positions have $m_t=0$ and are excluded from both the cumulative sum and
+the denominator; the mask is evaluated only on active positions. Equivalently, on a fixed padded horizon one may replace $t$ in
+Eq.~\eqref{eq:prefix-is} by $\sum_{s\le t}m_s$ and replace the sum by $\sum_{s\le t}m_s\log\rho_s$. This convention matches the
+implementation, which computes `positions` as the cumulative action-mask count.
+For any binary action mask, increasing enumeration of its active positions
+preserves the prefix average and the number of rejected active tokens.
+At each active position the cumulative count is at least one, so the
+implementation's denominator clamp has no effect there. These exact-real
+identities are verified in \path{formal/PaddedPrefix.lean}; they do not
+require contiguous active positions.
+In the abstract theory $\rho_t$ refers to the selected policy pair; in the
+implementation it is instantiated by the cached
+$w_t^{\piold/\piroll}$ ratio as explained below.
 \end{definition}
 
 \begin{definition}[Prefix Causal Trust Region Mask]
@@ -330,6 +475,42 @@ $\log\rhoprefix{t}$ and $\log\rho_{t+1}$ lie in $[\log(1-\epslow),\log(1+\epshig
 $\log\rhoprefix{t+1}\in[\log(1-\epslow),\log(1+\epshigh)]$, which implies $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
 \end{proof}
 
+\paragraph{Implementation bridge for a stale PPO snapshot}
+The prefix statistic used by the implementation is based on
+$w_s^{\piold/\piroll}$ from the three-policy decomposition in
+\Cref{sec:preliminaries}. Define
+$z_s:=\log w_s^{\piold/\piroll}$ and
+$u_s:=\log r_s^{\theta/\piold}$. Then the current-policy log-ratio satisfies
+\begin{equation*}
+    \log\rho_s^{\theta/\piroll}=z_s+u_s,
+    \qquad
+    \frac{1}{t}\sum_{s=1}^{t}\log\rho_s^{\theta/\piroll}
+    =
+    \frac{1}{t}\sum_{s=1}^{t}z_s
+    +
+    \frac{1}{t}\sum_{s=1}^{t}u_s.
+\end{equation*}
+If $|u_s|\le\eta$ for every active position, then
+\begin{equation*}
+    \left|
+    \frac{1}{t}\sum_{s=1}^{t}\log\rho_s^{\theta/\piroll}
+    -
+    \frac{1}{t}\sum_{s=1}^{t}z_s
+    \right|
+    \le \eta.
+\end{equation*}
+This finite-prefix perturbation bound is verified by the Lean theorem
+\path{prefix_average_additive_perturbation}. Consequently, a gate
+computed from cached $(\piold,\piroll)$ ratios controls the current
+$(\pitheta,\piroll)$ prefix statistic up to an explicit threshold margin
+whenever the PPO update has the stated per-token log-ratio bound. This is a
+coupling condition for transferring the sample-level proxy; it is not needed
+for the purely algebraic prefix comparisons below.
+The corresponding finite-active-set statement, which excludes EOS-padding
+positions from both the average and its denominator, is checked by
+\path{finset_average_additive_perturbation} in
+\path{formal/ProMax.lean}.
+
 \paragraph{Granularity} The mask is computed at \emph{per-position} granularity: a single trajectory can contribute gradients at some
 positions while being masked at others. This can be viewed as a prefix-level refinement of the sequence-level rejection mechanism in TRM.
 
@@ -345,6 +526,13 @@ For convenience, we also use the equivalent log-thresholds
     \tau_- := -\log(1-\epslow),
 \]
 so that $\rho_t \in [1-\epslow,1+\epshigh]$ is equivalent to $\log\rho_t \in [-\tau_-,\tau_+]$.
+The implementation performs this comparison in exponentiated space: it computes
+the prefix log-average, applies $\exp$, and compares with
+$[1-\epslow,1+\epshigh]$. Under the explicit positivity conditions
+$1-\epslow>0$ and $1+\epshigh>0$, the equivalence between these two forms is
+verified by
+\path{ImplementationBridge.prefix_exp_gate_iff_log_gate} and
+\path{ImplementationBridge.prefix_gate_thresholds_match}.
 In the deviation-pattern analysis below, we use $\varepsilon$ to denote a uniform bound on the per-token log-ratios $\log\rho_t$.
 
 \begin{theorem}[Causality-Aware Masking with Conditional Dominance]
@@ -359,7 +547,7 @@ Concretely, the sequence-level mask is defined by a single statistic
     = \left(\prod_{s=1}^{T}\rho_s\right)^{\frac{1}{T}},
 \end{equation*}
 and $M_t^{\mathrm{seq}} := \mathbb{I}[\rhoseq \in [1-\epslow,1+\epshigh]]$ for all $t$.
-Assume policy support overlap (\Cref{asm:support}). Then:
+Assume mutual policy support (\Cref{asm:support}). Then:
 
 \begin{enumerate}
     \item[(a)] \textbf{Early deviation: the prefix mask rejects a (possibly longer) prefix.} Assume $\rho_1 \notin [1-\epslow,1+\epshigh]$ and
@@ -389,12 +577,16 @@ Assume policy support overlap (\Cref{asm:support}). Then:
     \[
         \log\rhoprefix{t^*} = \frac{1}{t^*}\log\rho_{t^*} \ge \frac{1}{T}\log\rho_{t^*} = \log\rhoseq,
     \]
-    so there exist regimes where $M_{t^*}^{\mathrm{pre}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$ (sequence geometric mean diluted by
-    large $T$). The lower-spike case $\rho_{t^*}<1$ is analogous with the lower threshold.
+    For every $t^*<T$, choosing $\log\rho_{t^*}=\tau_+(t^*+T)/2$ gives
+    $M_{t^*}^{\mathrm{pre}}=0$ while $M_t^{\mathrm{seq}}=1$ for all $t$.
+    The lower-spike choice $\log\rho_{t^*}=-\tau_-(t^*+T)/2$ gives the same
+    separation at the lower threshold. At $t^*=T$, the prefix and sequence
+    statistics coincide, so this strict separation at the spike is impossible.
 
-\item[(c)] \textbf{Monotone violation: all methods reject.} If $\log\rho_s > \tau_+$ for all $s$ (upper violation), or
-    $\log\rho_s < -\tau_-$ for all $s$ (lower violation), then $M_t^{\mathrm{pre}} = 0$ and $M_t^{\mathrm{seq}} = 0$ for all $t$,
-    so both methods reject all $T$ tokens.
+\item[(c)] \textbf{Sustained one-sided violation: all methods reject.} If $\log\rho_s > \tau_+$ for all $s$ (upper violation), or
+    $\log\rho_s < -\tau_-$ for all $s$ (lower violation), then
+    $M_t^{\mathrm{tok}}=M_t^{\mathrm{pre}}=M_t^{\mathrm{seq}}=0$ for all $t$,
+    so each of the three methods rejects all $T$ tokens. No monotonicity in $s$ is required.
 \end{enumerate}
 \end{theorem}
 
@@ -423,16 +615,106 @@ $M_t^{\mathrm{pre}}=1$. Therefore masking can only occur at positions $t\ge t^*$
 comparison follows by specializing to $\rho_t=1$ for $t\neq t^*$ and $\rho_{t^*}>1$, which gives $\log\rhoseq=\log\rho_{t^*}/T$ and
 $\log\rhoprefix{t^*}=\log\rho_{t^*}/t^*$, so $\log\rhoprefix{t^*}\ge \log\rhoseq$ since $t^*\le T$.
 
-\textbf{Part (c).} If each $\log\rho_s$ is strictly beyond the same threshold, then their running average is also strictly beyond the
-threshold, so both prefix and sequence masks reject all tokens.
+\textbf{Part (c).} If each $\log\rho_s$ is strictly beyond the same threshold, each token mask rejects and both the running and
+full-sequence averages are strictly beyond that threshold. Thus all three masks reject every token.
 \end{proof}
+
+The complete three-case statement, binary rejection counts, both explicit
+spike constructions, and the final-position equality are verified in
+\path{formal/PrefixMasking.lean}. In particular, the early and late cases
+retain the stated bounded background noise. The active-position identities
+above transfer the prefix mask and its rejection count to the padded
+implementation in exact real arithmetic.
 
 \begin{remark}[Same-Sign but In-Bound Deviations]
 When all $\log\rho_s$ share the same sign but do not all exceed the corresponding threshold, the prefix log-statistic $\log\rhoprefix{t}$ need not be
 monotone in $t$ and may return within bounds after crossing a threshold. In this regime there is no unconditional dominance ordering
-between prefix masking and token-level masking: token-level methods detect large single-token outliers, while prefix masking detects
-cumulative drift from many moderate deviations.
+between prefix masking and token-level masking. If every token log-ratio lies in the acceptance interval, every prefix average lies
+in it as well, so repeated in-bound deviations alone cannot trigger this geometric-mean gate.
+Prefix rejection records a running average outside the interval, which can persist after individual tokens have returned within bounds.
 \end{remark}
+
+\subsection{What the Accepted Prefix Controls}
+\label{sec:prefix-mechanism}
+To connect prefix filtering to the context-shift factor in Eq.~\eqref{eq:error-decomp}, it is convenient to make explicit the change of
+measure between prefix context visitation distributions under $\piroll$ and $\pitheta$. For each $t\in\{1,\ldots,T\}$, define the prefix
+density ratio random variable
+\begin{equation*}
+    W_t := \prod_{s=1}^{t}\rho_s,
+    \qquad
+    \log W_t = \sum_{s=1}^{t}\log\rho_s.
+\end{equation*}
+In the finite history-tree model, $d_t^\pi$ denotes the normalized path-mass distribution on
+length-$(t-1)$ prefix contexts. The next two lemmas show that $W_t$ is exactly the Radon--Nikodym derivative between the
+length-$t$ prefix distributions (indexed as $d_{t+1}$) and that the resulting context shift admits a clean ratio-residual identity.
+
+\begin{lemma}[Prefix density-ratio factorization]
+\label{lem:prefix-density-ratio}
+Under the mutual-support Assumption~\ref{asm:support}, a finite vocabulary, and the normalized autoregressive history-tree model,
+for any $t\in\{1,\ldots,T\}$ and any reachable context $c_{t+1}=(x,y_{\le t})$ such that
+$d_{t+1}^{\piroll}(c_{t+1})>0$,
+\begin{equation*}
+    \frac{d_{t+1}^{\pitheta}(c_{t+1})}{d_{t+1}^{\piroll}(c_{t+1})}
+    = \prod_{s=1}^{t} \frac{\pitheta(y_s\mid c_s)}{\piroll(y_s\mid c_s)}
+    = W_t.
+\end{equation*}
+\end{lemma}
+
+\begin{lemma}[Context-shift TV as an expectation of the prefix ratio residual]
+\label{lem:tv-prefix-ratio}
+Under the mutual-support Assumption~\ref{asm:support}, a finite vocabulary, and the same normalized history-tree model, for any
+$t\in\{1,\ldots,T\}$,
+\begin{equation*}
+    \bigl\|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\bigr\|_{\mathrm{TV}}
+    =
+    \frac{1}{2}\E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[\big|W_t - 1\big|\right].
+\end{equation*}
+\end{lemma}
+
+The prefix gate further enforces a deterministic per-position envelope on this drift along the accepted prefixes.
+
+\begin{theorem}[Per-position drift control on accepted prefixes]
+\label{thm:pre-causal-mechanism}
+Fix a finite vocabulary and a normalized history-tree model satisfying the mutual-support
+Assumption~\ref{asm:support}. Fix $\epslow\in(0,1)$ and $\epshigh>0$, and write
+$\tau_+ := \log(1+\epshigh)$ and $\tau_- := -\log(1-\epslow)$. Let
+$M_t^{\mathrm{pre}}$ be defined as in Eq.~\eqref{eq:prefix-mask}. Then for any $t\in\{1,\ldots,T\}$, on the event
+$\{M_t^{\mathrm{pre}}=1\}$,
+\begin{equation*}
+    e^{-t\tau_-} \le W_t \le e^{t\tau_+},
+    \qquad
+    \big|W_t-1\big|
+    \le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}.
+\end{equation*}
+Consequently,
+\begin{align*}
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\,\big|W_t-1\big|\right]
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}\,
+    \E_{c_{t+1}\sim d_{t+1}^{\piroll}}\!\left[M_t^{\mathrm{pre}}\right]
+    \\
+    &\le
+    \max\!\big\{e^{t\tau_+}-1,\;1-e^{-t\tau_-}\big\}.
+\end{align*}
+\end{theorem}
+
+\noindent\textbf{Why this matters for our method.}
+\Cref{lem:prefix-density-ratio} makes explicit the causal object that prefix filtering controls: the cumulative product of token ratios is
+exactly the density ratio between prefix context distributions. \Cref{lem:tv-prefix-ratio} then rewrites the context-shift factor in
+Eq.~\eqref{eq:error-decomp} as an expectation of a \emph{prefix} ratio residual. Finally, \Cref{thm:pre-causal-mechanism} shows that our
+prefix gate enforces a per-position bounded change-of-measure regime on the \emph{accepted} prefixes. This is the sense in which the mask
+acts as a prefix-level Causal Trust Region proxy: updates are filtered to exclude positions whose prefixes induce extreme reweighting of
+the rollout context distribution. Proofs are in \Cref{app:pre-causal-tr}.
+
+The bound concerns the unnormalized mass of accepted prefixes. It permits
+an action-dependent gate and gives no unbiasedness claim for the masked
+policy gradient. For the implementation, the policy pair supplying the gate
+is $(\piroll,\piold)$; the coupling condition in \Cref{sec:prefix-is}
+controls its transfer to $(\piroll,\pitheta)$ during a stale-snapshot update.
+Under an additional conditional log-ratio concentration assumption,
+\Cref{app:subgaussian-perpos} gives accepted-mass and effective-horizon
+bounds, with all assumptions and proofs stated there.
 
 \subsection{Connection to the Adaptive Bound}
 \label{sec:adaptive-connection}
@@ -442,16 +724,36 @@ LLM-RL~\citep{li2025trm}. In our notation, these bounds analyze the policy pair 
 
 \begin{remark}[KL Chain Rule for the Cumulative Log-Ratio]
 \label{rem:cumsum-kl}
-Under Assumptions~\ref{asm:support}--\ref{asm:finite-length}, for any $t \le T$,
+Under the mutual-support Assumption~\ref{asm:support}, with a fixed (or EOS-padded) finite horizon as in
+\Cref{def:llm-surrogate}, consider the finite normalized history-tree model. Define the cumulative conditional reverse-KL cost
+recursively by $\mathsf{CKL}_0(h)=0$ and
+\begin{equation}
+    \mathsf{CKL}_{n+1}(h)
+    := \DKL\!\big(\piroll(\cdot|h)\,\|\,\pitheta(\cdot|h)\big)
+       + \sum_a \piroll(a|h)\,\mathsf{CKL}_{n}(h\mathbin{\|}a).
+    \label{eq:cumulative-conditional-kl-recursion}
+\end{equation}
+Then, for every $t\le T$,
 \begin{equation}
     \E_{\piroll}\!\Big[\sum_{s=1}^{t} \log\rho_s\Big]
-    = -\sum_{s=1}^{t} \E_{c_s \sim d_s^{\piroll}}\!\big[\DKL(\piroll(\cdot|c_s) \| \pitheta(\cdot|c_s))\big]
-    = -\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\pitheta}),
+    = -\mathsf{CKL}_{t}(\varnothing)
+    = -\DKL\!\left(d_{t+1}^{\piroll}\,\|\,d_{t+1}^{\pitheta}\right),
     \label{eq:cumsum-kl}
 \end{equation}
-where the final equality is the KL chain rule applied to the joint prefix distributions.
+where $d_{t+1}^{\pi}$ is the length-$t$ prefix law obtained by multiplying the normalized conditional token probabilities.
+The expectation, recursion, and joint-prefix KL are evaluated on these same finite history trees.
 \par
 \noindent This identity is the KL chain rule under autoregressive factorization; see, e.g., \citet{li2025trm}.
+Its finite conditional weighted-sum algebra is checked by
+\path{REINFORCEProMax.finite_conditional_kl_chain} in
+\path{formal/KLChain.lean}.
+The fully recursive history-tree statement is checked by
+\path{AutoregressiveTree.chain_log_ratio_eq_neg_chain_kl} in
+\path{formal/TreeKL.lean}.
+The same file verifies \path{trajectory_log_ratio_expectation} and
+\path{jointPrefixKL_eq_chainKL}: the sampled cumulative log-ratio has the
+stated expectation, and the independently constructed joint-prefix KL equals
+the recursive conditional cost.
 \end{remark}
 
 \begin{remark}[Prefix Filtering as a Sample-Level Proxy]
@@ -465,11 +767,16 @@ Thresholding $\rhoprefix{t}$ is equivalent to a per-position, sample-level const
 \end{align*}
 In contrast, \Cref{rem:cumsum-kl} is an \emph{expectation} identity over the behavior distribution. Therefore, the threshold condition
 should be interpreted as a practical, sample-level proxy for Causal Trust Region filtering rather than a population-level guarantee
-without additional assumptions. Separately, Pinsker's inequality relates the population-level KL in Eq.~\eqref{eq:cumsum-kl} to a TV bound:
+without additional assumptions. For the finite joint-prefix distributions constructed above, Pinsker's inequality gives:
 \begin{equation*}
     \|d_{t+1}^{\pitheta} - d_{t+1}^{\piroll}\|_{\mathrm{TV}}
     \le \sqrt{\frac{\DKL(d_{t+1}^{\piroll} \| d_{t+1}^{\pitheta})}{2}}.
 \end{equation*}
+The finite inequality, including common zero-probability outcomes, is proved
+by \path{finite_pinsker} in \path{formal/Pinsker.lean}. Its application to the
+actual history-tree prefix laws and their KL chain rule is checked by
+\path{prefixTV_le_sqrt_jointPrefixKL} and \path{prefixTV_le_sqrt_chainKL} in
+\path{formal/TreePinsker.lean}.
 \end{remark}
 
 \begin{remark}[Per-Position Sample-Level Causal Trust Region Constraint]
@@ -486,18 +793,54 @@ This provides a per-position, sample-level trust region constraint analogous to 
 \subsection{The Combined Loss}
 \label{sec:combined-loss}
 
-We define the loss as the negative surrogate objective, $\mathcal{L} = -\mathcal{L}_{\piroll}(\pitheta)$, so that gradient descent on
-$\mathcal{L}$ corresponds to maximizing the surrogate. The REINFORCE Pro Max loss applies the prefix mask to the standard per-token
-importance-weighted surrogate:
+The theoretical unclipped surrogate uses the total ratio
+$\rho_t^{\theta/\piroll}=\pitheta(y_t|c_t)/\piroll(y_t|c_t)$. The
+implementation keeps PPO's frozen snapshot and its clipped objective. Define
+\begin{equation*}
+    \ell_t^{\mathrm{PPO}}
+    :=
+    -\min\!\left(
+        r_t^{\theta/\piold}\hat A_t,\;
+        \operatorname{clip}\!\left(r_t^{\theta/\piold},
+        1-\epsilon_{\mathrm{clip}},1+\epsilon_{\mathrm{clip}}\right)\hat A_t
+    \right),
+    \qquad
+    w_t^{\piold/\piroll}
+    :=
+    \frac{\piold(y_t|c_t)}{\piroll(y_t|c_t)}.
+\end{equation*}
+The implemented REINFORCE Pro Max loss is the masked, vLLM-corrected PPO
+loss
 \begin{equation}
     \mathcal{L}^{\mathrm{ProMax}}
-    := -\sum_{t=1}^{T} M_t^{\mathrm{pre}}\,\rho_t\,\hat{A}_t.
+    := \operatorname{MaskedMean}_{t}\!
+    \left[m_t\,M_t^{\mathrm{pre}}\,
+    \operatorname{stopgrad}\!\left(w_t^{\piold/\piroll}\right)
+    \ell_t^{\mathrm{PPO}}\right].
     \label{eq:promax-loss}
 \end{equation}
-Here $\hat{A}_t$ is the adaptively normalized advantage from \Cref{sec:adaptive-norm}, $M_t^{\mathrm{pre}}$ is the prefix-level
-Causal Trust Region mask from \Cref{def:prefix-trm-proxy},
-$\rho_t$ is the per-token ratio defined in Eq.~\eqref{eq:ratio}.
+Here $\operatorname{MaskedMean}_{t}$ is the same action-mask reduction used
+by the implementation, $M_t^{\mathrm{pre}}$ is computed from the prefix of
+$w_s^{\piold/\piroll}$, and $m_t\in\{0,1\}$ removes EOS-padding positions.
+When the PPO clipping branch is inactive, the product of the retained weight and the PPO ratio is
+$w_t^{\piold/\piroll}r_t^{\theta/\piold}=\rho_t^{\theta/\piroll}$, even for a stale snapshot.
+Recovering the raw population surrogate additionally requires accounting for the prefix gate, adaptive normalization, and reduction.
+\Cref{prop:promax-objective-split} gives the exact finite-batch decomposition with all these components present.
 
-\paragraph{Gradient flow} Gradients propagate only through $\rho_t$. The prefix mask $M_t^{\mathrm{pre}}$ and the normalized advantage
-$\hat{A}_t$ are detached from the computation graph. When $M_t^{\mathrm{pre}} = 0$, the loss at position $t$ is zero and contributes
+\paragraph{Gradient flow} Gradients propagate through the PPO ratio
+$r_t^{\theta/\piold}$ only. The action mask, prefix mask
+$M_t^{\mathrm{pre}}$, vLLM coefficient $w_t^{\piold/\piroll}$, and normalized
+advantage $\hat A_t$ are detached from the computation graph. When either
+$m_t=0$ or $M_t^{\mathrm{pre}}=0$, the loss at position $t$ is zero and contributes
 no gradient.
+
+\paragraph{Analyzed training configuration}
+Equation~\eqref{eq:promax-loss} specifies the standard PPO policy term:
+\texttt{policy\_loss\_type=ppo}, with vLLM correction enabled and
+\path{vllm_is_correction_type} set to \texttt{reinforce\_pro}.
+The optional \texttt{dual\_clip} argument is unset. The analyzed complete
+loss also has no reference-KL, entropy, or MoE auxiliary loss contribution;
+the corresponding coefficients must be zero or the branches disabled.
+Adding these terms changes the optimizer's update and requires retaining
+their contributions separately. The reduction qualifications in
+\Cref{sec:unified} still apply to microbatch accumulation.

@@ -4,18 +4,90 @@
 We presented REINFORCE Pro Max, a unified framework for critic-free LLM reinforcement learning that addresses two fundamental challenges:
 high-variance advantage estimation and causal off-policy mismatch between behavior and training policies.
 
-The first component, REINFORCE Max, combines a leave-one-out baseline (statistically independent of each sample, enabling clean
-second-moment analysis, \Cref{rem:rloo-variance}) with adaptive asymmetric normalization (preserving advantage sign while enforcing the
-empirical constraints in \Cref{def:adaptive-norm}, \Cref{eq:alpha-beta}). The second component, REINFORCE Pro, introduces
-prefix-level Causal Trust Region masking (a ratio-based prefix proxy) that preserves the causal structure of autoregressive generation. We showed that the
-resulting prefix mask can provide tighter filtering than both token-level and sequence-level alternatives in the analyzed deviation
-patterns (\Cref{thm:prefix-tighter}), subject to the conditions stated therein. The connection to the Adaptive bound from the trust region
-framework highlights that prefix masking acts as a sample-level proxy for per-position Causal Trust Region filtering: the KL chain rule yields an
+The first component, REINFORCE Max, combines a leave-one-out baseline (conditionally independent of each sample's own response given the prompt, enabling clean
+second-moment analysis, \Cref{rem:rloo-variance}) with adaptive asymmetric normalization, which preserves advantage sign and enforces the
+empirical constraints in \Cref{def:adaptive-norm}, \Cref{eq:alpha-beta} in its nondegenerate ideal form. The implemented stabilizer and
+clamps have explicit moment formulas and residual bounds (\Cref{prop:normalization-safeguards}).
+For binary RLOO groups, the ideal normalized amplitudes depend only on the
+two token counts, while the factor ratio equals the class-conditional mean
+length ratio (\Cref{prop:binary-rloo-normalization}). Exact scale invariance
+also isolates this normalization mechanism from the removable common
+mean-baseline/RLOO scale (\Cref{prop:normalization-scale-invariance}).
+The second component, REINFORCE Pro, introduces
+prefix-level Causal Trust Region masking (a ratio-based prefix proxy) that preserves the causal structure of autoregressive generation.
+The implementation computes this proxy from the cached $(\piold,\piroll)$ ratio
+while the PPO gradient uses the current-to-snapshot ratio. We showed that the
+resulting prefix mask propagates early-deviation rejection and localizes late-deviation rejection under the conditions in
+\Cref{thm:prefix-tighter}. The exact centered-surrogate equivalence and finite-batch objective decomposition connect the critic-free
+estimator to the per-step surrogate and separate the effects of the ProMax gate, normalization, and clipping.
+The complete finite-tree Adaptive remainder bound
+(\Cref{thm:adaptive-bound}), attributed to the trust-region framework,
+connects rollout surrogate gain to actual reward improvement with an explicit
+error allowance. The prefix mask has its own accepted-prefix density-ratio
+and expectation bounds (\Cref{thm:pre-causal-mechanism}).
+\Cref{thm:promax-certificate} further connects the complete ProMax objective
+to a finite-sample sufficient condition for reward improvement. It retains
+random response lengths and RLOO group dependence, and controls selection
+from a finite candidate family fixed before evaluation.
+\Cref{cor:promax-energy-certificate} removes the unknown mean response
+length through exact observed-token rescaling. Its sampling error is
+controlled by additive conditional ratio energy on the history tree,
+retaining dependence between tokens and between sibling RLOO terms.
+\Cref{prop:rloo-group-variance} sharpens this result with the exact RLOO
+group-average variance, exhibiting the response-count benefit within each
+prompt and the separate contribution of prompt sampling.
+\Cref{cor:covered-policy-certificate} extends the guarantee to an arbitrary
+fit on the evaluation data within a fixed policy class with a finite cover.
+The extra margin $3R_{\max}\zeta$ and the finite sum of center error budgets
+make the approximation and complexity costs explicit.
+\Cref{cor:logit-calibration} supplies explicit energy, Adaptive-cost,
+and cover-radius bounds from uniform logit-change envelopes, without
+requiring a minimum positive token probability.
+The KL chain rule yields an
 expectation identity for the cumulative log-ratio (\Cref{rem:cumsum-kl}), while the prefix thresholding rule enforces a per-position
-sample constraint (\Cref{rem:prefix-proxy}).
+sample constraint (\Cref{rem:prefix-proxy}). For stale snapshots, the
+finite-prefix coupling condition is required to transfer this diagnostic to
+the current policy.
 
 \textbf{Limitations and future work.} The prefix-mask thresholds $[1-\epslow, 1+\epshigh]$ are hyperparameters that require tuning. The
-sample-level prefix constraint is only a proxy for a population-level trust-region condition, and the gap between the two is not formally
-characterized. The theoretical analysis assumes bounded rewards and overlapping policy supports (\Cref{sec:assumptions}), which may not
-hold in all practical settings. Empirical validation on large-scale benchmarks is ongoing; we plan to evaluate on mathematical reasoning
-tasks (AIME, MATH) with ablations on each component.
+sample-level prefix constraint controls accepted, unnormalized prefix mass;
+it does not certify the maximum population TV/KL assumptions needed by the
+Adaptive bound. The exact objective decomposition and sampling margins
+retain the effects of filtering, normalization, clipping, and reduction.
+The selection guarantee uses either a fixed finite candidate family or a
+pre-specified policy class with a fixed finite cover. A useful cover size
+for unrestricted neural policy fitting is not established; fitting or
+checking the cover only on the evaluation batch does not meet its premises.
+The logit-based calibration supplies one such numerical instantiation;
+establishing its uniform envelope for a trained neural policy remains a
+separate requirement, and batch-only measurements cannot establish it.
+The optional uniform-scale branch adds an on-policy per-prompt score term
+aligned with the $0/1$ reward gradient, but depends on the reward zero
+point; a common reward offset can reverse its update
+(\Cref{prop:uniform-population}).
+Under the explicit sufficient condition that active response length depends
+only on the binary reward class, the complete token-reduced update remains a
+strictly positive multiple of the success-probability gradient even with the
+implemented stabilizer, cap, clamps and identity fallback
+(\Cref{prop:binary-complete-update}). If within-class length variation is
+correlated with response scores, this alignment needs a separate covariance
+bound and is not claimed by the theorem. The exact within-class covariance
+decomposition and its finite Cauchy--Schwarz margin are given in
+\Cref{prop:binary-length-covariance}.
+When this covariance margin is dominated by the positive gradient component,
+\Cref{cor:binary-local-improvement} proves strict true-reward improvement
+for every sufficiently small step along the fixed-prompt population update.
+The result permits content-dependent lengths and retains numerical
+safeguards; its on-policy, accepted-gate and inactive-clipping premises
+remain explicit.
+The theoretical analysis assumes bounded rewards and mutual policy support (\Cref{sec:assumptions}), which may not
+hold in all practical settings. The finite-sample certificate also applies to the unconditioned iid evaluation law; the optional
+training-time \texttt{dynamic\_filtering} branch changes the retained group law, as shown by the exact counterexample in \Cref{sec:unified}.
+A filtered training run therefore needs a separate independent evaluation batch, or a new analysis of the accepted-group law.
+The current artifact contains only the synthetic structural checks in
+\Cref{sec:experiments}; a large-scale language-model benchmark has not yet
+been run. The paper therefore does not make an empirical performance claim.
+An ICLR submission requires matched AIME/MATH or comparable reasoning-task
+experiments, independent evaluation, multiple training seeds, and ablations
+for each component under the protocol in
+\path{reinforce_pro_max/EXPERIMENT_PROTOCOL.md}.

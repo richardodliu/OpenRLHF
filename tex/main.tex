@@ -3,8 +3,8 @@
 \input{env}
 \input{math}
 
-\title{REINFORCE Pro Max: Variance-Reduced Advantage Estimation\\
-with Causal Off-Policy Correction for LLM-RL}
+\title{REINFORCE Pro Max: Adaptive Advantage Normalization\\
+with Causal Prefix Filtering for LLM-RL}
 
 \author{Jason Klein Liu}
 \date{}
@@ -14,21 +14,38 @@ with Causal Off-Policy Correction for LLM-RL}
 \maketitle
 
 \begin{abstract}
-Critic-free reinforcement learning methods for Large Language Models (LLMs), including REINFORCE++, GRPO, and RLOO, eliminate the need for
-a value network and save significant GPU memory. However, they face two intertwined challenges: high-variance advantage estimation and
-off-policy mismatch between inference engines and training frameworks. We present REINFORCE Pro Max, a unified framework addressing both
-challenges with theoretical analysis. The first component, REINFORCE Max, combines a leave-one-out (RLOO) baseline---which provides
-statistical independence between each sample and its baseline, enabling clean second-moment analysis---with an adaptive asymmetric
-normalization that preserves gradient direction while enforcing zero empirical mean and unit empirical variance on non-zero tokens. The
-second component, REINFORCE Pro, introduces prefix-level Causal Trust Region masking (a ratio-based prefix proxy) that preserves the causal structure of
-autoregressive generation. We show that, under explicit sufficient conditions on the per-token log-ratios stated in
-Theorem~\ref{thm:prefix-tighter}, the resulting prefix mask can provide tighter filtering than both token-level methods (which ignore causal
-dependencies) and sequence-level methods (which lose positional information) in three analyzed deviation patterns (early deviation, late
-deviation, and monotone drift). We relate prefix masking to the per-position structure of the Adaptive bound in trust-region analyses: the
-KL chain rule yields an expectation identity for the cumulative log-ratio, and thresholding the sample-level prefix log-ratio provides a
-practical, per-position proxy for Causal Trust Region filtering. Together, the two components target the two factors in the surrogate
-objective error decomposition: normalization stabilizes the advantage magnitude, while prefix masking filters out tokens with large prefix
-cumulative log-ratios between the behavior policy $\piroll$ and the training policy $\pitheta$.
+Critic-free reinforcement learning for large language models avoids a value
+network, but token-weighted advantage imbalance and inference--training
+policy mismatch can destabilize the sampled update. We present REINFORCE
+Pro Max, combining a leave-one-out (RLOO) baseline with adaptive asymmetric
+advantage normalization and causal prefix filtering. The ideal normalization
+preserves advantage signs while enforcing zero empirical mean and unit
+empirical variance on nonzero tokens; its implemented numerical safeguards
+admit explicit moment residuals. For binary RLOO rewards, its ideal scale
+ratio equals the class-conditional mean response-length ratio.
+Under stated deviation conditions, prefix
+filtering propagates early rejection and confines late rejection to a suffix,
+with additional bounds on accepted prefix mass.
+We analyze the sparse-terminal-reward core without KL shaping or post-RLOO
+reward clipping on a finite autoregressive model with bounded rewards and
+mutual policy support. An exact decomposition connects the implemented
+clipped objective to the raw critic-free surrogate, retaining the frozen
+snapshot ratios, prefix gate, normalization, and random response lengths.
+Combining this identity with the Adaptive trust-region bound yields a
+finite-sample sufficient condition for true reward improvement. An observed
+token-count rescaling removes the unknown mean response length, while an
+exact shared-baseline RLOO variance formula separates response-sampling
+uncertainty from prompt-sampling uncertainty and quantifies the benefit of
+additional responses per prompt. The guarantee supports selection from a
+fixed finite candidate family, and extends to policies fitted on the same
+evaluation data within a pre-specified class admitting a fixed finite cover,
+with an explicit approximation and complexity cost. Uniform logit-change
+bounds provide explicit energy, remainder, and cover-radius calibrations
+without a minimum token-probability assumption. These mathematical
+identities, variance formulas, and conditional reward guarantees are
+verified in Lean on the same finite autoregressive policy model used by the
+formal statements; this does not formalize a floating-point neural-network
+implementation.
 \end{abstract}
 
 

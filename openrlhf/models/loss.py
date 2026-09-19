@@ -119,8 +119,12 @@ class PolicyLoss(nn.Module):
         action_mask: Optional[torch.Tensor] = None,
         rollout_log_probs: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
+        ppo_log_ratio = None
         if self.policy_loss_type == "ppo":
             log_ratio = log_probs - old_log_probs
+            # Keep the differentiable current/old ratio separate from the
+            # rollout/old ratio used only for vLLM importance correction.
+            ppo_log_ratio = log_ratio
             ratio = log_ratio.exp()
         elif self.policy_loss_type == "gspo":
             # GSPO: https://arxiv.org/pdf/2507.18071
@@ -160,7 +164,7 @@ class PolicyLoss(nn.Module):
                 loss = vllm_is * loss
             elif self.vllm_is_correction_type == "seq-mask-tis":
                 # seq-mask-tis: use sequence-level geometric mean only for filtering,
-                # correction coefficients still use TIS (token-level clamp)
+                # while the correction coefficient remains the detached token-level IS weight
                 seq_log_ratio = masked_mean(log_ratio, action_mask, dim=-1)
                 seq_is = torch.exp(seq_log_ratio)
                 seq_mask = (seq_is >= low_threshold) & (seq_is <= high_threshold)
@@ -168,7 +172,7 @@ class PolicyLoss(nn.Module):
                 loss = seq_mask.unsqueeze(-1) * vllm_is * loss
             elif self.vllm_is_correction_type == "reinforce_pro":
                 # reinforce_pro: prefix cumulative geometric mean for filtering,
-                # correction coefficients still use TIS (token-level clamp)
+                # while the correction coefficient remains the detached token-level IS weight
                 cumsum_log_ratio = torch.cumsum(log_ratio * action_mask, dim=-1)
                 positions = torch.cumsum(action_mask.float(), dim=-1).clamp(min=1)
                 prefix_is = (cumsum_log_ratio / positions).exp().detach()
@@ -187,7 +191,14 @@ class PolicyLoss(nn.Module):
             else masked_mean(loss, action_mask, dim=-1).mean()
         )
         clip_ratio = masked_mean(torch.lt(surr2, surr1).float(), action_mask, dim=None)
-        ppo_kl = masked_mean(-log_ratio.detach(), action_mask, dim=None)
+        # Report the PPO KL from the current-vs-snapshot ratio.  The vLLM
+        # branch reuses ``log_ratio`` for old-vs-rollout correction, so using
+        # it here would silently report a different diagnostic.
+        ppo_kl = (
+            masked_mean(-ppo_log_ratio.detach(), action_mask, dim=None)
+            if self.policy_loss_type == "ppo"
+            else masked_mean(-log_ratio.detach(), action_mask, dim=None)
+        )
         return loss, clip_ratio, ppo_kl, vllm_kl
 
 
