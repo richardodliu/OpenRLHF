@@ -11,11 +11,19 @@ entry point is `tex/iclr2027_submission.tex`; the exact style and bibliography
 files are under `tex/iclr2027/`. The author block is anonymous and
 `\\iclrfinalcopy` remains commented, as required for initial review.
 
-The compiled artifact `tex/iclr2027_submission.pdf` has 43 pages: exactly 9 pages of main text, followed by the references and the
-full proof appendix. The main text ends at page 9, exactly matching the ICLR 2027 initial
-submission limit of 9 pages. Citations resolve with the official ICLR 2027
-bibliography style. The build has no overfull boxes; two underfull boxes occur
-in an appendix paragraph and do not change the page boundary.
+The compiled artifact `tex/iclr2027_submission.pdf` has 43 pages. The main
+text now ends with the complete Conclusion at the bottom of page 9. Statements
+and references start on page 10; the proof appendix starts on page 11. The
+end-of-main-text label is placed after a paragraph break and before the page
+break, excluding the AI use, reproducibility, and ethics statements.
+
+PDF text extraction and visual inspection verify the final main-text line on
+page 9 at y = 732.27 pt (coordinates from the top of the US Letter page),
+matching the bottom text line on other full pages. No conclusion text spills
+onto page 10. The official template's font sizes and page geometry are unchanged.
+The final build has no overfull boxes. Existing underfull-box and unresolved
+cross-reference warnings remain; this pagination check is not a claim that
+all submission issues are resolved.
 
 The submission includes the required AI use statement and the recommended
 reproducibility and ethics statements. The appendix records the exact theorem
