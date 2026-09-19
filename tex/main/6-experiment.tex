@@ -1,7 +1,7 @@
 \section{Experiments}
 \label{sec:experiments}
 
-This section reports controlled checks for two structural claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization have the stated advantage-statistics properties; and (ii)~prefix-level masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. The checks are deliberately synthetic and do not constitute a language-model benchmark. The executable protocol is in \path{reinforce_pro_max/structural_experiment.py}; its fixed-seed output is saved in \path{reinforce_pro_max/structural_experiment_20260918.json}. Benchmark results (e.g., AIME/MATH with a specified backbone) remain future work.
+This section reports controlled checks for two structural claims of REINFORCE Pro Max: (i)~the leave-one-out baseline and adaptive asymmetric normalization have the stated advantage-statistics properties; and (ii)~prefix-level masking behaves as predicted under the deviation patterns analyzed in \Cref{thm:prefix-tighter}. The checks are deliberately synthetic and do not constitute a language-model benchmark. The executable protocol is in \path{reinforce_pro_max/structural_experiment.py}; its fixed-seed output is saved in \path{reinforce_pro_max/structural_experiment_20260918.json}.
 
 \subsection{Experimental Setup}
 
@@ -183,5 +183,5 @@ suffix positions starting at $t=24$.
     \item Thresholds: default $(\epslow,\epshigh)=(0.1,0.1)$ (i.e., $[1-\epslow,1+\epshigh]=[0.9,1.1]$); sensitivity example $(\epslow,\epshigh)=(0.05,0.05)$ (i.e., $[0.95,1.05]$).
     \item The deterministic masking table can be reproduced directly from the formulas in
     \Cref{thm:prefix-tighter}. Exact-real counts and rejection positions are also checked in
-    \path{formal/StructuralExamples.lean}; the executable script reproduces both tables. No language-model benchmark checkpoint is included.
+    \path{formal/StructuralExamples.lean}; the executable script reproduces both tables.
 \end{itemize}

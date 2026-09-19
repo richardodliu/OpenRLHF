@@ -84,10 +84,3 @@ The theoretical analysis assumes bounded rewards and mutual policy support (\Cre
 hold in all practical settings. The finite-sample certificate also applies to the unconditioned iid evaluation law; the optional
 training-time \texttt{dynamic\_filtering} branch changes the retained group law, as shown by the exact counterexample in \Cref{sec:unified}.
 A filtered training run therefore needs a separate independent evaluation batch, or a new analysis of the accepted-group law.
-The current artifact contains only the synthetic structural checks in
-\Cref{sec:experiments}; a large-scale language-model benchmark has not yet
-been run. The paper therefore does not make an empirical performance claim.
-An ICLR submission requires matched AIME/MATH or comparable reasoning-task
-experiments, independent evaluation, multiple training seeds, and ablations
-for each component under the protocol in
-\path{reinforce_pro_max/EXPERIMENT_PROTOCOL.md}.

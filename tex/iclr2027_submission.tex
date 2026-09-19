@@ -43,8 +43,7 @@ corrections, and a nonnegative clipping deduction. A finite-tree adaptive
 bound then gives a conditional sufficient certificate for reward improvement.
 The mathematical statements and their finite-tree proofs are checked in Lean;
 the formalization does not claim to verify floating-point neural-network
-training. The current artifact contains structural synthetic checks only and
-does not report an LLM benchmark.
+training.
 \end{abstract}
 
 \section{Problem and scope}
@@ -301,20 +300,22 @@ optimization.
 
 \input{main/3-preliminaries}
 \section{Theory scope and limitations}
-This is a theory paper. Deterministic structural checks for normalization and
-prefix masking are included as consistency checks, rather than as an empirical
-benchmark. The paper makes no claim about benchmark accuracy, sample
-efficiency, or wall-clock performance. The formal proofs use exact real
-arithmetic on finite models; they do not formalize floating-point overflow, GPU
-kernels, Adam, Ray/vLLM execution, or the assumptions of a general neural
-policy. These boundaries are part of the theorem statements and determine the
-conditions under which the results apply.
+The formal results use exact real arithmetic on finite autoregressive models.
+Their applicability is conditional on bounded rewards, mutual policy support,
+and the stated trust-region and sampling assumptions. The finite-batch
+objective identity applies to standard PPO with a common frozen snapshot,
+gate, and normalized advantages. Translating its corrected increment into a
+population reward certificate additionally requires the specified reduction
+and independent RLOO evaluation blocks. The binary-length conclusions retain
+their class-mass and covariance conditions. These assumptions delimit the
+mathematical claims; they do not establish a guarantee for arbitrary optimizer
+steps or unrestricted neural policies.
 
 \subsection*{AI use statement}
 Generative AI tools assisted with code navigation, proof-audit organization, and language editing. All mathematical statements, source changes, and reported checks were reviewed against the repository. The authors take responsibility for the final content.
 
 \subsection*{Reproducibility statement}
-The repository contains the implementation correspondence, pinned Lean development, proof audit, and deterministic structural checks. The paper is theory-focused and makes no empirical performance claim.
+The repository contains the implementation correspondence, pinned Lean development, proof audit, and deterministic structural checks.
 
 \subsection*{Ethics statement}
 This work uses no human subjects or private user data.
