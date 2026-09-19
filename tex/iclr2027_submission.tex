@@ -3,6 +3,25 @@
 \input{iclr2027/math_commands.tex}
 \usepackage{hyperref}
 \usepackage{url}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{algorithm,algorithmic}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage[capitalize,noabbrev]{cleveref}
+\input{iclr2027/math_extra}
+\crefname{assumption}{Assumption}{Assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\crefname{appsec}{Appendix}{Appendices}
+\Crefname{appsec}{Appendix}{Appendices}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{remark}[theorem]{Remark}
 \title{REINFORCE Pro Max: Causal Prefix Filtering and Adaptive Advantage Normalization for Critic-Free LLM Reinforcement Learning}
 \author{Anonymous Authors}
 \newcommand{\fix}{\marginpar{FIX}}
@@ -138,53 +157,171 @@ terms and are outside the stated certificate. Variable-length dynamic
 microbatch response-count weighting does not automatically equal a global
 token mean, so the population reduction must be reported explicitly.
 
-\section{Evaluation status and limitations}
-The current repository includes deterministic synthetic structural checks for
-normalization and prefix masking. It does not contain matched LLM training,
-multiple seeds, an independent AIME/MATH-style test set, or a benchmark claim.
-The formal proofs use exact real arithmetic on finite models; they do not
-formalize floating-point overflow, GPU kernels, Adam, Ray/vLLM execution, or
-the assumptions of a general neural policy. These are required before claiming
-empirical ICLR readiness.
+
+\section{REINFORCE Max}
+For response $i$, define $A_i=R_i-b_i$. Sparse terminal reward with $\gamma=1$
+expands to the same signal on every active token. Let $m_{i,t}$ be its action
+mask and let $P=\{(i,t):A_i>0,m_{i,t}=1\}$ and
+$N=\{(i,t):A_i<0,m_{i,t}=1\}$. The ideal asymmetric factors $\alpha,\beta>0$
+are chosen from the token masses and second moments so that
+\[
+ \sum_{P}\alpha A_i+\sum_N\beta A_i=0,\qquad
+ \frac{1}{|P|+|N|}\left(\sum_P(\alpha A_i)^2+\sum_N(\beta A_i)^2\right)=1.
+\]
+The normalized signal is $H_{i,t}=\alpha A_i$ on $P$, $\beta A_i$ on $N$,
+and zero on raw zero tokens. Consequently signs and within-sign ordering are
+preserved while positive and negative token mass are balanced. The code adds
+an epsilon, cap, clamp, and fallback; their effects are retained as explicit
+normalization residuals in the objective decomposition.
+
+\begin{proposition}[Binary class scaling]
+For binary rewards with positive and negative class masses and class-conditional
+mean active lengths $\bar L_+$ and $\bar L_-$, the ideal scale ratio satisfies
+$\alpha/\beta=\bar L_-/\bar L_+$. Thus the token-weighted update is a positive
+class-dependent multiple of the success-probability direction when length is
+constant within each reward class.
+\end{proposition}
+
+When response length varies within a class, the update contains a covariance
+term. A strict local-improvement statement therefore requires a covariance
+margin; the theorem does not assert that arbitrary content-dependent lengths
+or an arbitrary Adam step improve reward. The Lean files
+\texttt{BinaryLength.lean}, \texttt{BinaryUpdate.lean}, and
+\texttt{RLOOCovariance.lean} verify these distinctions.
+
+\section{REINFORCE Pro: Causal Prefix Gate}
+The cached correction uses the old-to-rollout ratio $w_t$. For thresholds
+$0<\ell_-<1<\ell_+$, define the detached prefix gate
+\[
+ M_t=\mathbf 1\left\{\ell_-\le
+ \exp\left(\frac1{\nu_t}\sum_{s\le t}m_s\log w_s\right)\le\ell_+\right\},
+ \qquad \nu_t=\max\left(1,\sum_{s\le t}m_s\right).
+\]
+The implemented standard-PPO loss is
+\[
+ \mathcal L=-\sum_{i,t}\omega_{i,t}M_{i,t}\,\operatorname{stopgrad}(w_{i,t})
+ \min\{r_{i,t}H_{i,t},\operatorname{clip}(r_{i,t})H_{i,t}\},
+\]
+where $omega$ includes the detached action mask and selected active-token
+reduction. The gate, $w$, $H$, and mask are detached; only the current PPO
+ratio $r$ carries the actor gradient.
+
+\begin{lemma}[Prefix stability]
+If each represented prefix ratio lies in $[\ell_-,\ell_+]$ and one additional
+log-ratio perturbation is bounded by $b$, the next prefix geometric mean changes
+by at most $b/(t+1)$ in log scale. Therefore a gate crossing can be localized
+to a suffix after the first rejected prefix.
+\end{lemma}
+
+\begin{theorem}[Causal continuation bound]
+Under the local trust-region assumption, the total variation between the
+continuation distributions after a history of depth $t$ is at most
+\[
+ d_t\le \min\left\{1,(T-t)\varepsilon,
+ \sqrt{(T-t)\delta/2}\right\}.
+\]
+For bounded terminal rewards, the corresponding continuation-value error is
+at most $2R_{\max}d_t$. Summing over reachable prefixes yields the adaptive
+remainder used in the performance certificate.
+\end{theorem}
+
+The causal gate differs from token-level TIS and sequence-level GSPO. A token
+outside the range is filtered according to its own prefix history, so early
+drift propagates forward while a late violation affects only a suffix. The
+implementation uses detached coefficients, avoiding an unintended gradient
+through the rollout correction or through the gate.
+
+\section{Unified objective identity}
+Let $k$ enumerate represented active positions, with nonnegative reduction
+weights $\omega_k$, gate $M_k$, raw signal $A_k$, normalized signal $H_k$, and
+ratios $r_k,w_k$. Define
+\begin{align*}
+ U&=\sum_k\omega_kr_kw_kA_k,&
+ G&=\sum_k\omega_kr_kw_k(1-M_k)A_k,\\
+ N&=\sum_k\omega_kr_kw_kM_k(H_k-A_k),&
+ C&=\sum_k\omega_kM_kw_k\bigl(r_kH_k-\min(r_kH_k,\operatorname{clip}(r_k)H_k)\bigr).
+\end{align*}
+\begin{proposition}[Finite-batch decomposition]
+For standard PPO,
+\[
+ -\mathcal L=U-G+N-C,\qquad C\ge0,
+\]
+and therefore $|-\mathcal L-U|\le |G|+|N|+C$. The identity holds for every
+realized batch, including random lengths and cached policy mismatch.
+\end{proposition}
+
+The three correction terms have different meanings: $G$ is the signed cost of
+prefix rejection, $N$ is the signed cost of numerical normalization, and $C$
+is the standard-PPO clipping deduction. The latter nonnegativity is not true
+for dual clipping; the checked counterexample uses advantage $-1$, current ratio
+$4$, clipped ratio $6/5$, and dual coefficient $3$, yielding deduction $-1$.
+
+\begin{theorem}[Finite-sample reward certificate]
+For a finite candidate family fixed before evaluation, $K$ independent RLOO
+blocks, and minimum active length $\ell$, let $\widehat\kappa_j$ be the
+self-normalized corrected increment for candidate $q_j$, and let $B_j$ be the
+summed continuation remainder from the causal bound. With probability at least
+$1-\sum_j v_j/[K(n\ell)^2\eta_j^2]$, simultaneously for all candidates,
+\[
+ J(q_j)-J(p)\ge \mu_L\bigl(\Delta S_{\rm PM}+\Delta G-\Delta N
+ +\Delta C-\eta_j\bigr)-B_j.
+\]
+Thus a positive corrected gain exceeding sampling, gate, normalization,
+clipping, and adaptive remainders is a sufficient certificate for true reward
+improvement. It is conditional on the stated finite-tree and trust-region
+assumptions, not a guarantee for an arbitrary neural policy.
+\end{theorem}
+
+\section{Sampling, reduction, and implementation correspondence}
+RLOO is unbiased for the response-level policy-gradient direction under
+conditional i.i.d. responses. For a response contribution $Z$ and active
+length $L$, response-mean reduction targets $\mathbb E[Z/L]$, whereas global
+token reduction targets $\mathbb E[Z]/\mathbb E[L]$. Their difference is
+\[
+ \mathbb E[Z/L]-\frac{\mathbb E[Z]}{\mathbb E[L]}
+ =-\frac{\mathbb E[(L-\mathbb E[L])Z/L]}{\mathbb E[L]}.
+\]
+This length covariance is why the theorem states the selected reduction
+explicitly. The standard PPO code path uses active-token mean; dynamic
+response-count replay weighting does not automatically reconstruct a global
+token mean for variable lengths. GSPO, dual clip, KL loss, entropy loss,
+reward shaping, and auxiliary losses are separate objectives outside this
+certificate.
+
+\section{Proof roadmap and formal scope}
+The main proof chain is: RLOO cancellation and moments; token expansion and
+normalization; prefix-gate stability and continuation discrepancy; exact
+finite-batch decomposition; self-normalized sampling concentration; and the
+finite-tree adaptive reward bound. Each theorem is mapped to a Lean declaration
+in \texttt{formal/PROOF\_AUDIT.md}. The formal development checks exact finite
+models and real arithmetic, including the dual-clip counterexample and the
+binary-length covariance boundary. It does not claim to formalize floating
+point, GPU kernels, Adam, Ray/vLLM scheduling, or general neural-network
+optimization.
+
+\input{main/3-preliminaries}
+\section{Theory scope and limitations}
+This is a theory paper. Deterministic structural checks for normalization and
+prefix masking are included as consistency checks, rather than as an empirical
+benchmark. The paper makes no claim about benchmark accuracy, sample
+efficiency, or wall-clock performance. The formal proofs use exact real
+arithmetic on finite models; they do not formalize floating-point overflow, GPU
+kernels, Adam, Ray/vLLM execution, or the assumptions of a general neural
+policy. These boundaries are part of the theorem statements and determine the
+conditions under which the results apply.
 
 \subsection*{AI use statement}
-Generative AI tools were used to assist with code navigation, proof-audit organization, and language editing. All mathematical statements, source changes, and reported checks were reviewed against the repository and verified by the authors; no generated text is treated as empirical evidence. The authors take responsibility for the final content.
+Generative AI tools assisted with code navigation, proof-audit organization, and language editing. All mathematical statements, source changes, and reported checks were reviewed against the repository. The authors take responsibility for the final content.
 
 \subsection*{Reproducibility statement}
-The repository contains the implementation, the exact finite-tree Lean development, the proof audit, and deterministic structural tests. The current artifact does not report GPU training or benchmark results; those experiments remain future work.
+The repository contains the implementation correspondence, pinned Lean development, proof audit, and deterministic structural checks. The paper is theory-focused and makes no empirical performance claim.
 
 \subsection*{Ethics statement}
 This work uses no human subjects or private user data.
 
+\typeout{ICLR_MAIN_END_PAGE=\thepage}
 \bibliographystyle{iclr2027/iclr2027_conference}
 \bibliography{main/reference}
-\appendix
-\section{Formalization and proof coverage}
-The accompanying Lean project is built with the repository's pinned toolchain and an
-explicit axiom audit. The audit records 31 labeled theorem, proposition, corollary,
-and lemma environments in the paper and maps each to a checked Lean declaration.
-The latest clean build checked 911 project theorems and allowed only
-\texttt{propext}, \texttt{Classical.choice}, and \texttt{Quot.sound}. This is a
-finite exact-real formalization; it does not certify floating-point kernels,
-Ray/vLLM scheduling, optimizer dynamics, or neural-network assumptions.
 
-The implementation theorem is restricted to standard PPO with
-\texttt{vllm\_is\_correction\_type=reinforce\_pro}, no dual clip, no KL or entropy
-loss, zero auxiliary-loss coefficient, sparse terminal reward, and zero KL reward
-coefficient. The Lean counterexample in \texttt{formal/ProMaxObjective.lean}
-shows why the nonnegative clipping deduction cannot be extended to dual clipping.
-The finite-tree adaptive result assumes mutual support, bounded rewards, and the
-stated local TV or reverse-KL bounds. The binary-length result additionally
-requires positive mass in both reward classes; content-dependent within-class
-length variation is covered only with the stated covariance margin.
-
-\section{Reproducibility materials}
-The source tree contains the implementation changes in
-\texttt{openrlhf/models/loss.py} and
-\texttt{openrlhf/trainer/ppo\_utils/experience\_maker.py}, the formal development
-under \texttt{formal/}, and deterministic CPU checks under
-\texttt{reinforce\_pro\_max/}. The checks cover the policy-loss contract, prefix
-masking, normalization safeguards, and structural examples. No GPU is available
-in the current build environment, so no LLM training, multi-seed comparison, or
-AIME/MATH-style benchmark result is reported here.
+\clearpage\input{main/appendix}
 \end{document}

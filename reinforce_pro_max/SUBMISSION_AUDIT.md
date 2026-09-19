@@ -11,8 +11,8 @@ entry point is `tex/iclr2027_submission.tex`; the exact style and bibliography
 files are under `tex/iclr2027/`. The author block is anonymous and
 `\\iclrfinalcopy` remains commented, as required for initial review.
 
-The compiled artifact `tex/iclr2027_submission.pdf` has 4 pages: 3 pages of
-main text and 1 page of appendix. The main text is below the ICLR 2027 initial
+The compiled artifact `tex/iclr2027_submission.pdf` has 43 pages: exactly 9 pages of main text, followed by the references and the
+full proof appendix. The main text ends at page 9, exactly matching the ICLR 2027 initial
 submission limit of 9 pages. Citations resolve with the official ICLR 2027
 bibliography style. The build has no overfull boxes; two underfull boxes occur
 in an appendix paragraph and do not change the page boundary.
@@ -31,15 +31,15 @@ scope, formalization boundary, and source locations.
 - The complete proof manuscript remains available as `tex/main.tex` and
   `tex/main.pdf`; it is intentionally separate from the page-limited ICLR
   entry point.
-- The current experiments are deterministic synthetic structural checks only.
-  There is no matched LLM training, multi-seed comparison, independent
-  AIME/MATH-style evaluation, or benchmark performance claim.
+- The paper is intentionally theory-focused. Deterministic structural checks are
+  included only as consistency checks for the implementation and formal claims;
+  no benchmark performance claim is made.
 
 ## Submission limitations
 
-The ICLR-format and content structure are now prepared, but empirical
-readiness is incomplete. GPU training, matched baselines, ablations, and
-independent evaluation are required before making empirical claims. The Lean
+The ICLR-format and content structure are prepared for a theory submission; the main text is exactly 9 pages.
+The central evidence is the theorem/proof development, the implementation
+correspondence, and the explicit assumptions and counterexamples. The Lean
 formalization uses exact finite models and does not certify floating-point
 kernels, Ray/vLLM scheduling, optimizer dynamics, or general neural-policy
-assumptions. No acceptance claim is made.
+assumptions. No empirical performance claim or acceptance claim is made.

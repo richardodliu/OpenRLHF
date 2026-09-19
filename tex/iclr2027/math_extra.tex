@@ -1,0 +1,68 @@
+% tex/math.tex — Math symbols, operators, and shared notation
+%
+% NOTE: theorem/lemma/definition environments are defined in `tex/env.tex` to
+% keep all environment configuration in a single place, aligned with the
+% reference material under `tex/literature/`.
+
+%==============================================================================
+% MATH OPERATORS
+%==============================================================================
+\providecommand{\argmax}{\mathop{\rm arg\,max}}
+\providecommand{\argmin}{\mathop{\rm arg\,min}}
+\providecommand{\sign}{\mathop{\rm sign}}
+\providecommand{\Tr}{\mathop{\rm Tr}}
+
+%==============================================================================
+% PROBABILITY AND STATISTICS
+%==============================================================================
+\providecommand{\E}{\mathbb{E}}
+\providecommand{\Var}{\mathrm{Var}}
+\providecommand{\Cov}{\mathrm{Cov}}
+\providecommand{\R}{\mathbb{R}}
+
+%==============================================================================
+% POLICY NOTATION
+%==============================================================================
+\providecommand{\piroll}{\pi_{\mathrm{roll}}}
+\providecommand{\pitheta}{\pi_{\theta}}
+% PPO-style implementations often denote the rollout snapshot as \piold. In this
+% paper, the theoretical behavior/data-generating policy is always \piroll; we
+% only mention \piold when mapping to implementation terminology.
+\providecommand{\piold}{\pi_{\mathrm{old}}}
+\providecommand{\piref}{\pi_{\mathrm{ref}}}
+\providecommand{\ylt}{y_{<t}}
+\providecommand{\yle}{y_{\le t}}
+
+%==============================================================================
+% IMPORTANCE RATIOS (TRM/GSPO STYLE)
+%------------------------------------------------------------------------------
+% We follow the reference style in `tex/literature/` and use:
+% - token-level ratio: \rho_t
+% - sequence-level geometric-mean ratio: \rhoseq
+% - prefix-level geometric-mean ratio: \rhoprefix{t}
+%==============================================================================
+\providecommand{\rhoseq}{\rho^{\mathrm{seq}}}
+\providecommand{\rhoprefix}[1]{\rho_{#1}^{\mathrm{pre}}}
+
+%==============================================================================
+% DIVERGENCE MEASURES (following TRM paper convention)
+%==============================================================================
+\providecommand{\DKL}{D_{\mathrm{KL}}}
+\providecommand{\DTV}{D_{\mathrm{TV}}}
+\providecommand{\Dkltok}{D_{\mathrm{KL}}^{\mathrm{tok}}}
+\providecommand{\Dtvtok}{D_{\mathrm{TV}}^{\mathrm{tok}}}
+\providecommand{\Dkltokmax}{D_{\mathrm{KL}}^{\mathrm{tok,max}}}
+\providecommand{\Dtvtokmax}{D_{\mathrm{TV}}^{\mathrm{tok,max}}}
+\providecommand{\Dklseq}{D_{\mathrm{KL}}^{\mathrm{seq}}}
+\providecommand{\Dtvseq}{D_{\mathrm{TV}}^{\mathrm{seq}}}
+\providecommand{\Dbar}{\bar{D}}
+
+%==============================================================================
+% COMMON MATH SHORTCUTS
+%==============================================================================
+\providecommand{\Ls}{\mathcal{L}}
+\def\eps{{\epsilon}}
+\providecommand{\epslow}{\epsilon_{\mathrm{low}}}
+\providecommand{\epshigh}{\epsilon_{\mathrm{high}}}
+\def\ceil#1{\lceil #1 \rceil}
+\def\floor#1{\lfloor #1 \rfloor}
