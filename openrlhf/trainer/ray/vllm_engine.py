@@ -279,6 +279,9 @@ def create_vllm_engines(
             "enable_sleep_mode": vllm_enable_sleep,
         }
 
+        if cache_bytes := os.environ.get("OPENRLHF_VLLM_KV_CACHE_BYTES"):
+            actor_kwargs["kv_cache_memory_bytes"] = int(cache_bytes)
+
         actor_kwargs.update(
             {
                 "agent_func_path": agent_func_path,

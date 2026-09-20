@@ -218,7 +218,7 @@ class BasePPOTrainer(ABC):
 
         # Peek at the first decoded sample for quick sanity check.
         sample0 = [
-            self.tokenizer.decode(experiences[0].sequences[0].unsqueeze(0), skip_special_tokens=True)[0],
+            self.tokenizer.decode(experiences[0].sequences[0], skip_special_tokens=True),
             experiences[0].info["reward"][0].item(),
         ]
         logger.info(f"Sample: {sample0}")
