@@ -32,7 +32,7 @@
       "global_normalization": false
     }
   },
-  "scope": "Four 100-update arms share rollout-denominator PPO clipping: baseline, Max only, Pro mask only, Max + Pro mask. One model and seed. Previous ICEPOP run is archived separately.",
-  "baseline_definition": "Token-level PPO clip with current training / rollout inference ratio; clip interval [0.8, 1.28]; RLOO with shared global normalization; no extra IS multiplier or gate.",
-  "pro_definition": "Frozen old/rollout causal prefix mask [0.5,5] applied to the same rollout-denominator PPO objective; no additional IS multiplier."
+  "scope": "Four 100-update arms share an unclipped token IS objective: baseline, Max, Pro causal prefix mask, Max+Pro. One seed. Prior ICEPOP and PPO-clipped runs are separate archives.",
+  "baseline_definition": "Unclipped token IS surrogate: mean(current/rollout ratio * RLOO advantage), no learned trust-region mask and no extra IS multiplier.",
+  "pro_definition": "Multiply the same token IS surrogate by a detached causal prefix geometric-mean mask computed from current/rollout ratio, thresholds [0.5,5]. No PPO clipping and no extra IS multiplier."
 }

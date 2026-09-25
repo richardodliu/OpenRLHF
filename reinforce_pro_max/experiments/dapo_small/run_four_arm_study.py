@@ -1,4 +1,4 @@
-"""Run only the fixed four-arm short study with an uncorrected baseline; preserve old cancellation."""
+"""Run only the four-arm unclipped token IS study with optional causal prefix mask; preserve old cancellation."""
 from pathlib import Path
 import os,sys,json,hashlib,subprocess,datetime,fcntl,time
 R=Path(sys.argv[sys.argv.index('--run-dir')+1]).resolve() if '--run-dir' in sys.argv else Path(__file__).resolve().parent;P=json.loads((R/'plan.json').read_text())
@@ -27,8 +27,9 @@ def execute(args,cwd,env,folder,kind):
 def environment():
  e=os.environ.copy();e.update(PYTHONPATH=str(R/'source'),CUDA_VISIBLE_DEVICES='0,1,2,3,4,5,6,7',WANDB_MODE='disabled',OMP_NUM_THREADS='4',TOKENIZERS_PARALLELISM='false',PYTHONUNBUFFERED='1',VLLM_WORKER_MULTIPROC_METHOD='spawn');e['PATH']=str(Path(sys.executable).parent)+':'+e.get('PATH','');e.pop('WANDB_API_KEY',None);e.pop('RAY_ADDRESS',None);return e
 def evaluate(name,model):
+ for path,expected in json.loads((R/'evaluation-inputs.json').read_text()).items():assert digest(path)==expected,path
  folder=R/name/'evaluation';env=environment();env['CUDA_VISIBLE_DEVICES']='0,1,2,3';state('evaluating',run=name)
- execute([sys.executable,'-u',str(R/'evaluate_aime25.py'),'--model',str(model),'--output',str(folder),'--suite','math'],R,env,folder,'eval')
+ execute([sys.executable,'-u','/volume/pt-train/users/rbliu/github/OpenRLHF/reinforce_pro_max/experiments/dapo_small/evaluate_aime25.py','--model',str(model),'--output',str(folder),'--suite','math'],R,env,folder,'eval')
  if not (folder/'_SUCCESS').exists():raise RuntimeError('Missing completed evaluation marker')
 def summarize():
  result={}
@@ -56,8 +57,5 @@ if __name__=='__main__':
  with (R/'study.lock').open('w') as lock:
   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);(R/'runner.pid').write_text(str(os.getpid())+'\n')
   try:
-   state('queued',waiting_for=P['supersedes'],next_run='baseline')
-   with (Path(P['supersedes'])/'study.lock').open('a') as previous_lock:
-    fcntl.flock(previous_lock,fcntl.LOCK_EX)
    main()
   except Exception as exc:state('failed',error=repr(exc));raise

@@ -109,38 +109,43 @@ or generating responses. Standard evaluation uses four GPUs for tensor paralleli
 
 ## Four-arm component comparison
 
-`study-arms.json` records the current configuration. Each arm starts from the same
-Qwen2.5-Math-7B initial model, uses seed 42 and runs 100 updates on the same subset.
-All four arms use token-level PPO clipping with the differentiable ratio
-`exp(current_training_logprob - rollout_inference_logprob)` and clip interval
-`[0.8, 1.28]`, matching the TRM clipping baseline's interval.
+`study-arms.json` is the authoritative current configuration. All four arms start
+from Qwen2.5-Math-7B, use seed 42, and run 100 updates on the same training subset.
+The shared objective is **unclipped token-level importance sampling**:
 
-| Arm | Advantage processing | Pro mask | Extra IS multiplier |
-| --- | --- | --- | --- |
-| baseline | RLOO + global normalization | No | No |
-| max_only | Max sign-dependent scaling | No | No |
-| pro_only | RLOO + global normalization | Yes | No |
-| pro_max | Max sign-dependent scaling | Yes | No |
+- Baseline: `advantage * ratio`.
+- Pro: `causal_prefix_mask * advantage * ratio`.
+- `ratio = exp(current_training_logprob - rollout_inference_logprob)` appears once.
+- No PPO clipping, ICEPOP filtering or additional IS multiplier is used.
 
-Pro uses the existing detached causal prefix geometric mean of cached-old /
-rollout probabilities, with thresholds `[0.5, 5]`. It adds only a mask; the common
-PPO ratio already accounts for rollout probabilities. Max replaces the baseline's
-global normalization with its own scaling, so its contrast measures that full
-advantage-processing change, not just one scalar in isolation.
+| Arm | Advantage processing | Trust-region mask |
+| --- | --- | --- |
+| baseline | RLOO + global normalization | None |
+| max_only | Max sign-dependent scaling | None |
+| pro_only | RLOO + global normalization | Causal prefix |
+| pro_max | Max sign-dependent scaling | Causal prefix |
 
-`rollout_clip.patch` records the changes against the study's frozen training source,
-including collection of rollout log probabilities for all arms. The implementation
-uses `policy_loss_type=ppo_rollout`; existing `ppo` behavior is unchanged.
-`check_rollout_clip.py --source /path/to/patched/source` checks both loss values and
-gradients, with and without the mask and with different advantage scales.
+For valid token position t, Pro computes the geometric mean of the same ratio
+from the first response token through t. It keeps the token when that value is
+in `[0.5, 5]`. The mask is detached. Future tokens cannot affect earlier masks;
+tokens may be accepted again after a rejected prefix. Padding masks still apply.
+Loss reduction uses all valid response tokens, not only accepted tokens.
 
-`run_four_arm_study.py --run-dir /path/to/prepared/study` runs the current plan,
-waits for the preceding study's lock and preserves that study's outputs. It needs
-the prepared study directory (source, configuration, data and validation records).
-The former RLOO + ICEPOP run is an archived additional reference, not the baseline
-for this four-arm comparison. `run_pro_only_extension.py` is the superseded legacy
-queue extension and must not be used with the current plan.
+This follows TRM's masked IS surrogate structure, replacing its sequence mask
+with a causal prefix mask. It is not an exact TRM reproduction: the mask criterion,
+model, advantage processing and training budget differ. Max replaces the
+baseline's global normalization with its own scaling, so the Max contrast measures
+that complete advantage-processing change.
 
-All four arms use the same reward function and local AIME25 evaluation. Comparisons
-include Max vs baseline, Pro vs baseline, Pro Max vs Max, and Pro Max vs Pro.
-A single training seed and 100 updates per arm scope the conclusions to this run.
+`training-source.tar.gz` contains the complete frozen training source for this
+experiment, with no dependency on earlier run directories. `check_prefix_is.py`
+checks loss values and gradients against the explicit formula. `study-plan.json`
+records the complete fixed plan; its machine paths identify the training host.
+`run_four_arm_study.py --run-dir /path/to/prepared/study` runs that plan.
+
+Current run directory:
+`/volume/pt-train/users/rbliu/github/test/runs/promax_dapo_fixed_20260925`.
+All previous experimental run directories and superseded clipping/queue scripts
+were removed at the user's request. Current results start from scratch.
+All four arms use the same reward function and local AIME25 evaluation.
+One seed and 100 updates per arm scope conclusions to this experiment.
