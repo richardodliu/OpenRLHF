@@ -5,8 +5,8 @@
   "group_size": 8,
   "learning_rate": 3e-06,
   "gate_thresholds": [
-    0.5,
-    5.0
+    0.8,
+    1.25
   ],
   "max_context": 4096,
   "max_generation": 3072,
@@ -34,5 +34,12 @@
   },
   "scope": "Four 100-update arms share an unclipped token IS objective: baseline, Max, Pro causal prefix mask, Max+Pro. One seed. Prior ICEPOP and PPO-clipped runs are separate archives.",
   "baseline_definition": "Unclipped token IS surrogate: mean(current/rollout ratio * RLOO advantage), no learned trust-region mask and no extra IS multiplier.",
-  "pro_definition": "Multiply the same token IS surrogate by a detached causal prefix geometric-mean mask computed from current/rollout ratio, thresholds [0.5,5]. No PPO clipping and no extra IS multiplier."
+  "pro_definition": "Multiply the same token IS surrogate by a detached causal prefix geometric-mean mask computed from current/rollout ratio, thresholds [0.8,1.25]. No PPO clipping and no extra IS multiplier.",
+  "gate_threshold_reference": {
+    "selection": "Explicit user choice: [0.8, 1.25]",
+    "geometry": "Reciprocal bounds, symmetric in log space",
+    "statistic_reference": "GSPO Eq. (7): geometric mean of token ratios; Pro applies it to causal prefixes for a binary mask",
+    "statistic_source": "https://arxiv.org/html/2507.18071v2#S4.SS1",
+    "gspo_clipping_parameters_adopted": false
+  }
 }

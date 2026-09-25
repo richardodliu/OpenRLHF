@@ -45,6 +45,26 @@ def main():
             changed_old = fn(values, old+2, a, mask, rollout)[0]
             torch.testing.assert_close(actual.detach(), changed_old)
             checked.append({'pro':pro,'scaled_advantages':scaled,'loss':actual.item()})
+    # User-selected interval: below, inside, above, and causal reentry.
+    bounds = [.8, 1.25]
+    small_ratio = torch.tensor([[.5, 2., 4., .25]], dtype=torch.float32)
+    rollout32 = torch.zeros_like(small_ratio)
+    current32 = small_ratio.log().requires_grad_()
+    ones = torch.ones_like(small_ratio)
+    narrow = PolicyLoss(policy_loss_type='token_is', enable_vllm_is_correction=True,
+                        vllm_is_correction_type='reinforce_pro', vllm_is_truncated_threshold=bounds)
+    actual = narrow(current32, rollout32, ones, ones, rollout32)[0]
+    prefix = (current32.detach().cumsum(-1)/torch.arange(1,5)).exp()
+    accepted = (prefix >= bounds[0]) & (prefix <= bounds[1])
+    assert accepted.tolist() == [[False, True, False, True]], accepted
+    expected = -(small_ratio*accepted).mean()
+    torch.testing.assert_close(actual, expected)
+    gradient = torch.autograd.grad(actual, current32)[0]
+    torch.testing.assert_close(gradient, -small_ratio*accepted/4)
+    changed_future = current32.detach().clone();changed_future[0,-1] += 1
+    changed_prefix = (changed_future.cumsum(-1)/torch.arange(1,5)).exp()
+    torch.testing.assert_close(prefix[:,:-1], changed_prefix[:,:-1])
+    checked.append({'thresholds':bounds,'prefix_acceptance':accepted.tolist(),'causal_reentry':True})
     try:
         fn(values, old, advantage, mask, None)
     except ValueError:

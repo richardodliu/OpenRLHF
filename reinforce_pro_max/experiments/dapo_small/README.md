@@ -127,7 +127,10 @@ The shared objective is **unclipped token-level importance sampling**:
 
 For valid token position t, Pro computes the geometric mean of the same ratio
 from the first response token through t. It keeps the token when that value is
-in `[0.5, 5]`. The mask is detached. Future tokens cannot affect earlier masks;
+in `[0.8, 1.25]`, as explicitly selected by the user. The bounds are reciprocal
+and symmetric in log space. The geometric-mean statistic follows the form of
+[GSPO Eq. (7)](https://arxiv.org/html/2507.18071v2#S4.SS1), applied to causal prefixes;
+GSPO's clipping widths are not adopted. Prefix accumulation uses float32. The mask is detached. Future tokens cannot affect earlier masks;
 tokens may be accepted again after a rejected prefix. Padding masks still apply.
 Loss reduction uses all valid response tokens, not only accepted tokens.
 
