@@ -1,0 +1,76 @@
+# DAPO data and reward snapshot
+
+This directory stores the dataset and reward function used for the small DAPO
+experiment. It contains inputs and validation records, not experiment results.
+
+## Files
+
+| File | Contents |
+| --- | --- |
+| `distinct-prompts-with-rewards.parquet` | Full public deduplicated release: 17,398 exact-unique prompts and their original reward labels. |
+| `train-3200.jsonl` | Fixed 3,200-example training subset with `question` and `label` fields. |
+| `mathverify_dapo.py` | Reward function with final line-start `Answer:` section extraction. |
+| `source.json` | Public source URL, pinned revision, size and SHA-256. |
+| `training-selection.json` | Exclusions, zero-based source row indices, seed and training-file hash. |
+| `reward-validation.json` | Validation results for this exact reward-file hash. |
+| `SHA256SUMS` | Checksums of data, reward code and JSON records. |
+
+## Dataset provenance and selection
+
+The original dataset is [DAPO-Math-17k](https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k).
+The bundled Parquet is the public
+[YouJiacheng deduplicated release](https://huggingface.co/datasets/YouJiacheng/DAPO-Math-17k-dedup),
+pinned at revision `6e26a33abdabd3e6aaa1d742326b790758f7dbc5`.
+Consult these source repositories for dataset attribution and licensing.
+This is a pinned input for this experiment; it is not a claim that TRM used
+this exact release or subset.
+
+Deduplication here means exact prompt-text deduplication, not semantic
+deduplication. All 17,398 bundled prompt/label pairs were found in the existing
+local DAPO conversion, which contained 17,917 records. That conversion's SHA-256
+was `b94a18b981121c5c9adcd22f86f3dbb7a6c2e241193e4e547f07075daec40b8b`.
+
+For the training subset, seven source rows whose questions had conflicting
+labels in that conversion were excluded. Ten further rows exceeded the
+1,024-token prompt limit under the experiment's Qwen2.5-Math-7B preprocessing.
+From the remaining 17,381 rows, `random.Random(42).sample(eligible, 3200)` selected
+the subset, sorted by source row index before serialization. The manifest records
+all selected and excluded indices; the bundled subset is the authoritative input.
+Prompts, including their original `Answer:` instructions, and ground-truth labels
+were preserved without rewriting.
+
+The AIME25 overlap check removed only the known DAPO instruction wrapper and
+compared NFKC/whitespace-normalized question text. It found no exact overlaps;
+this is not a semantic contamination audit.
+
+## Reward behavior
+
+Relative to the original `mathverify_v3.py`, only `extract_answer` was changed:
+
+1. If a line-start `Answer:` marker exists, restrict the passage to the text after
+   its last occurrence (case-insensitive, with whitespace allowed).
+2. Continue the existing boxed-answer extraction on that passage.
+3. If no box is present but an `Answer:` section exists, use its first nonempty
+   line after stripping surrounding whitespace.
+4. Continue the original mathematical equivalence checking and reward logic.
+
+Without an `Answer:` marker, the original boxed-answer behavior is retained.
+The existing final-200-character extraction window is unchanged: an `Answer:`
+marker outside that window is not seen by the extractor during reward scoring.
+Correct, incorrect and unextractable answers still receive `1`, `-0.5` and `-1`,
+respectively. For example, `\boxed{35}\nAnswer: \boxed{34}` is graded using `34`.
+
+Dependencies are `torch`, `sympy` and `pylatexenc`. From the repository root,
+the relevant training arguments are:
+
+```bash
+--prompt_data reinforce_pro_max/experiments/dapo_small/train-3200.jsonl \
+--input_key question --label_key label \
+--remote_rm_url reinforce_pro_max/experiments/dapo_small/mathverify_dapo.py
+```
+
+The recorded reward validation passed 22 targeted cases, five unchanged legacy
+cases and correct-answer emission checks for all 3,200 training labels. These
+checks validate parsing and grading behavior, not model performance.
+
+Verify the archived bytes from this directory with `sha256sum -c SHA256SUMS`.

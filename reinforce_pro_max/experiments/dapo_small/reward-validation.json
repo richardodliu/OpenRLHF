@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "targeted_cases": 22,
+  "legacy_unchanged_cases": 5,
+  "all_training_labels_correct_when_emitted": 3200,
+  "original_sha256": "f0363749d2b4d8de80d1ce5d4ec92ed4889fd30d536448143f7eefe2718b244f",
+  "new_sha256": "ba7ee29bb123f97abc79298b8de0729d9b554e250bfb958554c6cc5118ab049c",
+  "only_modified_function": "extract_answer",
+  "unchanged_reward_values": [
+    1,
+    -0.5,
+    -1
+  ],
+  "unchanged_tail_characters": 200
+}
