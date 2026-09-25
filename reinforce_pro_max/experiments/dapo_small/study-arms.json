@@ -13,24 +13,26 @@
   "arms": {
     "baseline": {
       "estimator": "rloo",
-      "gate": "icepop",
+      "gate": "none",
       "global_normalization": true
     },
     "max_only": {
       "estimator": "reinforce_max",
-      "gate": "icepop",
-      "global_normalization": false
-    },
-    "pro_max": {
-      "estimator": "reinforce_max",
-      "gate": "reinforce_pro",
+      "gate": "none",
       "global_normalization": false
     },
     "pro_only": {
       "estimator": "rloo",
       "gate": "reinforce_pro",
       "global_normalization": true
+    },
+    "pro_max": {
+      "estimator": "reinforce_max",
+      "gate": "reinforce_pro",
+      "global_normalization": false
     }
   },
-  "scope": "One model, one training seed, four 100-update arms: baseline, Max, Pro, Pro Max. Component study, not a TRM method reproduction or a multi-seed superiority claim."
+  "scope": "Four 100-update arms share rollout-denominator PPO clipping: baseline, Max only, Pro mask only, Max + Pro mask. One model and seed. Previous ICEPOP run is archived separately.",
+  "baseline_definition": "Token-level PPO clip with current training / rollout inference ratio; clip interval [0.8, 1.28]; RLOO with shared global normalization; no extra IS multiplier or gate.",
+  "pro_definition": "Frozen old/rollout causal prefix mask [0.5,5] applied to the same rollout-denominator PPO objective; no additional IS multiplier."
 }

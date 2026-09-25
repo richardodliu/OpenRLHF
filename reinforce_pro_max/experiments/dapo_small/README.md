@@ -109,19 +109,38 @@ or generating responses. Standard evaluation uses four GPUs for tensor paralleli
 
 ## Four-arm component comparison
 
-`study-arms.json` records the fixed configuration. Each arm starts from the same
+`study-arms.json` records the current configuration. Each arm starts from the same
 Qwen2.5-Math-7B initial model, uses seed 42 and runs 100 updates on the same subset.
+All four arms use token-level PPO clipping with the differentiable ratio
+`exp(current_training_logprob - rollout_inference_logprob)` and clip interval
+`[0.8, 1.28]`, matching the TRM clipping baseline's interval.
 
-| Arm | Advantage estimator | Global RLOO normalization | Gate |
+| Arm | Advantage processing | Pro mask | Extra IS multiplier |
 | --- | --- | --- | --- |
-| baseline | RLOO | Yes | ICEPOP |
-| max_only | Max | No | ICEPOP |
-| pro_only | RLOO | Yes | Pro causal prefix |
-| pro_max | Max | No | Pro causal prefix |
+| baseline | RLOO + global normalization | No | No |
+| max_only | Max sign-dependent scaling | No | No |
+| pro_only | RLOO + global normalization | Yes | No |
+| pro_max | Max sign-dependent scaling | Yes | No |
 
-Pro-only changes only the gate relative to baseline. All four arms use the same
-reward function and AIME25 evaluation. The running study executes baseline,
-Max and Pro Max first; `run_pro_only_extension.py` waits on its process lock,
-checks successful completion, then runs Pro-only and regenerates the combined
-analysis. It requires the frozen study directory; it is not a standalone training
-launcher. Comparisons include Pro-only minus baseline and Pro Max minus Pro-only.
+Pro uses the existing detached causal prefix geometric mean of cached-old /
+rollout probabilities, with thresholds `[0.5, 5]`. It adds only a mask; the common
+PPO ratio already accounts for rollout probabilities. Max replaces the baseline's
+global normalization with its own scaling, so its contrast measures that full
+advantage-processing change, not just one scalar in isolation.
+
+`rollout_clip.patch` records the changes against the study's frozen training source,
+including collection of rollout log probabilities for all arms. The implementation
+uses `policy_loss_type=ppo_rollout`; existing `ppo` behavior is unchanged.
+`check_rollout_clip.py --source /path/to/patched/source` checks both loss values and
+gradients, with and without the mask and with different advantage scales.
+
+`run_four_arm_study.py --run-dir /path/to/prepared/study` runs the current plan,
+waits for the preceding study's lock and preserves that study's outputs. It needs
+the prepared study directory (source, configuration, data and validation records).
+The former RLOO + ICEPOP run is an archived additional reference, not the baseline
+for this four-arm comparison. `run_pro_only_extension.py` is the superseded legacy
+queue extension and must not be used with the current plan.
+
+All four arms use the same reward function and local AIME25 evaluation. Comparisons
+include Max vs baseline, Pro vs baseline, Pro Max vs Max, and Pro Max vs Pro.
+A single training seed and 100 updates per arm scope the conclusions to this run.
