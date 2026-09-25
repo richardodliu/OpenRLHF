@@ -106,3 +106,22 @@ python reinforce_pro_max/experiments/dapo_small/evaluate_aime25.py \
 The script defaults to data and reward files beside itself. Add `--validate-only`
 to check tokenization, repetition counts and grading without loading model weights
 or generating responses. Standard evaluation uses four GPUs for tensor parallelism.
+
+## Four-arm component comparison
+
+`study-arms.json` records the fixed configuration. Each arm starts from the same
+Qwen2.5-Math-7B initial model, uses seed 42 and runs 100 updates on the same subset.
+
+| Arm | Advantage estimator | Global RLOO normalization | Gate |
+| --- | --- | --- | --- |
+| baseline | RLOO | Yes | ICEPOP |
+| max_only | Max | No | ICEPOP |
+| pro_only | RLOO | Yes | Pro causal prefix |
+| pro_max | Max | No | Pro causal prefix |
+
+Pro-only changes only the gate relative to baseline. All four arms use the same
+reward function and AIME25 evaluation. The running study executes baseline,
+Max and Pro Max first; `run_pro_only_extension.py` waits on its process lock,
+checks successful completion, then runs Pro-only and regenerates the combined
+analysis. It requires the frozen study directory; it is not a standalone training
+launcher. Comparisons include Pro-only minus baseline and Pro Max minus Pro-only.

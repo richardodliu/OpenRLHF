@@ -1,0 +1,36 @@
+{
+  "seed": 42,
+  "updates_per_arm": 100,
+  "train_prompts": 3200,
+  "group_size": 8,
+  "learning_rate": 3e-06,
+  "gate_thresholds": [
+    0.5,
+    5.0
+  ],
+  "max_context": 4096,
+  "max_generation": 3072,
+  "arms": {
+    "baseline": {
+      "estimator": "rloo",
+      "gate": "icepop",
+      "global_normalization": true
+    },
+    "max_only": {
+      "estimator": "reinforce_max",
+      "gate": "icepop",
+      "global_normalization": false
+    },
+    "pro_max": {
+      "estimator": "reinforce_max",
+      "gate": "reinforce_pro",
+      "global_normalization": false
+    },
+    "pro_only": {
+      "estimator": "rloo",
+      "gate": "reinforce_pro",
+      "global_normalization": true
+    }
+  },
+  "scope": "One model, one training seed, four 100-update arms: baseline, Max, Pro, Pro Max. Component study, not a TRM method reproduction or a multi-seed superiority claim."
+}
