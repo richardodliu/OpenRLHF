@@ -1,0 +1,10 @@
+{
+  "source_repository": "https://github.com/Simplified-Reasoning/LUFFY",
+  "commit": "01f4ae066249e6965ce0d5512ccdf99a12895c74",
+  "source_file": "data/valid.all.parquet",
+  "source_sha256": "92503399b914212d2e3d85839882bc1376a0111652fec0dcb722e86307e97617",
+  "selection": "data_source == 'aime25', original order and repetitions preserved",
+  "rows": 960,
+  "unique_questions": 30,
+  "data_sha256": "f71d3a0aadbef870a1fc1784abfacbf14dcc10f351c17b32141e0c9d7be5a9b3"
+}

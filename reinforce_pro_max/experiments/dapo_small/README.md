@@ -74,3 +74,35 @@ cases and correct-answer emission checks for all 3,200 training labels. These
 checks validate parsing and grading behavior, not model performance.
 
 Verify the archived bytes from this directory with `sha256sum -c SHA256SUMS`.
+
+## Standalone AIME25 evaluation
+
+`aime25.jsonl` contains the 960 AIME25 records used in this experiment: 30
+questions repeated 32 times, preserving source messages, answers, order and
+original row indices. `evaluation-source.json` records the LUFFY source commit
+and checksums. LUFFY is the data source only; evaluation does not import its code
+or require a checkout of that repository.
+
+`evaluate_aime25.py` reads these local records and calls this directory's
+`mathverify_dapo.py:reward_func` directly. Correctness is `reward == 1`, with the
+same answer extraction, final-200-character window and mathematical grading as
+training. Both `Answer:` and boxed answers are accepted. This replaces the
+previously planned OAT grader; reported scores use this shared reward function.
+
+Generation retains temperature 1.0, top-p 0.95, seed 42 plus the selected row's
+position, context length 4,096 and generation cap 3,072. The source system message
+is removed before applying the model's own chat template, as in the existing
+evaluation setup. All 32 responses contribute to avg@32 (sample-mean accuracy),
+not pass@32. The runner records data, reward, evaluator and model hashes and saves
+generated text and individual scores before producing aggregate results.
+
+In an environment with `vllm`, `transformers`, `torch`, `sympy` and `pylatexenc`:
+
+```bash
+python reinforce_pro_max/experiments/dapo_small/evaluate_aime25.py \
+  --model /path/to/completed/model --output /path/to/evaluation
+```
+
+The script defaults to data and reward files beside itself. Add `--validate-only`
+to check tokenization, repetition counts and grading without loading model weights
+or generating responses. Standard evaluation uses four GPUs for tensor parallelism.
