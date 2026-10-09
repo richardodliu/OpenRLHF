@@ -1,0 +1,1351 @@
+{
+  "scope": "Explicit mathematical environments in the sole active ICLR entry closure; excludes inline claims and proof bodies.",
+  "status_semantics": "not_reviewed_in_ledger means not yet individually recorded here, not unproved. reviewed_finite_scope is a human semantic scope review, not a machine equivalence certificate.",
+  "statements": [
+    {
+      "id": "tex/main/core-appendix.tex::asm:support",
+      "source": "tex/main/core-appendix.tex",
+      "line": 23,
+      "kind": "assumption",
+      "label": "asm:support",
+      "title": "Mutual Policy Support",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "312baea7b823c7cde33b1e234c299fe0b3339161a7d03274cb720747bfe460cd",
+      "review_status": "reviewed_assumption_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/TreeSurrogate.lean",
+          "theorem": "prob_mul_ratio",
+          "file_sha256": "25006ea1ab65c39b66e0043ae8bdd51f157d4cb93d2074120eb6f880b3a11a72"
+        },
+        {
+          "file": "formal/PrefixConcentration.lean",
+          "theorem": "pathMass_ratio",
+          "file_sha256": "05ff9d8e8c11de077055d3dc0c6c9cd58369307c64758c0a5c92d678d9cd1dc2"
+        },
+        {
+          "file": "formal/TreeKL.lean",
+          "theorem": "local_log_ratio_eq_neg_reverseKL",
+          "file_sha256": "3dfefc5b05f1227797d3b629661635bf5a24c3959f4f9fcdecb56d12f28e5c9a"
+        }
+      ],
+      "review_note": "Assumption alignment only, not a proof that actual training satisfies it. For nonnegative normalized masses, equal zero sets match equivalent positivity; the finite change-of-measure and KL proofs require this support condition. Lean divides by zero as zero off support, while paper permits ratio one there; all cited expectations weight those terms by zero. Sampled positive-support identities agree."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::cor:binary-local-improvement",
+      "source": "tex/main/core-appendix.tex",
+      "line": 564,
+      "kind": "corollary",
+      "label": "cor:binary-local-improvement",
+      "title": "Local true-reward improvement of the complete binary update",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "fc743fbe585ca9a2c6d65e61f5b8192b7e85e7a40c44f76b80a37d0259d15c7d",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/BinaryLength.lean",
+          "theorem": "response_class_multiplier_lower_bound",
+          "file_sha256": "ccb2ec840dcd789a916bbd9e47d29302be21794e5500d647d8e93dd77871d153"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "success_gradient_correct",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "population_ascent_bound",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "population_local_improvement",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "response_local_improvement",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "class_length_local_improvement",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        }
+      ],
+      "review_note": "0/1 rewards; both classes positive; real Hilbert parameters with nonnegative normalized policy in a neighborhood. Uniform branch restricted to homogeneous groups. Actual-class-multiplier margin and conservative eta/Lmax margin are separately covered. Existence of a sufficiently small positive radius, not a numerical step size or arbitrary optimizer guarantee. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::cor:binary-token-standardization",
+      "source": "tex/main/core-appendix.tex",
+      "line": 379,
+      "kind": "corollary",
+      "label": "cor:binary-token-standardization",
+      "title": "Equivalence to token-weighted standardization for binary rewards",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "43896db2f5e40b6cebc448ddc1b16fb99f7c1ee4a796c1d1222dc7e3af65f83a",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "two_level_token_zscore",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "finite_binary_rloo_normalization",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        }
+      ],
+      "review_note": "Same mixed binary group and token weights. Population standard deviation divides by token count, not Bessel-corrected sample standard deviation. All raw binary mixed-group advantages are nonzero."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::cor:prompt-ascent",
+      "source": "tex/main/core-appendix.tex",
+      "line": 634,
+      "kind": "corollary",
+      "label": "cor:prompt-ascent",
+      "title": "Aggregating prompt-specific population updates",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "e5a954076cec6ecd421db39e0ce60609db04539b6e168d902856b2c187d51a8b",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "covariance_identity",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "covariance_bound",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "projection_mean",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "average_ascent_bound",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "finite_prompt_gradient",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "finite_prompt_local_improvement",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        },
+        {
+          "file": "formal/PromptAscent.lean",
+          "theorem": "positive_multipliers_can_reverse",
+          "file_sha256": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5"
+        }
+      ],
+      "review_note": "Fixed finite prompt probability law. U_x=lambda_x*g_x+e_x supplied under preceding per-prompt assumptions. Cross-prompt covariance and projected residual retained; positive prompt multipliers alone do not imply global ascent. Algebraic reversal example is not asserted to be a realized training run."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:adaptive-norm",
+      "source": "tex/main/core-appendix.tex",
+      "line": 329,
+      "kind": "definition",
+      "label": "def:adaptive-norm",
+      "title": "Adaptive Normalization",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "06cab476b66fc28a1b4c5feaa95e0b956c9571ff7a227024f4432f9ad8f4e6eb",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "adaptive_closed_form",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        },
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "adaptive_closed_form_unique",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "finite_scaled_moments",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        }
+      ],
+      "review_note": "Consolidated unchanged ideal definition: nonempty active sign sets, excluded zero tokens, positive sums S+/S-, square sums Q+/Q-, count d. The two empirical moment constraints are written directly as alpha*S+=beta*S- and alpha^2*Q+ + beta^2*Q-=d. Existing finite_scaled_moments converts between these and token moments; adaptive_closed_form and adaptive_closed_form_unique prove same positive solution. Equation label preserved; numerical safeguards and empty-class fallback remain separate."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:impl-surrogate",
+      "source": "tex/main/core-appendix.tex",
+      "line": 71,
+      "kind": "definition",
+      "label": "def:impl-surrogate",
+      "title": "Trajectory-Level Surrogate",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "bb7ad340e8c27713ac00650f1751baf2da6fd095a87209c0f347df30009ee002",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_independent_baseline_average",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_surrogate_baseline_offset",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_context_surrogate_equivalence",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        }
+      ],
+      "review_note": "Definition of the raw unclipped, unnormalized population trajectory surrogate. Baseline law and rollout law are fixed; conditional independence factors baseline from the entire response and permits integrating it to its prompt mean. Context weights can include a predictable action mask (EOS-emitting action active, subsequent shared absorbing padding inactive). Action-dependent prefix gate, normalization and random token-batch denominator are not included in this definition. Listed lemmas validate its finite conditional-law interpretation; the definition itself is not an empirical performance theorem."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:max-div",
+      "source": "tex/main/core-appendix.tex",
+      "line": 38,
+      "kind": "definition",
+      "label": "def:max-div",
+      "title": "Uniform Token-Level Divergence Bounds and Expected Per-Position TV",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "052c0564b4bffc366215275e960f0d351d489a06e33d2a4fd3cc8be43de88d68",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "futureTV_le_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "surrogate_error_adaptive_root",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_adaptive_cost",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_remainder_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        }
+      ],
+      "review_note": "Corrected unjustified attained maxima over unrestricted prompt/context sets to explicit finite nonnegative uniform upper bounds, matching the existing hTV and hKL theorem premises. All histories before the horizon and all prompts of the model are covered; finite context sets permit maxima. Expected local TV is weighted by rollout visitation, with family_adaptive_cost proving the finite prompt aggregation. No inference that mutual support supplies a uniform KL bound over arbitrary prompts."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:prefix-is",
+      "source": "tex/main/core-appendix.tex",
+      "line": 765,
+      "kind": "definition",
+      "label": "def:prefix-is",
+      "title": "Prefix geometric-mean ratio",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "3705bfcb521012df5979a8a0df322317e87dbab1f16aa1029d2b031d9241dba2",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PrefixDefinition.lean",
+          "theorem": "prefix_geometric_mean",
+          "file_sha256": "877c59e29508721b352c9ea16d9d173c583ce32d29486d62411663fd2ee81501"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "cumulativeSum_eq_masked_cumsum",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "cumulativeCount_eq_masked_cumsum",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementationAverage_reindex",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementationMask_reindex",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementation_rejection_count",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/EOSGateDrift.lean",
+          "theorem": "eos_effective_gate_implementation",
+          "file_sha256": "c7318ee68f58dcc01dd840ce48f4a7eb0cc3d32afb06ae1bf0ad6e60fd4a15a9"
+        },
+        {
+          "file": "formal/EOSGateDrift.lean",
+          "theorem": "eos_effective_gate_zero_after_eos",
+          "file_sha256": "c7318ee68f58dcc01dd840ce48f4a7eb0cc3d32afb06ae1bf0ad6e60fd4a15a9"
+        }
+      ],
+      "review_note": "Positive sampled ratios give the exact exp(mean(log r))=product(r)^(1/count) identity. Active-index reindexing matches binary action-mask cumsum/count and proves the denominator clamp inactive on active positions, preserving rejection counts even for noncontiguous masks. EOS effective gate includes the action mask, excluding padded positions from diagnostics. The implementation uses cached old/rollout log ratios and detached token weights, not current/rollout or the geometric mean as a weight. Exact real arithmetic only. Removed only the effective-horizon diagnostic aside and its reference to the archived concentration extension. Prefix statistic, mask handling, policy-pair mapping, and proof evidence are unchanged. Generic normalized two-policy and positive-ratio proofs are instantiated with p=rollout and q=current; the current ratio is rho=q/p. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:prefix-trm-proxy",
+      "source": "tex/main/core-appendix.tex",
+      "line": 785,
+      "kind": "definition",
+      "label": "def:prefix-trm-proxy",
+      "title": "Causal Prefix Mask",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "afd1cd5938de18d51a2b571aa44bd977cc6598dd89916a11d8aaf920d89d24b5",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/ImplementationBridge.lean",
+          "theorem": "prefix_exp_gate_iff_log_gate",
+          "file_sha256": "0f7b27283e1aa3927920ae1cef684fa898f42653babbe6f050195b7fca939b4a"
+        },
+        {
+          "file": "formal/ImplementationBridge.lean",
+          "theorem": "prefix_gate_thresholds_match",
+          "file_sha256": "0f7b27283e1aa3927920ae1cef684fa898f42653babbe6f050195b7fca939b4a"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "exp_interval_mask",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "binaryMask_zero",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "binaryMask_one",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementationMask_reindex",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        }
+      ],
+      "review_note": "The causal prefix mask uses the same current-policy/rollout ratio as the token coefficient. It is recomputed at the evaluated policy and detached during differentiation. The ratio-space and log-space interval predicates coincide for positive ratios. The cited formal components establish interval equivalence, binary-mask identities, and active-position reindexing in exact arithmetic."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::def:rloo",
+      "source": "tex/main/core-appendix.tex",
+      "line": 285,
+      "kind": "definition",
+      "label": "def:rloo",
+      "title": "Leave-One-Out Baseline",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "f039008b566a259e0bca7ac7e31a74200b757e576b34fd673654f41b6848259d",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "rloo_scaling",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        },
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "rloo_shaped_sum_zero",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        }
+      ],
+      "review_note": "Definition/algebra only, n>=2; not an unconditional unbiasedness claim. Actual reward shaping precedes token expansion; KL-free and inactive clipping restrictions remain separate."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::ex:prefix-half-retention",
+      "source": "tex/main/core-appendix.tex",
+      "line": 907,
+      "kind": "example",
+      "label": "ex:prefix-half-retention",
+      "title": "Nonzero retention with bounded moments",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "6a0dfd02b05ce1ca2b8c2454c152c493ea89855fdc89b53ffb69e4656bbd9c2e",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_policy_positive",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_mutual_support",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_root_ratio",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_later_ratio",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_gate",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_acceptance_mass",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_retained_moment",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_reentry_zero",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_unfiltered_root_moment",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        },
+        {
+          "file": "formal/PrefixGateExample.lean",
+          "theorem": "selective_lower_reentry_zero",
+          "file_sha256": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598"
+        }
+      ],
+      "review_note": "Normalized three-action family matches the stated root probabilities and uniform later transitions. Conditions K>0, tau>=0, T>=1 and log K>T*tau ensure exact first-token-zero acceptance through horizon T. Includes t=1 with empty-prefix acceptance. Full rollout mass and retained second moment equal 1/2, reentry zero; unfiltered root moment (K+1/K)/2. No claim about reward on rejected branches or superiority to another filter. The reentry notation is updated to the lower-side contribution; selective_lower_reentry_zero proves it vanishes by nonnegativity and domination by the already-zero all-reentry contribution. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions. Terminology-only revision: filtering/filtered/unfiltered renamed masking/masked/unmasked; formulas and assumptions unchanged."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::lem:prefix-stability",
+      "source": "tex/main/core-appendix.tex",
+      "line": 943,
+      "kind": "lemma",
+      "label": "lem:prefix-stability",
+      "title": "Stability of Prefix Geometric Means",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "6d1215f1a812bab09cc90b5e663f5ebc17631ba051ceca127e21b769270e2779",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "prefix_log_average_stability",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        },
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "prefix_geomean_stability",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        }
+      ],
+      "review_note": "Positive lower ratio threshold; substitute convex weight t/(t+1) for t>=1 and use the prefix log-average recurrence. Both the old prefix and next token must lie in the same interval. No claim of monotonicity or persistence after arbitrary increments. Generic normalized two-policy and positive-ratio proofs are instantiated with p=rollout and q=current; the current ratio is rho=q/p. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::lem:uniform-eligibility",
+      "source": "tex/main/core-appendix.tex",
+      "line": 508,
+      "kind": "lemma",
+      "label": "lem:uniform-eligibility",
+      "title": "Binary uniform-scale eligibility",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "0cbc46aaa43b7ff194fa4542cfe29650aac0c4fb572e2c16ec84fd607d97a7e5",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/UniformEligibility.lean",
+          "theorem": "binary_sample_variance",
+          "file_sha256": "98ff4315be259ef5fda97cba47e9aa53f9ec25ad6dc83887abf097fafb4875e0"
+        },
+        {
+          "file": "formal/UniformEligibility.lean",
+          "theorem": "mixed_binary_variance_lower_bound",
+          "file_sha256": "98ff4315be259ef5fda97cba47e9aa53f9ec25ad6dc83887abf097fafb4875e0"
+        },
+        {
+          "file": "formal/UniformEligibility.lean",
+          "theorem": "uniform_test_iff_homogeneous",
+          "file_sha256": "98ff4315be259ef5fda97cba47e9aa53f9ec25ad6dc83887abf097fafb4875e0"
+        },
+        {
+          "file": "formal/UniformEligibility.lean",
+          "theorem": "zero_one_implementation_tolerance",
+          "file_sha256": "98ff4315be259ef5fda97cba47e9aa53f9ec25ad6dc83887abf097fafb4875e0"
+        }
+      ],
+      "review_note": "Minimal prerequisite for all three uses: binary 0/1 rewards, n>=2, positive tolerance, and n*tolerance^2<=1. Existing general-gap theorem instantiated at c=0,d=1; strict comparison retains equality case. Removed unused general reward-gap extension and sharpness counterexample; no core update assumptions weakened. Exact real arithmetic only."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:batch-denominator",
+      "source": "tex/main/core-appendix.tex",
+      "line": 683,
+      "kind": "proposition",
+      "label": "prop:batch-denominator",
+      "title": "Effective coefficients for a shared batch denominator",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "8e4c5bfb75db5f33f3ede4bb6710df4549954710a8781bb5048306f7627fd3db",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "batch_expectation",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "inverse_weight_bounds",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "one_group_weight",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "coefficient_bridge",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "shared_batch_decomposition",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "shared_batch_multiplier_lower_bound",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        },
+        {
+          "file": "formal/BatchDenominator.lean",
+          "theorem": "token_weighted_partition",
+          "file_sha256": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83"
+        }
+      ],
+      "review_note": "K>=1 iid complete unfiltered groups with normalized finite joint prompt/response law and positive bounded group lengths. Retains the inherited RLOO n>=2 convention. For the lower bound: binary 0/1, positive class masses, 0<eta<=min(1,maxScale), homogeneous-only optional uniform branch. Effective inverse weight is conditional on the selected group; no replacement by inverse mean length or length-score independence. The covariance residual remains. Dynamic replay response-count scaling and length-selected partitions do not satisfy this iid global-token evaluation model automatically; source checked in replay_buffer.py and ppo_actor.py. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions. Terminology-only revision: filtering/filtered/unfiltered renamed masking/masked/unmasked; formulas and assumptions unchanged."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:binary-complete-update",
+      "source": "tex/main/core-appendix.tex",
+      "line": 536,
+      "kind": "proposition",
+      "label": "prop:binary-complete-update",
+      "title": "Complete binary update under class-dependent lengths",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "896fae8100ba8cf01d6a0939576460e3033e9954184af8beef8c6c2c32a78a11",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/BinaryUpdate.lean",
+          "theorem": "coordinate_expectation",
+          "file_sha256": "c180c9f1efd6abd13d70b9228f5242c511f1610def7317be4267bb964dc8cf66"
+        },
+        {
+          "file": "formal/BinaryUpdate.lean",
+          "theorem": "complete_update_expectation",
+          "file_sha256": "c180c9f1efd6abd13d70b9228f5242c511f1610def7317be4267bb964dc8cf66"
+        },
+        {
+          "file": "formal/BinaryUpdate.lean",
+          "theorem": "implementation_multiplier_lower_bound",
+          "file_sha256": "c180c9f1efd6abd13d70b9228f5242c511f1610def7317be4267bb964dc8cf66"
+        },
+        {
+          "file": "formal/BinaryUpdate.lean",
+          "theorem": "implementation_policy_direction",
+          "file_sha256": "c180c9f1efd6abd13d70b9228f5242c511f1610def7317be4267bb964dc8cf66"
+        }
+      ],
+      "review_note": "Corrected statement explicitly uses R in {0,1}, not arbitrary two-level rewards inherited from the preceding proposition. Group-token denominator, deterministic length within each label; 0<eta<=1 and maxScale>=eta. Homogeneous-only uniform branch. Finite normalized differentiable policy and common multiplier for all directions; no stochastic/Adam-step guarantee. Notation clarified: paper H_i is the actual signal BEFORE group reduction, C_i=H_i/L is the coefficient of the response score. Lean implementationCoefficient already includes this denominator and any homogeneous uniform boost. The main-text summary now states the common expected-update direction and its lower bound explicitly, with the same on-policy, accepted-gate and inactive-clipping conditions. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:normalization-safeguards",
+      "source": "tex/main/core-appendix.tex",
+      "line": 422,
+      "kind": "proposition",
+      "label": "prop:normalization-safeguards",
+      "title": "Moment Residuals of the Implemented Normalization",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "efb1e4cce955c12849534b1f4fd465d4769c398b1803d6c518fb6afd5ecb0157",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "finite_scaled_moments",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "stabilized_closed_form",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "stabilizer_second_moment_lt_one",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "stabilizer_deficit_bound",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "capped_stabilized_moment",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "factor_mean_residual_bound",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "factor_second_moment_residual_bound",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "positiveClamp_pos",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "positiveClamp_mem",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "signScale_preserves_sign",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/ProMax.lean",
+          "theorem": "positive_scaling_preserves_order",
+          "file_sha256": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "signScale_strictMono",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        },
+        {
+          "file": "formal/NormalizationSafeguards.lean",
+          "theorem": "clamped_signScale_strictMono",
+          "file_sha256": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d"
+        }
+      ],
+      "review_note": "Normalization branch only: both signs, P,N>=epsilon and finite factors. Product cap, additive epsilon, factor clamps and fallback order match the inspected Python. Moments divide by nonzero active token count; variance v2-mu^2 is an elementary expansion of centered squares. Excludes floating-point rounding/overflow and the default sample-variance logging convention."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:normalization-scale-invariance",
+      "source": "tex/main/core-appendix.tex",
+      "line": 361,
+      "kind": "proposition",
+      "label": "prop:normalization-scale-invariance",
+      "title": "Scale invariance of ideal normalization",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "565b535960bf21292e9ed760a2071f9494ffb965201a4d2ac20ca6877d9e03e7",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "weighted_normalization_scale_invariant",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "mean_and_rloo_normalization_equal",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        }
+      ],
+      "review_note": "Common strictly positive rescaling and identical token weights; ideal normalization only. Mean/RLOO equivalence is pointwise, with n>=2. No extension to fixed epsilon, clamping, or uniform-scale replacement."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:prefix-weight-limit",
+      "source": "tex/main/core-appendix.tex",
+      "line": 821,
+      "kind": "proposition",
+      "label": "prop:prefix-weight-limit",
+      "title": "Unbounded retained weights under prefix acceptance",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "fa503105bd3c0d075690e55c670e55bfcee9ef2f7d9456bccf2bc02768407fce",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_mutual_support",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_token_ratios",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_path_mass",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_gate_accepts",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_second_moment_contribution",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_second_moment_lower_bound",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_retained_second_moment",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "retained_second_moment_unbounded",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "accepted_token_weight_unbounded",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        },
+        {
+          "file": "formal/PrefixGateLimits.lean",
+          "theorem": "cancellation_localTV",
+          "file_sha256": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990"
+        }
+      ],
+      "review_note": "Normalized strictly positive binary policies, two-token horizon. Map log thresholds to log(ell_plus) and -log(ell_minus), both nonnegative. Full rollout second moment dominates the displayed positive-mass path contribution K^3/(K+1)^2 >= K/4 for K>=1. Unbounded over the family, not infinite for any fixed finite K; retained current/rollout coefficient, not reward variance. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:promax-objective-split",
+      "source": "tex/main/core-appendix.tex",
+      "line": 1100,
+      "kind": "proposition",
+      "label": "prop:promax-objective-split",
+      "title": "Finite-Batch ProMax Objective Decomposition",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "7afb49dd0b8d97a58844710280f46d6cd74f6027ee81ebbcaee3e4bc264d71ef",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/TwoPolicyObjective.lean",
+          "theorem": "objective_split",
+          "file_sha256": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0"
+        }
+      ],
+      "review_note": "Two-policy unclipped identity. rho=q/p; M may depend on q. Pointwise ring identity supplies each finite summand; nonnegative weights and triangle inequality supply the displayed bound. No cached snapshot, clipping term or mask-independence assumption."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::prop:surrogate-equivalence",
+      "source": "tex/main/core-appendix.tex",
+      "line": 86,
+      "kind": "proposition",
+      "label": "prop:surrogate-equivalence",
+      "title": "Exact Centered Surrogate Equivalence",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "193e67830f3f1a9d97134da3b92a0809a25fc1ae3357aa3a054ee0f8fb64ebf2",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_independent_baseline_average",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_surrogate_baseline_offset",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_surrogate_equivalence",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_reward_ratio_surrogate_equivalence",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/SurrogateBridge.lean",
+          "theorem": "finite_context_surrogate_equivalence",
+          "file_sha256": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b"
+        },
+        {
+          "file": "formal/RLOOSurrogate.lean",
+          "theorem": "response_ratio_residual_mean_zero",
+          "file_sha256": "ba11755d86119e8e6d3951fdb036cbc0b82ebc85243f642615465297897131d1"
+        },
+        {
+          "file": "formal/RLOOSurrogate.lean",
+          "theorem": "iid_rloo_surrogate_increment_expectation",
+          "file_sha256": "ba11755d86119e8e6d3951fdb036cbc0b82ebc85243f642615465297897131d1"
+        },
+        {
+          "file": "formal/RLOOSurrogate.lean",
+          "theorem": "group_surrogate_ratio_of_positive_length",
+          "file_sha256": "ba11755d86119e8e6d3951fdb036cbc0b82ebc85243f642615465297897131d1"
+        }
+      ],
+      "review_note": "Finite normalized action/continuation distributions, fixed context weights and independent baseline law. Candidate support contained in rollout support suffices; paper mutual support is stronger. Centering removes the fixed rollout value offset; both displayed equalities hold for off-policy candidates in population. Finite context/time/prompt sums preserve them, with predictable EOS masks. Concrete iid RLOO group-average increment is connected to the recursive tree surrogate. Expected group numerator divided by expected active length is a distinct token-normalized target, not equality for a random batch ratio. No centering cancellation is claimed after adding action-dependent gate or reward-dependent normalization."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::rem:rloo-variance",
+      "source": "tex/main/core-appendix.tex",
+      "line": 300,
+      "kind": "remark",
+      "label": "rem:rloo-variance",
+      "title": "Raw RLOO baseline identities",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "3a73bbcb07fccc5e3b23429b9c75997c3997a7182d3dadab0d5448f0b207dc92",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PolicyGradient.lean",
+          "theorem": "finite_policy_score_mean_zero",
+          "file_sha256": "9315629797c2365ffdf63c24da8dddfb5c22ff59c229e4929f23b574daffee15"
+        },
+        {
+          "file": "formal/PolicyGradient.lean",
+          "theorem": "finite_iid_rloo_policy_gradient",
+          "file_sha256": "9315629797c2365ffdf63c24da8dddfb5c22ff59c229e4929f23b574daffee15"
+        },
+        {
+          "file": "formal/TreePolicyGradient.lean",
+          "theorem": "tree_iid_rloo_policy_gradient",
+          "file_sha256": "f3f8125025a2417fe0e11e250376fd674135c096774bfca32e21bdd9c48c0c84"
+        },
+        {
+          "file": "formal/RLOOMoments.lean",
+          "theorem": "iid_expect_insertNth",
+          "file_sha256": "4df4e453c49174cbea5e47b1dd99bdec6e0ff9dc3a3686ff49d82cf7b246465e"
+        },
+        {
+          "file": "formal/RLOOProbability.lean",
+          "theorem": "finite_independent_baseline_score",
+          "file_sha256": "1ec7937b2dcb93db8f84b04660dc91ec13af01ebf3903d31e81efe43eda174b0"
+        },
+        {
+          "file": "formal/RLOOScaling.lean",
+          "theorem": "raw_mean_estimator_scaling",
+          "file_sha256": "b6950290934aa45273bf3f0f15010b057a2ce9ca9d32937ad585074b498a0abe"
+        }
+      ],
+      "review_note": "Minimal raw-estimator prerequisite: same finite positive support, Euclidean parameter, local differentiability/normalization and parameter-independent rewards. Retains iid RLOO unbiasedness and deterministic mean-baseline scaling. Sibling independence is used explicitly in the proof; unused baseline variance and score outer-product second-moment expansion removed. Existing finite_policy_gradient and raw_mean_estimator_scaling evidence applies; no claim about transformed or random-denominator estimators. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::thm:adaptive-bound",
+      "source": "tex/main/core-appendix.tex",
+      "line": 130,
+      "kind": "theorem",
+      "label": "thm:adaptive-bound",
+      "title": "Finite-tree reward error bound",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "d6463e43f3468385bc523b7ea430ee59c609c9683082759d397a7b852b023b7b",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "futureTV_le_linear",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "futureTV_le_pinsker",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "futureTV_le_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "surrogate_error_future_identity",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "futureInteraction_abs_le",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "surrogate_error_adaptive_root",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "trajectory_remainder_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_adaptive_cost",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_remainder_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_performance_lower_bound_adaptive",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/TreeTV.lean",
+          "theorem": "sequenceTV_le_expected_tokenTV",
+          "file_sha256": "69a7ae315cb19f9b2ac18037844a7db20e10b7fe2a3f46ab8872b836a76acd4c"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "surrogate_error_mixed_tv",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/AdaptiveBound.lean",
+          "theorem": "family_reward_error_mixed_tv",
+          "file_sha256": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053"
+        },
+        {
+          "file": "formal/ProMaxCertificate.lean",
+          "theorem": "family_reward_error_bound",
+          "file_sha256": "17d7edf6e14207e1f25450ef29d3eb181d599b5d29f6f2b979bcf1aa4535019b"
+        }
+      ],
+      "review_note": "Finite normalized history trees and finite prompt mixture; bounded reward B>=0, mutual support, uniform local TV and KL(rollout||current) bounds before horizon. Adaptive uses conditional sequence TV via product telescoping under rollout prefix occupancy, then the minimum of one, remaining-horizon local TV, and chain-rule Pinsker. Its coefficient is 4B*localTV*futureCap with Lean k=t-1 and N-1-k=T-t. Mixed independently uses performance_difference, the 2B*min(1,epsilon) gain bound, bounded-function expectation differences and contraction from full-response TV to marginal prefix TV. family_reward_error_bound takes the minimum of two valid absolute reward-error bounds after averaging over the same prompt law. Full-response TV is not substituted for conditional continuation TV; no token independence or automatic cached-gate guarantee. Expanded appendix derivations cite DPPO B.1-B.2 and TRM Adaptive/Mixed techniques as borrowed results. No new paper environment."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::thm:prefix-reentry-moment",
+      "source": "tex/main/core-appendix.tex",
+      "line": 858,
+      "kind": "theorem",
+      "label": "thm:prefix-reentry-moment",
+      "title": "Retained-weight moments and lower-side reentry",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "85e8a91e81063c7ce87e13db633368a78fbf7d1793b8f08384448889e7bb458e",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "lower_safe_retained_moment_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "retained_moment_lower_reentry_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "retained_moment_bound_of_reentry",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "consecutive_envelope_horizon_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "retained_moment_horizon_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "upper_reentry_token_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "lower_reentry_le_all_reentry",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "local_retained_mass_nonneg",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "local_retained_mass_le_one",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "local_retained_moment_of_envelope_mass",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        },
+        {
+          "file": "formal/PrefixGateMoments.lean",
+          "theorem": "retained_moment_lower_reentry_mass_bound",
+          "file_sha256": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f"
+        }
+      ],
+      "review_note": "Paper time t corresponds to Lean prior-history depth n=t-1. The prefix log product is logRatioTrace on supported paths. The residual now includes only previous histories below the lower log threshold and an accepted current token. lower_safe_retained_moment_bound proves the retained-token envelope and uses conditional probability normalization; retained_moment_lower_reentry_bound integrates it over histories. The horizon result now assumes this smaller residual bound. upper_reentry_token_bound supplies the separate upper-excursion observation. lower_reentry_le_all_reentry proves the new uniform C+Rminus bound is no larger than the former C+Rall bound; no pointwise comparison with the former probability-refined expression is claimed. Gates are binary, so one gate in the local moment equals its square. EOS uses the full padded-tree gate: active implemented coefficients agree there, and their unconditional squared moment is dominated by the full-tree moment. Not a survival-conditioned moment or full-gradient variance bound. Retained-mass refinement: localRetainedMass is sum_a p(a|h)*M(h,a)*w(h,a), not the unweighted acceptance probability. It is nonnegative and at most one by conditional normalization (zero rollout mass handled separately). The local envelope bounds the second moment by C times this first moment. Averaging controlled histories and dropping their restriction only in a nonnegative first-moment term yields E[(Mw)^2]<=C*E[Mw]+R_lower. retained_moment_lower_reentry_bound now derives the former C+R_lower bound from the stronger result. Index n=t-1 and full-tree EOS convention unchanged; the active coefficient remains bounded by the full-tree moment. No new hypothesis and no full-gradient variance claim. The duplicate consecutive-acceptance proof now calls the shared envelope lemma. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/core-appendix.tex::thm:prefix-tighter",
+      "source": "tex/main/core-appendix.tex",
+      "line": 964,
+      "kind": "theorem",
+      "label": "thm:prefix-tighter",
+      "title": "Conditional prefix rejection patterns",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "52bf986633673e65662685284a79497e77550766b927218b363648e8044e559e",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "prefix_tighter_complete",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "early_deviation_complete",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "late_deviation_complete",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PrefixMasking.lean",
+          "theorem": "exp_interval_mask",
+          "file_sha256": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementationMask_reindex",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        },
+        {
+          "file": "formal/PaddedPrefix.lean",
+          "theorem": "implementation_rejection_count",
+          "file_sha256": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4"
+        }
+      ],
+      "review_note": "Minimal conditional rejection claim used in main text: early bounded-noise rejection windows and non-strict token-count comparison; late rejection confined to suffix with sequence gate all-or-none. Removed unused midpoint-spike separation and sustained one-sided comparison. tau thresholds now defined before use. Existing early_deviation_complete and late_deviation_complete cover retained claims; no gradient variance or reward dominance. Cached old/rollout ratio and active-position conventions unchanged. Stability proof compressed to convex-combination identity; its statement unchanged. Pro organization revision: moved the unchanged moment-bound argument ahead of the causal pattern theorem. Condensed this theorem by writing the sequence mask directly instead of defining an intermediate geometric-mean symbol. Preserved the common cached ratios and interval, mutual support, explicit 0<=epsilon<=min(tau_plus,tau_minus), first/late excursion conditions, strict early windows, non-strict token-count conclusion, and late suffix cardinality. Existing Lean early_deviation_complete and late_deviation_complete match those conditions. The proof uses the same two-sided prefix-sum bounds and accepted-prefix argument. This is a presentation change, not a new bound or superiority statement. Two-policy revision: prefix results use rho=q/p; on-policy Max statements require accepted masks without an extraneous clipping premise. Generic finite identities retain their original mathematical assumptions."
+    },
+    {
+      "id": "tex/main/paper-body.tex::ex:selective-positive-margin",
+      "source": "tex/main/paper-body.tex",
+      "line": 564,
+      "kind": "example",
+      "label": "ex:selective-positive-margin",
+      "title": "Positive margin with nontrivial prefix rejection",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "7e520ef281bddf6bedae7eb270611e8d63f6663a7b8a670c96074edc052390da",
+      "review_status": "reviewed_analytic_with_exact_checks",
+      "lean_evidence": [],
+      "review_note": "Rewritten for rho=q/p and candidate-dependent prefix masks. Paper supplies symbolic derivation; reinforce_pro_max/check_two_policy_examples.py enumerates complete two-response groups with exact rational arithmetic for stated test parameters. Finite checks do not prove the whole parametric family. Historical SelectiveRolloutBound and CoupledGateCounterexample theorems refer to the previous clipped/snapshot objective and are not claimed as current evidence. Terminology-only revision: filtering/filtered/unfiltered renamed masking/masked/unmasked; formulas and assumptions unchanged."
+    },
+    {
+      "id": "tex/main/paper-body.tex::prop:binary-length-covariance",
+      "source": "tex/main/paper-body.tex",
+      "line": 227,
+      "kind": "proposition",
+      "label": "prop:binary-length-covariance",
+      "title": "Within-class length covariance decomposition",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "a1e19a12eb4c324461300d7489531236e93057a55db39db8610b83ce316a9a14",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/BinaryLength.lean",
+          "theorem": "general_update_decomposition",
+          "file_sha256": "ccb2ec840dcd789a916bbd9e47d29302be21794e5500d647d8e93dd77871d153"
+        },
+        {
+          "file": "formal/BinaryLength.lean",
+          "theorem": "covariance_error_abs_bound",
+          "file_sha256": "ccb2ec840dcd789a916bbd9e47d29302be21794e5500d647d8e93dd77871d153"
+        },
+        {
+          "file": "formal/BinaryLength.lean",
+          "theorem": "response_update_decomposition",
+          "file_sha256": "ccb2ec840dcd789a916bbd9e47d29302be21794e5500d647d8e93dd77871d153"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "population_ascent_bound",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        },
+        {
+          "file": "formal/BinaryAscent.lean",
+          "theorem": "population_local_improvement",
+          "file_sha256": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4"
+        }
+      ],
+      "review_note": "Both class probabilities positive; iid complete groups and finite zero-mean score. C_i includes actual length-dependent normalization and denominator. V_C sums over coordinates and siblings, score variance is per response, giving the factor n. No length-score independence assumption. The formerly verbal directional conclusion is now the explicit gradient-projection bound and local-improvement consequence from the existing appendix corollary. population_ascent_bound is instantiated with d=classMultiplier and le_rfl; population_local_improvement uses the strict ACTUAL-multiplier covariance margin, not the stronger epsilon/Lmax replacement. No new optimizer-step or stochastic-ascent guarantee. The two covariance displays are combined without changing their algebra."
+    },
+    {
+      "id": "tex/main/paper-body.tex::prop:binary-rloo-normalization",
+      "source": "tex/main/paper-body.tex",
+      "line": 148,
+      "kind": "proposition",
+      "label": "prop:binary-rloo-normalization",
+      "title": "Binary RLOO normalization and response-length balance",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "9412ad65ef749521df2d980c694020aa86e8a809443c309ffb5e4938a15d87c6",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "finite_binary_rloo_normalization",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "rloo_success_amplitude",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "rloo_failure_amplitude",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "rloo_scale_ratio_mean_lengths",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        },
+        {
+          "file": "formal/AdaptiveMechanism.lean",
+          "theorem": "normalized_mass_balance",
+          "file_sha256": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e"
+        }
+      ],
+      "review_note": "Two exact reward levels and mixed group; arbitrary positive total class token lengths. Real RLOO amplitudes are m*gap/(n-1) and -k*gap/(n-1), not assumed equal. Results precede IS, gate and score-vector multiplication. Terminology-only revision: filtering/filtered/unfiltered renamed masking/masked/unmasked; formulas and assumptions unchanged."
+    },
+    {
+      "id": "tex/main/paper-body.tex::prop:coupled-gate-failure",
+      "source": "tex/main/paper-body.tex",
+      "line": 620,
+      "kind": "proposition",
+      "label": "prop:coupled-gate-failure",
+      "title": "Objective ascent can lower reward under a shared parameter",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "f9cc39ade13a858683646b4b82323a9263448d74d7c0ef28d263c086214a08d5",
+      "review_status": "reviewed_analytic_with_exact_checks",
+      "lean_evidence": [],
+      "review_note": "Rewritten for rho=q/p and candidate-dependent prefix masks. Paper supplies symbolic derivation; reinforce_pro_max/check_two_policy_examples.py enumerates complete two-response groups with exact rational arithmetic for stated test parameters. Finite checks do not prove the whole parametric family. Historical SelectiveRolloutBound and CoupledGateCounterexample theorems refer to the previous clipped/snapshot objective and are not claimed as current evidence."
+    },
+    {
+      "id": "tex/main/paper-body.tex::proposition:3",
+      "source": "tex/main/paper-body.tex",
+      "line": 332,
+      "kind": "proposition",
+      "label": null,
+      "title": "Finite-batch decomposition",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "6ce810dcbee809b7e67bb95494add21971c25861eb5bccae4d1625ce0175039f",
+      "review_status": "reviewed_finite_scope",
+      "lean_evidence": [
+        {
+          "file": "formal/TwoPolicyObjective.lean",
+          "theorem": "objective_split",
+          "file_sha256": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0"
+        }
+      ],
+      "review_note": "Two-policy unclipped identity. rho=q/p; M may depend on q. Pointwise ring identity supplies each finite summand; nonnegative weights and triangle inequality supply the displayed bound. No cached snapshot, clipping term or mask-independence assumption."
+    },
+    {
+      "review_status": "reviewed_analytic_with_formal_components",
+      "lean_evidence": [
+        {
+          "file": "formal/TwoPolicyObjective.lean",
+          "theorem": "candidate_gate_residual",
+          "file_sha256": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0"
+        },
+        {
+          "file": "formal/TwoPolicyObjective.lean",
+          "theorem": "candidate_gate_residual_bound",
+          "file_sha256": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0"
+        },
+        {
+          "file": "formal/TwoPolicyObjective.lean",
+          "theorem": "scaled_raw_lower_bound",
+          "file_sha256": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0"
+        }
+      ],
+      "review_note": "Current mask recomputed at q; M(p)=1. D charges scaling mismatch plus rho(1-M)|H|. Formal evidence checks pointwise residual and margin algebra only. Full population proof in manuscript integrates iid sibling RLOO signals after restoring random L, and applies existing Adaptive/Mixed error bounds. Historical fixed-mask clipped population wrappers are not evidence for the new theorem.",
+      "source": "tex/main/paper-body.tex",
+      "line": 505,
+      "kind": "theorem",
+      "label": "thm:promax-population",
+      "title": "Population reward improvement",
+      "entries": [
+        "tex/iclr2027_submission.tex"
+      ],
+      "statement_sha256": "7b5f308e3e52dd46212db6a24f069cbe7cd865c1bbebfd2296d051701f79c18d",
+      "id": "tex/main/paper-body.tex::thm:promax-population"
+    }
+  ],
+  "dependencies_sha256": {
+    "formal/AdaptiveBound.lean": "7ee937e585950b80dd7bbde7e7c30c3e381c3c652ff5ca9ceb21540fb9f97053",
+    "formal/AdaptiveMechanism.lean": "a01dcabf502f93f9762f2807a2cb25a5a019b554359b38fb0b6fb2d909429e3e",
+    "formal/AutoregressiveTree.lean": "4997eae6a148bffe2593ed646337579d0f4e003d0fd9dec1f59e6e9a60f5094f",
+    "formal/AxiomAudit.lean": "cc5a3f8d0ee6f40c0d2f338dfd2b2033828507b32f4b806d079fec325af7c1cf",
+    "formal/BatchDenominator.lean": "bbb9b245234520139deced5b002b5ef134882253f3b765eb546144ac4996ea83",
+    "formal/BatchPerformance.lean": "247bf3ffc80caaae916481c6f8f7b4b8a13b894fb5df0df6c0a3582f21f42266",
+    "formal/BatchReduction.lean": "7c1b9d5008332325932c727f900fbba8c1f71ff37102819cb9f868cf910c7d0e",
+    "formal/BinaryAscent.lean": "f0764b1e85e4a24c0f91023c3d85c34e51a0f0acdf14466063c18fa1f58649f4",
+    "formal/BinaryLength.lean": "ccb2ec840dcd789a916bbd9e47d29302be21794e5500d647d8e93dd77871d153",
+    "formal/BinaryUpdate.lean": "c180c9f1efd6abd13d70b9228f5242c511f1610def7317be4267bb964dc8cf66",
+    "formal/CachedGateDrift.lean": "61263fa68ffa98a9ceee9c7484358522dd752b0ae118b3f44b1229abc7907013",
+    "formal/CoarseGrain.lean": "269fd951b7459a12b587bc8d1c142733a86f419dde0388d0514f6deb872bba91",
+    "formal/CoarseKL.lean": "145d46875a4fd4346c8189342080d0f6c4c2c7fed7b670a2a7f38017abbaa12b",
+    "formal/ConcentrationPromptMixture.lean": "5d436b83261bcf2d708247badff11caaa76fea2e344ed3161a413501db3b11a5",
+    "formal/CoupledGateCounterexample.lean": "c96f004325690533c4b22c624e37e3d71e6cdad46ebc7beb6cf4c406064fe7ac",
+    "formal/DiscountedGradient.lean": "5dd902802ca2b021a0da3ba21c00c80cc56778fc059528e12efdb58937b63ddf",
+    "formal/EOSCertificateBridge.lean": "7b478b114ac119e16e4b32801e0bf5990d60842056bf5966448290d11df84647",
+    "formal/EOSGateDrift.lean": "c7318ee68f58dcc01dd840ce48f4a7eb0cc3d32afb06ae1bf0ad6e60fd4a15a9",
+    "formal/EmpiricalCertificate.lean": "7b65c607c33f43e4d1796985d606d6ba6cdea8e997c70bb75f9e6dbeeed6884c",
+    "formal/ErrorDecomp.lean": "0fe0b855429e6af47febd671ff139c9cace77c8dd9b7f5427fe5e63167bcbae8",
+    "formal/FiniteSelection.lean": "b77386f8b3ae4f9e7ed6b07b67536cf982e909ef0e7bc76f879e2e210975f7ff",
+    "formal/GroupCertificate.lean": "59ce8c6a4b8a7e94d6e2fbbc15e11f672f75e0488d5a573dd936ecdc4f7f926a",
+    "formal/GroupFiltering.lean": "8c675df27233c12391d04f73403a88b426fb10351fe5e2a363218cb5b7582a51",
+    "formal/ImplementationBridge.lean": "0f7b27283e1aa3927920ae1cef684fa898f42653babbe6f050195b7fca939b4a",
+    "formal/K3Inlier.lean": "d815e755c0502c2960feecd42fc3f6b8208e384f26a298d315fbacff06c13baa",
+    "formal/KLChain.lean": "9694967f944c2f91d641c333526a26bf8c61a7b543fd2d1081af4a619c98c5ea",
+    "formal/KLEquality.lean": "ed0631a30c6db486651a46ba97705d62d97ef5958f36d2f4b6ef089bb3ca13c3",
+    "formal/LogitBounds.lean": "9bef102334cc7c883d9972e6e3f756f4f8ec23b5894d2caaa6cf75ab9de82e54",
+    "formal/NormalizationSafeguards.lean": "528d4b29695ca28882de19460bf5b072d5b787a9785851c0328e480b6e87e01d",
+    "formal/PPODerivative.lean": "cad70d50309e3af59769ea99710f5fd9a4525c793d8c016f5f0c680c610a8117",
+    "formal/PaddedPrefix.lean": "c4bfde9a97bc776228107071e3ab44e586e32cfb785830fd70c91b34604cf3a4",
+    "formal/Pinsker.lean": "a8fe01d64b31a548bb0f039e2bacf3157c872bad66393ed017d3ee67fc1fa98c",
+    "formal/PolicyCover.lean": "c7c2e13e270cf814f9badb2fa39f945532f41584240e22fe1321f189da776a78",
+    "formal/PolicyGradient.lean": "9315629797c2365ffdf63c24da8dddfb5c22ff59c229e4929f23b574daffee15",
+    "formal/PositiveCertificateExample.lean": "e9bcf5001d97cdd20f4908b5395e9d35b8b98782af52081d64237f8f1f648ca7",
+    "formal/PrefixConcentration.lean": "05ff9d8e8c11de077055d3dc0c6c9cd58369307c64758c0a5c92d678d9cd1dc2",
+    "formal/PrefixDefinition.lean": "877c59e29508721b352c9ea16d9d173c583ce32d29486d62411663fd2ee81501",
+    "formal/PrefixGateExample.lean": "effca1f44ee5187c8a2579729ad9d0b91e8f4458a4cba68d537894bb5a091598",
+    "formal/PrefixGateLimits.lean": "c58e56b128a2d8ad691233dfe23330de9694bfae7ae4efb84a69becc0f328990",
+    "formal/PrefixGateMoments.lean": "60313c94d19de6b7badd87a28ae12a2d93e87f5132e6ea832b4f99f87f99638f",
+    "formal/PrefixMasking.lean": "70566ae931888381531d2c63e1f228bcb445cf801d997e5130bd89bd074a4903",
+    "formal/ProMax.lean": "4fe4ba514c190f78c0f66b261dd78394e65041c7b242daeb5e984ad022a151fa",
+    "formal/ProMaxBatch.lean": "571a83ff92cbc9b3392018c60d86cb5e2ed74ea12b3ac5441805213ef2f0790c",
+    "formal/ProMaxCertificate.lean": "17d7edf6e14207e1f25450ef29d3eb181d599b5d29f6f2b979bcf1aa4535019b",
+    "formal/ProMaxObjective.lean": "b3fa685f8058bddd47de3df6994e220a2dd1a60703009f471e1208363a6a8ec6",
+    "formal/PromptAscent.lean": "00c8a8cfbf5eb823ded45c58475bad3d88503455bbe64a17e6919a4a814307c5",
+    "formal/PromptGradient.lean": "c09520156ab73ca21865ed443b6f6e5baadac52983f6259004df8f20b7608541",
+    "formal/PromptMixture.lean": "e110bfb67085dcb5729ca4c87afad878717eb0f49c8bbbfef8e35868087c4538",
+    "formal/RLOOCovariance.lean": "737e71caed2c7959572e8179458c783b01a2b28dc5d22c31fccbc765a1350ba4",
+    "formal/RLOOGeneral.lean": "27f27e9283cee1b2a9334019255270e85c348155f1a5fe74b03c95641474f65d",
+    "formal/RLOOMoments.lean": "4df4e453c49174cbea5e47b1dd99bdec6e0ff9dc3a3686ff49d82cf7b246465e",
+    "formal/RLOOProbability.lean": "1ec7937b2dcb93db8f84b04660dc91ec13af01ebf3903d31e81efe43eda174b0",
+    "formal/RLOOScaling.lean": "b6950290934aa45273bf3f0f15010b057a2ce9ca9d32937ad585074b498a0abe",
+    "formal/RLOOSurrogate.lean": "ba11755d86119e8e6d3951fdb036cbc0b82ebc85243f642615465297897131d1",
+    "formal/SelectiveRewardExample.lean": "d965e512755596f382663b1d587fc7c59c0286cea8129450814261cb41523f31",
+    "formal/SelectiveRolloutBound.lean": "c4e75b2e175059415c77a58e8d63e1dceb9c558f805288dd0b612163fb421ec2",
+    "formal/SequenceDilution.lean": "b37085be404d869baa06493286c4624b30d14a1e220648fb90914b49e7a0fdfc",
+    "formal/SequenceTV.lean": "753755a33e2e8cbfda4ade832b805047207e3fe2ad79e499e35767e505ae5df7",
+    "formal/SparseReturn.lean": "014737eecac7f3f4002ca4945808fc7b18cf29fa91c2549a8cbf0444d8af5758",
+    "formal/StructuralExamples.lean": "523137a60eeadd9f278cce5a7477129710723d937bbce4a5dd6e4e282aff5152",
+    "formal/SurrogateBridge.lean": "0bb94af69fb33cb08b1db86ac77d0efcaac5d8c68eca6ef82484ae8400bff47b",
+    "formal/SurrogateEnergy.lean": "1b0c5edb358f38b8d9df2a040956458ac1cd93e36072e8d007c8c86751d3ab04",
+    "formal/TokenMaskContext.lean": "b1928aa168593d950bcf751e333526f9405345b9480b6f9d32cce02423c2de85",
+    "formal/TokenScoreBridge.lean": "e1e38d6ee71d802621e7c23ce3c78fa1181846907a64d31a9721af991b673727",
+    "formal/TreeKL.lean": "3dfefc5b05f1227797d3b629661635bf5a24c3959f4f9fcdecb56d12f28e5c9a",
+    "formal/TreePinsker.lean": "52a29cb87a3cb70a387f453cd3fd31b4a05db2f70425341f3559c54943007785",
+    "formal/TreePolicyGradient.lean": "f3f8125025a2417fe0e11e250376fd674135c096774bfca32e21bdd9c48c0c84",
+    "formal/TreePrefixGate.lean": "d34ce58037625904f49d331944685a9569e65737e44f5e06fa008f726c7992e4",
+    "formal/TreeSurrogate.lean": "25006ea1ab65c39b66e0043ae8bdd51f157d4cb93d2074120eb6f880b3a11a72",
+    "formal/TreeTV.lean": "69a7ae315cb19f9b2ac18037844a7db20e10b7fe2a3f46ab8872b836a76acd4c",
+    "formal/TwoPolicyObjective.lean": "db36bcc679b00d2793eef6005b2e86b866782de1c35723b3475da81b347910e0",
+    "formal/UniformEligibility.lean": "98ff4315be259ef5fda97cba47e9aa53f9ec25ad6dc83887abf097fafb4875e0",
+    "formal/UniformScale.lean": "89a0a8daa93a084035f1b2c199d6437e8a52cea08a58c0c3675a8d4019228a86",
+    "openrlhf/models/loss.py": "6017743e93b105014d541d58d4abce9634ce7d088721bf626937f6b25988636f",
+    "openrlhf/models/utils.py": "37c5ad01a787ec5579cfff23a85f720d2bd03581fc3789a490f8b8ecc6f069bc",
+    "openrlhf/trainer/ppo_utils/experience_maker.py": "198e8efb40db1a7875caee12c4fdd2cc237647e342a82d5c667f5ee7c9e7b4f0",
+    "openrlhf/trainer/ppo_utils/replay_buffer.py": "be09f8b30cd2af312806b4949511038b219d2ab5c2c8ddd459204ea6900f9d24",
+    "openrlhf/trainer/ray/ppo_actor.py": "460f5d92f4bb8f03f80f42a82e6b881a5b621a45cb8631d1596a98476cc68cd6",
+    "tex/iclr2027/math_commands.tex": "9f3f2b0d50e14574ba5d037f67a6b46039af492658693fc799182e73341f542c",
+    "tex/iclr2027/math_extra.tex": "78a2df45ac41d3d638df4c31151f7dbfad60f2c542510224d080a0dbfec1a5c5",
+    "tex/iclr2027_submission.tex": "1babd05eb87adce1e9d95ae990403dae2a3528b5cabc6c34024c132a626e71d2",
+    "tex/main/core-appendix.tex": "1d9a6b85602cfb6f08c47f52633e8e78f616c9186e1ece5328bd8d984c8f2908",
+    "tex/main/paper-abstract.tex": "45b60e19f7b4918d3f0fccb05af7bc5a5b0ceb62adce35f14fe52853ff7ea5df",
+    "tex/main/paper-body.tex": "3d1ea0ff247dae3d2c58cdfe471aba1437c50af65925cffb1c3bfc14550dd42a"
+  },
+  "two_policy_revision": "2026-09-25: rendered manuscript uses rollout/current only; historical clipped wrappers are not full certificates for the new objective."
+}

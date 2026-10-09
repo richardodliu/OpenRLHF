@@ -1,0 +1,26 @@
+{
+  "baseline": {
+    "all_avg8": 0.24009076286764705,
+    "last50_avg8": 0.27734375,
+    "last50_ppl_gap": 0.0007186178332631244,
+    "token_weighted_prefix_rejection": 3.1509800978538673e-06
+  },
+  "max_only": {
+    "all_avg8": 0.24569163602941177,
+    "last50_avg8": 0.29078125,
+    "last50_ppl_gap": 0.0007634288491681218,
+    "token_weighted_prefix_rejection": 4.075881602791867e-06
+  },
+  "pro_only": {
+    "all_avg8": 0.25142894071691174,
+    "last50_avg8": 0.29734375,
+    "last50_ppl_gap": 0.0008679578277224209,
+    "token_weighted_prefix_rejection": 3.044338015616137e-06
+  },
+  "pro_max": {
+    "all_avg8": 0.2510770909926471,
+    "last50_avg8": 0.286875,
+    "last50_ppl_gap": 0.0007949139373522485,
+    "token_weighted_prefix_rejection": 5.5823207389451706e-06
+  }
+}

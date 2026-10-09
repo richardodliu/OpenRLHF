@@ -1,0 +1,122 @@
+{
+  "completed_scores": {
+    "baseline": {
+      "avg_at_32": 0.05625,
+      "formatted_fraction": 0.9677083333333333,
+      "truncation_fraction": 0.03125
+    }
+  },
+  "paired_contrasts": {},
+  "training_metrics": {
+    "baseline": {
+      "recorded_calls": 544,
+      "all_calls_have_eight_ranks": true,
+      "last": {
+        "loss_call": 544,
+        "rank_records": 8,
+        "active_tokens": 226901,
+        "ppl_gap_current_rollout": 0.0007342577337112743,
+        "ppl_gap_cached_rollout": 0.0007342577337112743,
+        "prefix_acceptance": 1.0,
+        "token_acceptance": 0.9988981978924729,
+        "retained_second_moment": 1.0004885029015957,
+        "unfiltered_second_moment": 1.0004885029015957,
+        "lower_reentry_second_moment": 0.0
+      }
+    },
+    "max_only": {
+      "recorded_calls": 544,
+      "all_calls_have_eight_ranks": true,
+      "last": {
+        "loss_call": 544,
+        "rank_records": 8,
+        "active_tokens": 209543,
+        "ppl_gap_current_rollout": 0.0008202504614018835,
+        "ppl_gap_cached_rollout": 0.0008202504614018835,
+        "prefix_acceptance": 1.0,
+        "token_acceptance": 0.9984919563049112,
+        "retained_second_moment": 1.0005884177859676,
+        "unfiltered_second_moment": 1.0005884177859676,
+        "lower_reentry_second_moment": 0.0
+      }
+    },
+    "pro_only": {
+      "recorded_calls": 544,
+      "all_calls_have_eight_ranks": true,
+      "last": {
+        "loss_call": 544,
+        "rank_records": 8,
+        "active_tokens": 234190,
+        "ppl_gap_current_rollout": 0.0009602284626453184,
+        "ppl_gap_cached_rollout": 0.0009602284626453184,
+        "prefix_acceptance": 0.9999957299628507,
+        "token_acceptance": 0.9970237841069217,
+        "retained_second_moment": 1.0008341834488022,
+        "unfiltered_second_moment": 1.0008431822184978,
+        "lower_reentry_second_moment": 0.0
+      }
+    },
+    "pro_max": {
+      "recorded_calls": 544,
+      "all_calls_have_eight_ranks": true,
+      "last": {
+        "loss_call": 544,
+        "rank_records": 8,
+        "active_tokens": 204407,
+        "ppl_gap_current_rollout": 0.0007893897709436715,
+        "ppl_gap_cached_rollout": 0.0007893897709436715,
+        "prefix_acceptance": 0.9999951077996351,
+        "token_acceptance": 0.9983757894788339,
+        "retained_second_moment": 1.0007024081779856,
+        "unfiltered_second_moment": 1.0007050979326784,
+        "lower_reentry_second_moment": 4.8921916170222e-06
+      }
+    }
+  },
+  "scope": "Four-arm full eligible DAPO study with Qwen2.5-Math-1.5B: 544 updates per arm, 8 GPUs per arm sequentially, CUDA Graph enabled, seed 42; all start from the initial model.",
+  "training_avg8": {
+    "metric": "online_training_avg_at_8",
+    "samples_per_prompt": 8,
+    "scope": "Training rollout correctness under the policy at each step; not final-model dataset accuracy or held-out evaluation.",
+    "arms": {
+      "baseline": {
+        "recorded_steps": 544,
+        "last_step_avg_at_8": 0.265625,
+        "first_50_steps_avg_at_8": 0.110546875,
+        "last_50_steps_avg_at_8": 0.27734375,
+        "all_recorded_steps_avg_at_8": 0.24009076286764705,
+        "curve": "baseline/training_avg8.csv"
+      },
+      "max_only": {
+        "recorded_steps": 544,
+        "last_step_avg_at_8": 0.17578125,
+        "first_50_steps_avg_at_8": 0.12828125,
+        "last_50_steps_avg_at_8": 0.29078125,
+        "all_recorded_steps_avg_at_8": 0.24569163602941177,
+        "curve": "max_only/training_avg8.csv"
+      },
+      "pro_only": {
+        "recorded_steps": 544,
+        "last_step_avg_at_8": 0.33203125,
+        "first_50_steps_avg_at_8": 0.115625,
+        "last_50_steps_avg_at_8": 0.29734375,
+        "all_recorded_steps_avg_at_8": 0.25142894071691174,
+        "curve": "pro_only/training_avg8.csv"
+      },
+      "pro_max": {
+        "recorded_steps": 544,
+        "last_step_avg_at_8": 0.32421875,
+        "first_50_steps_avg_at_8": 0.118359375,
+        "last_50_steps_avg_at_8": 0.286875,
+        "all_recorded_steps_avg_at_8": 0.2510770909926471,
+        "curve": "pro_max/training_avg8.csv"
+      }
+    }
+  },
+  "evaluation_policy": {
+    "skip_future_evaluations": true,
+    "reason": "User requested training-set online avg@8 only; preserve completed baseline evaluation.",
+    "updated_utc": "2026-09-25T14:32:45.413978+00:00",
+    "metric": "online_training_avg_at_8"
+  }
+}

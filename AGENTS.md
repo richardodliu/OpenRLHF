@@ -3,6 +3,8 @@
 本文件为 Codex 提供在此代码库中工作的指南。
 默认用中文回复用户的问题和解释解决的思路
 
+当前研究导航见 `reinforce_pro_max/README.md`，论文入口和维护约定见 `tex/PAPER_DESIGN.md`，当前投稿状态见 `reinforce_pro_max/SUBMISSION_AUDIT.md`。下文历史代码片段和行号只作入门示例，具体实现以源码为准；示例默认配置不自动满足论文的 KL-free 等假设。
+
 ## 仓库概述
 
 OpenRLHF 是基于 Ray + vLLM 分布式架构构建的高性能 RLHF 框架。当前版本: 0.9.2
@@ -413,7 +415,7 @@ ratio = exp(sum(log_ratio * mask) / sum(mask))  # 序列级平均
 
 ## 我们的方案: 前缀累积 IS (Prefix Cumulative IS)
 
-解决 vLLM 推理与 Actor 前向 logprob 不一致的问题。详细设计文档参见 `REINFORCE_PRO.md`。
+解决 vLLM 推理与 Actor 前向 logprob 不一致的问题。详细设计文档参见 `reinforce_pro_max/REINFORCE_PRO.md`。
 
 **注意**: `--vllm_is_correction_type reinforce_pro` 需配合 `--enable_vllm_is_correction` 使用。
 
@@ -433,7 +435,7 @@ ratio = exp(sum(log_ratio * mask) / sum(mask))  # 序列级平均
 | seq-mask-tis | 整序列 | 无 |
 | **reinforce_pro** | 前缀累积（token 级） | **有 ✓** |
 
-**与现有技术的关系**: 详见 `REINFORCE_PRO.md`
+**与现有技术的关系**: 详见 `reinforce_pro_max/REINFORCE_PRO.md`
 - `reinforce_pro` 是 `--vllm_is_correction_type` 的选项，`policy_loss_type` 保持 `ppo`
 - 核心优势：用前缀累积几何均值做 token 级 mask，保留因果结构
 
@@ -496,7 +498,7 @@ ratio = exp(sum(log_ratio * mask) / sum(mask))  # 序列级别
 | 适用场景 | 通用 | 高方差场景 | 序列整体偏离 | 序列内渐进偏离 |
 
 ## 算法设计
-关于 REINFORCE Pro Max 算法的详细实现指南，请参考 `REINFORCE_MAX.md`。
+关于 REINFORCE Pro Max 算法的详细实现指南，请参考 `reinforce_pro_max/REINFORCE_MAX.md`。
 
 关键参数:
 - `--advantage_estimator reinforce_max`: 启用 REINFORCE Max 算法
@@ -504,48 +506,24 @@ ratio = exp(sum(log_ratio * mask) / sum(mask))  # 序列级别
 
 ## 论文: REINFORCE Pro Max
 
-### 论文目录结构
+### 当前论文结构（2026-09-24）
 
-```
-tex/
-├── main.tex                    # 主控文件（摘要、宏定义、章节引入）
-├── main/
-│   ├── 1-intro.tex             # 引言 + 贡献列表
-│   ├── 2-related.tex           # 相关工作
-│   ├── 3-preliminaries.tex     # 符号、假设、surrogate 目标、IS 方法综述
-│   ├── 4-method.tex            # 核心方法（REINFORCE Max + REINFORCE Pro）
-│   ├── 5-theory.tex            # 统一框架、算法伪代码、方法对比表
-│   ├── 6-experiment.tex        # 实验（占位中）
-│   ├── 7-conclusion.tex        # 结论
-│   └── appendix.tex            # 附录（RLOO 证明、γ=1 证明、prefix IS 示例、数值稳定性、uniform scale）
-├── main/*_review.md            # 各章节审稿意见
-└── literature/                 # 参考论文（Trust Region Masking 等）
-```
+唯一论文入口为 tex/iclr2027_submission.tex，其科学内容位于：
+- tex/main/paper-abstract.tex：摘要。
+- tex/main/paper-body.tex：正文及完整算法伪代码。
+- tex/main/core-appendix.tex：有限模型、Max、Pro、组合算法的核心陈述与证明。
+- tex/main/reference.bib：文献。
 
-### 论文章节与核心定理
+旧 main/1-intro 至 7-conclusion 和 appendix.tex 已归档移出活动源码，不再使用 supplementarystatements 重复引入完整章节。当前投稿状态见 reinforce_pro_max/SUBMISSION_AUDIT.md。
 
-| 章节 | 文件 | 核心内容 |
-|------|------|---------|
-| §4 REINFORCE Max | `4-method.tex` | RLOO baseline (`def:rloo`)、token expansion (`eq:token-advantage`)、adaptive normalization (`prop:alpha-beta`, `prop:gradient-direction`) |
-| §4 REINFORCE Pro | `4-method.tex` | Prefix IS (`def:prefix-is`)、masking theorem (`thm:prefix-tighter`)、Adaptive bound 连接 (`thm:prefix-adaptive`) |
-| §5 Unified Framework | `5-theory.tex` | 算法伪代码 (`alg:promax`)、方法对比表 (`tab:comparison`) |
-| Appendix | `appendix.tex` | RLOO 性质证明 (`app:rloo-proof`)、γ=1 证明 (`app:gamma-one`)、prefix IS 示例 (`app:prefix-proof`)、数值稳定性 (`app:numerical`)、uniform scale (`app:uniform-scale`) |
+### 论文维护规范
 
-### 论文修改规范
-
-- 修改 theorem/proposition/proof 时，检查所有 `\Cref` 引用是否一致
-- 从正文移动内容到附录时：保留 `\label`，正文用 `\Cref{app:xxx}` 引用
-- 修改公式后，用 grep 检查相关符号在全文中的残留
-- 摘要 (`main.tex`) 和贡献列表 (`1-intro.tex`) 的措辞需与 theorem 条件范围严格一致
-- 附录中的 illustrative examples 是具体数值示例，不构成一般性证明
-
-### 当前论文状态
-
-- 不使用 reference model / KL penalty（已从公式中移除 `kl_t`, `\piref`, `\lambda_{\mathrm{KL}}`）
-- Token expansion 简化为 $A_{i,t} = \tilde{r}_i$（sparse reward, γ=1）
-- RLOO 详细证明在附录，正文只保留定义和简要说明
-- Uniform scale 详细内容在附录，正文只有简短 remark
-- 实验章节为占位文本
+- 数学只围绕实际算法正确性和条件有效性；不无目标地扩展辅助定理。
+- 修改陈述或证明时同步核对 Lean 前提、正文措辞和交叉引用。
+- 删除前检查证明依赖并保留可追溯归档；构建和清单检查不是语义证明。
+- 仅维护匿名 ICLR 投稿版；运行 bash compile_iclr.sh 重建并检查 PDF。
+- 首要目标是现有算法的最小自洽证明链；仅修补核心主张的具体缺口，不为提高接收概率不断新增定理、比较模型或玩具例。优先合并重复论证，保留必要假设与 Lean 依赖。
+- 用户于 2026-09-25 重新授权 TRM 风格小规模 GPU 实验，当前范围见 reinforce_pro_max/TRM_SMALL_STUDY.md；旧完整多种子队列仍保持取消。已有单种子实验与合成数据保留归档，结论按各自证据范围陈述。
 
 ## 代码规范
 

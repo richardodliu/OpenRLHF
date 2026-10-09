@@ -1,10 +1,12 @@
 # TRM/DPPO Theorem Mining Log
 
+> 历史阅读笔记：候选结论、迁移建议和当时的完成状态不代表当前论文结果。当前命题与证明范围以 `formal/PROOF_AUDIT.md` 为准。
+
 本文件记录对 `tex/literature/` 中 TRM 与 DPPO 参考材料的理论内容梳理结果，用于：
 
 - 学习其 **定理设计方式、证明组织结构、与排版美学**（TRM/DPPO 作为 gold standard）。
 - 识别可用于本文 `Prefix Causal Trust Region` 叙事的 **building blocks** 与 **proof techniques**。
-- 对每个候选结果做 U/O/C 分类门禁，避免重复、避免矛盾、避免符号替换式搬运（学术合规红线见 `tex/plan.md`）。
+- 对每个候选结果做 U/O/C 分类门禁，避免重复、避免矛盾、避免符号替换式搬运（学术合规红线见 `tex/PAPER_DESIGN.md`）。
 
 注意：
 
@@ -25,7 +27,7 @@
 
 ## 1. DPPO（Rethinking Trust Region in the LLM Regime / Divergence Proxies）
 
-> 本节目标：把 DPPO 里**所有带 proof/长推导的理论内容**做“可迁移/可引用”视角的整理，方便判断哪些值得进入本文（合规见 `tex/plan.md`）。
+> 本节目标：把 DPPO 里**所有带 proof/长推导的理论内容**做“可迁移/可引用”视角的整理，方便判断哪些值得进入本文（合规见 `tex/PAPER_DESIGN.md`）。
 
 ### DPPO-0：Proof Inventory（完整性检查）
 
@@ -195,7 +197,7 @@
 ### DPPO-8：Classical trust region bound（`schulman2015trust`）
 
 - **Source**：`tex/literature/DPPO/paper/background.tex`（TRPO/TV bound theorem）。
-- **说明**：这是外部经典结果（TRPO / Achiam 等），DPPO 论文把它作为背景；我们在本文中若要用，必须按 `tex/plan.md`：**statement-only + citation**，不要复现 proof。
+- **说明**：这是外部经典结果（TRPO / Achiam 等），DPPO 论文把它作为背景；我们在本文中若要用，必须按 `tex/PAPER_DESIGN.md`：**statement-only + citation**，不要复现 proof。
 - **Technique tags（可借鉴）**：performance difference identity / coupling vs Pinsker / max-divergence penalty。
 - **U/O/C**：**O**（引用型）。
 
@@ -501,4 +503,4 @@
   - DPPO-1/DPPO-2（telescoping + integrate-out future 的结构）
   - DPPO-6（coarse-grain lower bound 的不等式套路：triangle/log-sum）
 - **谨慎/避免作为本文承重结论**：
-  - 任何“外部论文 theorem + proof”都不应出现在本文附录；只能引用 statement，或做本文扩展并给本文 proof（见 `tex/plan.md`）。
+  - 任何“外部论文 theorem + proof”都不应出现在本文附录；只能引用 statement，或做本文扩展并给本文 proof（见 `tex/PAPER_DESIGN.md`）。

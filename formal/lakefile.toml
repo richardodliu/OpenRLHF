@@ -1,9 +1,27 @@
 name = "reinforce_promax_audit"
 version = "0.1.0"
-defaultTargets = ["ProMax", "ErrorDecomp", "CoarseGrain", "KLChain", "SequenceTV", "KLEquality", "RLOOProbability", "SurrogateBridge", "ProMaxObjective", "AutoregressiveTree", "TreeSurrogate", "PromptMixture", "PrefixConcentration", "PrefixMasking", "PaddedPrefix", "NormalizationSafeguards", "TreeKL", "AxiomAudit"]
+defaultTargets = ["ProMax", "ErrorDecomp", "CoarseGrain", "KLChain", "SequenceTV", "KLEquality", "RLOOProbability", "SurrogateBridge", "ProMaxObjective", "TwoPolicyObjective", "AutoregressiveTree", "TreeSurrogate", "PromptMixture", "PrefixConcentration", "PrefixMasking", "PaddedPrefix", "NormalizationSafeguards", "TreeKL", "AxiomAudit"]
 
 [[lean_lib]]
 name = "ProMax"
+
+[[lean_lib]]
+name = "PrefixGateLimits"
+
+[[lean_lib]]
+name = "PrefixGateMoments"
+
+[[lean_lib]]
+name = "PrefixGateExample"
+
+[[lean_lib]]
+name = "PositiveCertificateExample"
+
+[[lean_lib]]
+name = "PromptAscent"
+
+[[lean_lib]]
+name = "BatchDenominator"
 
 [[lean_lib]]
 name = "ErrorDecomp"
@@ -55,8 +73,6 @@ name = "PolicyGradient"
 [[lean_lib]]
 name = "PromptGradient"
 
-[[lean_lib]]
-name = "PromptGradientMeasure"
 
 [[lean_lib]]
 name = "TreePolicyGradient"
@@ -165,3 +181,49 @@ name = "GroupFiltering"
 
 [[lean_lib]]
 name = "ImplementationBridge"
+
+[[lean_lib]]
+name = "SelectiveRewardExample"
+
+[[lean_lib]]
+name = "CoupledGateCounterexample"
+
+[[lean_lib]]
+name = "EOSCertificateBridge"
+
+[[lean_lib]]
+name = "CachedGateDrift"
+
+[[lean_lib]]
+name = "EOSGateDrift"
+
+[[lean_lib]]
+name = "UniformEligibility"
+
+
+[[lean_lib]]
+name = "SequenceDilution"
+
+[[lean_lib]]
+name = "ConcentrationPromptMixture"
+
+[[lean_lib]]
+name = "TokenScoreBridge"
+
+[[lean_lib]]
+name = "RLOOScaling"
+
+[[lean_lib]]
+name = "DiscountedGradient"
+
+[[lean_lib]]
+name = "PrefixDefinition"
+
+[[lean_lib]]
+name = "TokenMaskContext"
+
+[[lean_lib]]
+name = "SelectiveRolloutBound"
+
+[[lean_lib]]
+name = "TwoPolicyObjective"

@@ -110,6 +110,71 @@ def familyAdaptiveCost (μ : X → ℝ) (p q : X → Policy A)
     (B ε δ : ℝ) (T : ℕ) : ℝ :=
   4 * B * ∑ x, μ x * adaptiveCost (p x) (q x) ε δ T
 
+/-- TRM Mixed-TV cost and its minimum with the existing Adaptive cost.
+Both compare the same candidate and rollout policies, not the cached gate pair. -/
+def familyMixedCost (μ : X → ℝ) (p q : X → Policy A)
+    (B ε : ℝ) (T : ℕ) : ℝ :=
+  4 * B * (T : ℝ) * min 1 ε *
+    ∑ x, μ x * acceptedPrefixTV (p x) (q x) (fun _ => 1) T
+
+def familyRewardCost (μ : X → ℝ) (p q : X → Policy A)
+    (B ε δ : ℝ) (T : ℕ) : ℝ :=
+  min (familyAdaptiveCost μ p q B ε δ T) (familyMixedCost μ p q B ε T)
+
+/-- The same absolute reward error obeys both bounds; taking their minimum
+requires no new assumption that the gate controls full-response divergence. -/
+theorem family_reward_error_bound
+    (μ : X → ℝ) (p q : X → Policy A) (R : X → List A → ℝ)
+    (hμ : ∀ x, 0 ≤ μ x) (B ε δ : ℝ) (hB : 0 ≤ B)
+    (hR : ∀ x y, |R x y| ≤ B) (T : ℕ)
+    (hs : ∀ x h a, (p x).prob h a = 0 ↔ (q x).prob h a = 0)
+    (hTV : ∀ x h, h.length < T → localTV (p x) (q x) h ≤ ε)
+    (hKL : ∀ x h, h.length < T → localReverseKL (p x) (q x) h ≤ δ) :
+    |familyValue μ q R T - familyValue μ p R T - familySurrogate μ p q R T| ≤
+      familyRewardCost μ p q B ε δ T := by
+  apply le_min
+  · have ha := family_remainder_adaptive μ p q R hμ B ε δ hB hR T hs hTV hKL
+    have hid := family_surrogate_remainder_identity μ p q R (fun x h a => (hs x h a).mp)
+    have heq : familyValue μ q R T - familyValue μ p R T - familySurrogate μ p q R T =
+        -familyRemainder μ p q R T := by linarith [hid T]
+    rw [heq, abs_neg]
+    unfold familyAdaptiveCost
+    rwa [family_adaptive_cost]
+  · exact family_reward_error_mixed_tv μ p q R hμ B ε hB hR T hTV
+
+/-- Population transfer for the method's objective margin, without a held-out
+sample, confidence event, or candidate-selection procedure. `F` is the
+group token count times (objective increment - distortion - reference clip
+cost). Its pointwise comparison is the finite objective-decomposition lemma.
+The RLOO expectation and Adaptive reward bound are derived from the same
+autoregressive policy model, rather than assumed as a reward certificate. -/
+theorem population_performance_from_objective_margin {m T : ℕ} (hm : m ≠ 0)
+    (μ : X → ℝ) (p q : X → Policy A) (R : X → List A → ℝ)
+    (hμ0 : ∀ x, 0 ≤ μ x)
+    (B ε δ : ℝ) (hB : 0 ≤ B) (hR : ∀ x y, |R x y| ≤ B)
+    (hs : ∀ x h a, (p x).prob h a = 0 ↔ (q x).prob h a = 0)
+    (hTV : ∀ x h, h.length < T → localTV (p x) (q x) h ≤ ε)
+    (hKL : ∀ x h, h.length < T → localReverseKL (p x) (q x) h ≤ δ)
+    (F : RolloutBlock X A m T → ℝ)
+    (hF : ∀ b, F b ≤ blockIncrement p q R b) :
+    expectation (blockMass μ p m T) F / (m + 1 : ℝ) -
+      familyRewardCost μ p q B ε δ T ≤
+        familyValue μ q R T - familyValue μ p R T := by
+  have hmean : expectation (blockMass μ p m T) F ≤
+      expectation (blockMass μ p m T) (blockIncrement p q R) := by
+    apply Finset.sum_le_sum
+    intro b _
+    exact mul_le_mul_of_nonneg_left (hF b) (block_mass_nonneg μ p hμ0 m T b)
+  rw [block_increment_expectation hm μ p q R (fun x h a => (hs x h a).mp)] at hmean
+  have hn : (0 : ℝ) < m + 1 := by positivity
+  have hsur : expectation (blockMass μ p m T) F / (m + 1 : ℝ) ≤
+      familySurrogate μ p q R T := by
+    apply (div_le_iff₀ hn).mpr
+    simpa only [mul_comm] using hmean
+  have hreward := (abs_le.mp (family_reward_error_bound μ p q R hμ0
+    B ε δ hB hR T hs hTV hKL)).1
+  linarith
+
 /-- The algebraic objective identity instantiated on the exact prompt/group
 sample space of the statistical theorem. Normalization and gates may use
 the entire realized batch. The weights use its actual active-token count. -/

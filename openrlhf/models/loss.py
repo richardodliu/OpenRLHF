@@ -120,10 +120,14 @@ class PolicyLoss(nn.Module):
         rollout_log_probs: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         ppo_log_ratio = None
-        if self.policy_loss_type == "ppo":
-            log_ratio = log_probs - old_log_probs
-            # Keep the differentiable current/old ratio separate from the
-            # rollout/old ratio used only for vLLM importance correction.
+        if self.policy_loss_type in {"ppo", "token_is"}:
+            if self.policy_loss_type == "token_is":
+                if rollout_log_probs is None:
+                    raise ValueError("token_is requires inference log probabilities")
+                log_ratio = log_probs - rollout_log_probs.detach()
+            else:
+                log_ratio = log_probs - old_log_probs
+            # Preserve the differentiable objective ratio for logging.
             ppo_log_ratio = log_ratio
             ratio = log_ratio.exp()
         elif self.policy_loss_type == "gspo":
@@ -140,7 +144,9 @@ class PolicyLoss(nn.Module):
         surr1 = ratio * advantages
         surr2 = ratio.clamp(1 - self.clip_eps_low, 1 + self.clip_eps_high) * advantages
 
-        if self.dual_clip is None:
+        if self.policy_loss_type == "token_is":
+            loss = -surr1
+        elif self.dual_clip is None:
             # Standard PPO
             loss = -torch.min(surr1, surr2)
         else:
@@ -185,18 +191,32 @@ class PolicyLoss(nn.Module):
                 loss = vllm_is * loss
             vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
 
+        if self.policy_loss_type == "token_is" and self.enable_vllm_is_correction:
+            if self.vllm_is_correction_type != "reinforce_pro":
+                raise ValueError("token_is only supports the optional Pro prefix mask")
+            # The differentiable ratio already contains rollout correction.
+            # Pro adds a detached causal prefix mask from the same current/rollout ratio.
+            low_threshold, high_threshold = self.vllm_is_truncated_threshold
+            frozen_log_ratio = (log_probs.float() - rollout_log_probs.float()).detach()
+            positions = action_mask.float().cumsum(-1).clamp_min(1)
+            prefix_is = ((frozen_log_ratio * action_mask).cumsum(-1) / positions).exp()
+            token_mask = (prefix_is >= low_threshold) & (prefix_is <= high_threshold)
+            loss = token_mask * loss
+            vllm_kl = masked_mean(rollout_log_probs - old_log_probs, action_mask, dim=None)
+
         loss = (
             masked_mean(loss, action_mask, dim=None)
             if self.token_level_loss
             else masked_mean(loss, action_mask, dim=-1).mean()
         )
-        clip_ratio = masked_mean(torch.lt(surr2, surr1).float(), action_mask, dim=None)
+        clip_ratio = (loss.detach().new_zeros(()) if self.policy_loss_type == "token_is"
+                      else masked_mean(torch.lt(surr2, surr1).float(), action_mask, dim=None))
         # Report the PPO KL from the current-vs-snapshot ratio.  The vLLM
         # branch reuses ``log_ratio`` for old-vs-rollout correction, so using
         # it here would silently report a different diagnostic.
         ppo_kl = (
             masked_mean(-ppo_log_ratio.detach(), action_mask, dim=None)
-            if self.policy_loss_type == "ppo"
+            if self.policy_loss_type in {"ppo", "token_is"}
             else masked_mean(-log_ratio.detach(), action_mask, dim=None)
         )
         return loss, clip_ratio, ppo_kl, vllm_kl

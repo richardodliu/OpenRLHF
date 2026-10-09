@@ -1,0 +1,54 @@
+{
+  "seed": 42,
+  "updates_per_arm": 544,
+  "train_prompts": 17408,
+  "group_size": 8,
+  "learning_rate": 3e-06,
+  "gate_thresholds": [
+    0.8,
+    1.25
+  ],
+  "max_context": 4096,
+  "max_generation": 3072,
+  "arms": {
+    "baseline": {
+      "estimator": "rloo",
+      "gate": "none",
+      "global_normalization": true
+    },
+    "max_only": {
+      "estimator": "reinforce_max",
+      "gate": "none",
+      "global_normalization": false
+    },
+    "pro_only": {
+      "estimator": "rloo",
+      "gate": "reinforce_pro",
+      "global_normalization": true
+    },
+    "pro_max": {
+      "estimator": "reinforce_max",
+      "gate": "reinforce_pro",
+      "global_normalization": false
+    }
+  },
+  "dataset_revision": "6e26a33abdabd3e6aaa1d742326b790758f7dbc5",
+  "reward_values": {
+    "correct": 1,
+    "incorrect": -0.5,
+    "no_extracted_answer": -1
+  },
+  "model": "Qwen2.5-Math-1.5B",
+  "gpus": "8 H200",
+  "temperature": 1.0,
+  "top_p": 1.0,
+  "metric": "online training avg@8",
+  "training_only": true,
+  "smoothing": "trailing 20 steps, figure only",
+  "final_window": [
+    495,
+    544
+  ],
+  "eligible_unique_prompts": 17381,
+  "padded_repeated_presentations": 27
+}

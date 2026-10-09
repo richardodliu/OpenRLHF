@@ -1,6 +1,38 @@
 # `tex/literature/` 学习索引（算法实现、数学原理、证明路线）
 
-最后更新：2026-02-21
+参考材料整理于 2026-02-21；这是文献索引，不是本论文已验证结论或最新文献的完整清单。
+
+## 2026-09-25：Pro 的直接相关工作补充
+
+已核对 PNPO v1（2026-08-02）与 CPPO v2（2026-06-10）的原文目标和作者元数据，并加入正文及 bibliography。前缀筛选与前缀几何平均本身均已有相关方法；本文的贡献表述应落在实际系数、矩界和目标到奖励的误差连接上。
+
+| 工作与原文位置 | 与本文相关的具体机制 | 本文区分 |
+| --- | --- | --- |
+| [PNPO v1，§3.1–3.2](https://arxiv.org/html/2608.01418v1) | current/behavior 前缀几何平均同时作权重和 gate 统计量；gate 区间依赖最终响应长度；每个 minibatch 重算；detached log-policy 目标，按响应均值归约 | Pro 以 cached snapshot/rollout 统计量作 gate，保留单 token correction，并使用标准 PPO 和 active-token 归约 |
+| [CPPO v2，§3.1–3.4](https://arxiv.org/html/2606.10968v2) | 用位置加权的 token divergence 与累计前缀预算控制 mask；保留朝 ratio=1 方向的项；奖励界使用后续误差分解与 Abel 求和 | Pro gate 使用采样 log-ratio 平均，不能直接保证 CPPO 的分布散度预算；本文单独控制实际系数矩和目标 distortion |
+
+两篇的条件与目标均须保留，不能把它们的改进界直接作为本文 gate 的保证。本文继续采用指定 DPPO/TRM 奖励误差路线，没有新增 CPPO 位置权重或预算机制。Pro 的下侧重入项分析针对保留的单 token correction，不能与 PNPO 的几何平均权重混同。该对照明确方法差异，不构成性能优越性或完整新颖性认证。PNPO 的两个单名作者按 arXiv 元数据保留 jasperawang、alantzhao，不补造姓名。
+
+## 2026-09-23 补充：需要纳入投稿定位的直接相关工作
+
+以下均核对了 arXiv 原始页面。CTPO 与 MinPRO 进一步核对了原文方法段落，已加入 bibliography 及当前 ICLR 稿件的相关工作说明；长度权重和归一化两篇现已核对模型、主定理及关键推导；这不是对外部论文的完整正确性认证，也不把外部结论作为本文未经证明的假设替代。
+
+| 工作 | 当前已核对内容 | 后续比较重点 |
+| --- | --- | --- |
+| [CTPO, arXiv:2605.07331](https://arxiv.org/html/2605.07331v1) | 累计 token IS；按位置调整 clipping；无偏性陈述使用 prefix-measurable token advantage | 分清 prefix 产品系数与本文 prefix 几何均值 gate；不能把其无偏性结论直接搬到 sampled RLOO terminal reward 上 |
+| [MinPRO, arXiv:2601.22718](https://arxiv.org/html/2601.22718v1) | 当前 token ratio 乘先前前缀中的最小 token ratio | 与本文 cached geometric-mean gate × token weight 的不同对象；不能将利用 prefix 本身当作新颖性 |
+| [On the Impossibility of Unbiased and Length-Invariant Policy Optimization with Outcome Rewards, arXiv:2607.23364](https://arxiv.org/abs/2607.23364) | 定义 4—5、定理 6 及证明：length-only 权重与条件 score 范数 | 本文因子依赖整组 reward/length；signed token balance 不等于该文 P2。证明从式 (24) 到 (25) 取消梯度时还需非零梯度，固定长度下 token 有随机性本身不足以保证；不直接采用其排除结论 |
+| [Why GRPO Needs Normalization, arXiv:2601.23135](https://arxiv.org/abs/2601.23135) | §2—3 与附录 D：精确 on-policy 梯度、总体方差、log-linear 参数化、唯一正确输出 | 正交假设的放宽仍要求 constructive interaction 与尺度条件；不能迁移到 sampled alpha/beta、共享 batch 或任意神经网络 |
+
+这次补充没有完成整个领域的新颖性审查，也没有验证外部论文的所有理论断言。本文新增解析族证明系数矩与保留率，不构成对这些算法的性能优越性证明。
+
+## 2026-09-23：奖励证书的既有研究定位
+
+补入 [High Confidence Policy Improvement（Thomas et al., ICML 2015）](https://proceedings.mlr.press/v37/thomas15.html)。已核对 PMLR 原文 §3、§5：使用 importance-weighted return 构造置信下界，并将 candidate search 与 held-out safety test 分开。本文使用 additive token-ratio surrogate 加总体误差项；重点是实际 RLOO transformation、共享组依赖和 token reduction 的连接，不能把高置信奖励证书或策略选择原理本身写成首次提出。
+
+重新核对 CTPO §3.1、MinPRO §4.1—4.2：前者的 prefix change-of-measure 论证使用 prefix-measurable advantage；后者先给 current-policy advantage 的累计比值恒等式，再使用 prefix minimum times token ratio 的 detached clipped log-policy 系数。MinPRO 的实际目标不等于标准 PPO min/clipped surrogate。本文据此修订比较，并明确 CTPO/MinPRO 与 population normalization 文献不是同一组理论对象。
+
+当前标题、摘要、引言和结论已统一围绕系数/更新条件、gate 失效边界及目标到奖励证书的连接。该定位修订没有改数学命题或 Lean，也不构成完整相关工作搜索或新颖性认证。
 
 这份文档用于“写/改我们自己的论文”时快速回忆并复用已有工作的理论链路，尤其是：
 
@@ -26,13 +58,13 @@
 | IcePop (Every Step Evolves / Ring-1T report) | paper `.tex`      | training-inference mismatch，token-level filtering/校正         | 中（附录有定理+证明）          | `tex/literature/IcePop/main.tex`                                                             |
 | CISPO (MiniMax-M1 report, 含 `\method{}`)    | paper `.tex`      | 重要性权重截断、工程化的 RL scaling 配方                                   | 低-中（更偏 recipe）       | `tex/literature/CISPO/main.tex`                                                              |
 | DPPO (Rethinking the Trust Region in LLM Reinforcement Learning) | paper `.tex`      | 用分布散度替代 ratio clip 的 trust region，Binary/Top-K divergence 近似 | 中-高（含 theorem + proof） | `tex/literature/DPPO/example_paper.tex`                                                      |
-| TIS（off-policy mismatch + truncated IS）      | tech report `.md` | sampler/learner mismatch，TIS 修正项                             | 中                    | `tex/literature/TIS.md`                                                                      |
-| MIS（mismatch -> collapse + 序列级修正观点）          | tech report `.md` | token-level bias、seq-level 修正、MIS                            | 中                    | `tex/literature/MIS.md`                                                                      |
-| IcePop（博客稿）                                  | tech report `.md` | MoE mismatch，IcePop objective 与直觉                            | 中                    | `tex/literature/IcePop.md`                                                                   |
-| Policy Gradient Intro（LLM reasoning）         | tech report `.md` | policy gradient theorem，surrogate objective（autodiff 实现）     | 中-高（含 theorem/推导）    | `tex/literature/Brief Introduction of Policy Gradient In LLM Reasoning.md`                   |
-| On-Policy Distillation (OPD)                 | tech report `.md` | OPD = reverse KL，等价 entropy-regularized RL，policy gradient   | 高（含 theorem + proof） | `tex/literature/Theory of On-Policy Distillation.md`                                         |
-| Policy Entropy Convergence Note              | tech report `.md` | NPG/KL-regularized update 下策略熵变化，协方差表达式与直觉解释 | 中（推导为主）             | `tex/literature/How Does RL Policy Entropy Converge During Iteration.md`                     |
-| 熵减收敛笔记（skydownacai）                      | tech report `.md` | entropy 与梯度/Reverse-KL 位移的关系（含不等式推导）                     | 中（推导+不等式证明）         | `tex/literature/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`                                           |
+| TIS（off-policy mismatch + truncated IS）      | tech report `.md` | sampler/learner mismatch，TIS 修正项                             | 中                    | `tex/literature/Math/TIS.md`                                                                      |
+| MIS（mismatch -> collapse + 序列级修正观点）          | tech report `.md` | token-level bias、seq-level 修正、MIS                            | 中                    | `tex/literature/Math/MIS.md`                                                                      |
+| IcePop（博客稿）                                  | tech report `.md` | MoE mismatch，IcePop objective 与直觉                            | 中                    | `tex/literature/Math/IcePop.md`                                                                   |
+| Policy Gradient Intro（LLM reasoning）         | tech report `.md` | policy gradient theorem，surrogate objective（autodiff 实现）     | 中-高（含 theorem/推导）    | `tex/literature/Math/Brief Introduction of Policy Gradient In LLM Reasoning.md`                   |
+| On-Policy Distillation (OPD)                 | tech report `.md` | OPD = reverse KL，等价 entropy-regularized RL，policy gradient   | 高（含 theorem + proof） | `tex/literature/Math/Theory of On-Policy Distillation.md`                                         |
+| Policy Entropy Convergence Note              | tech report `.md` | NPG/KL-regularized update 下策略熵变化，协方差表达式与直觉解释 | 中（推导为主）             | `tex/literature/Math/How Does RL Policy Entropy Converge During Iteration.md`                     |
+| 熵减收敛笔记（skydownacai）                      | tech report `.md` | entropy 与梯度/Reverse-KL 位移的关系（含不等式推导）                     | 中（推导+不等式证明）         | `tex/literature/Math/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`                                           |
 | Theory Part 1                                | tech report `.md` | SGA lemma，bias vs variance，TV vs chi^2，TRPO 连接               | 高                    | `tex/literature/Theory/1-Why Off-Policy Breaks RL An SGA Analysis Framework.md`              |
 | Theory Part 2                                | tech report `.md` | Seq-IS/Token-IS 的系统性 bias-variance 分析                        | 高                    | `tex/literature/Theory/2-Applying the SGA Framework Token v.s. Sequence-level Correction.md` |
 | Theory Part 3                                | tech report `.md` | Seq-MIS，Geo-Mask，hard trust region via masking               | 高                    | `tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md`                  |
@@ -42,17 +74,17 @@
 
 ## 推荐阅读顺序（从“问题”到“证明”）
 
-1. `tex/literature/TIS.md`：先建立 sampler/learner mismatch 的基本模型与 TIS 修正项。
+1. `tex/literature/Math/TIS.md`：先建立 sampler/learner mismatch 的基本模型与 TIS 修正项。
 2. `tex/literature/Theory/1-Why Off-Policy Breaks RL An SGA Analysis Framework.md`：用 SGA lemma 把“训练会崩”拆成 bias 与 variance 两条主因。
 3. `tex/literature/Theory/2-Applying the SGA Framework Token v.s. Sequence-level Correction.md`：理解 token-level 与 sequence-level IS 在长序列下的结构性 tradeoff。
 4. `tex/literature/Theory/3-Trust Region Optimization via Sequence Masking.md`：理解 Seq-MIS 与 Geo-Mask 作为 hard trust region 的实现路径。
 5. `tex/literature/TRM/main_arxiv.tex`：看最系统的 bound 家族与“为什么必须 sequence-level gate 才能让 bound 非空化”。
 6. `tex/literature/GSPO/colm2024_conference.tex`：看 sequence-level ratio 与 clipping 如何落到一个可训练的 surrogate。
-7. `tex/literature/IcePop/main.tex` 与 `tex/literature/IcePop.md`：看 token-level filtering 在 MoE mismatch 下的具体形式与理论化表达。
-8. `tex/literature/Brief Introduction of Policy Gradient In LLM Reasoning.md`：如果需要从零把 policy gradient/surrogate objective 写清楚，这份笔记可直接复用定理与推导。
-9. `tex/literature/Theory of On-Policy Distillation.md`：如果论文里涉及“蒸馏视角/OPD”，用这份笔记快速对齐目标函数与 policy gradient 形式。
-10. `tex/literature/How Does RL Policy Entropy Converge During Iteration.md`：如果你需要解释“为什么/何时 policy entropy 会下降或上升”，用这里的协方差表达式给出一阶近似的定量直觉（与 NPG/KL-regularized 更新对齐）。
-11. `tex/literature/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`：如果你需要从 entropy 角度解释“为什么训练会逐步收敛/变慢”，这里给了两条不等式（梯度范数与 Reverse-KL 位移上界）以及一段完整推导链。
+7. `tex/literature/IcePop/main.tex` 与 `tex/literature/Math/IcePop.md`：看 token-level filtering 在 MoE mismatch 下的具体形式与理论化表达。
+8. `tex/literature/Math/Brief Introduction of Policy Gradient In LLM Reasoning.md`：如果需要从零把 policy gradient/surrogate objective 写清楚，这份笔记可直接复用定理与推导。
+9. `tex/literature/Math/Theory of On-Policy Distillation.md`：如果论文里涉及“蒸馏视角/OPD”，用这份笔记快速对齐目标函数与 policy gradient 形式。
+10. `tex/literature/Math/How Does RL Policy Entropy Converge During Iteration.md`：如果你需要解释“为什么/何时 policy entropy 会下降或上升”，用这里的协方差表达式给出一阶近似的定量直觉（与 NPG/KL-regularized 更新对齐）。
+11. `tex/literature/Math/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`：如果你需要从 entropy 角度解释“为什么训练会逐步收敛/变慢”，这里给了两条不等式（梯度范数与 Reverse-KL 位移上界）以及一段完整推导链。
 
 ---
 
@@ -119,7 +151,7 @@
     - “Definition: Geometric Sequence Masking (Geo-Mask)”
     - 以及为什么 $\rho(y)$ 会导致 length-dependent rejection bias 的分析。
 - MIS.md 的 “MIS” 叙述（与 Theory Part 3 一致）：
-  - `tex/literature/MIS.md` 中有 “Masked Importance Sampling (MIS)” 与 token-level vs sequence-level 的对照。
+  - `tex/literature/Math/MIS.md` 中有 “Masked Importance Sampling (MIS)” 与 token-level vs sequence-level 的对照。
 
 ### TRM 与 MIS 的关系：三个可操作的判别维度
 
@@ -550,7 +582,7 @@
 
 ### TIS.md：sampler/learner mismatch 与 truncated IS
 
-入口：`tex/literature/TIS.md`
+入口：`tex/literature/Math/TIS.md`
 
 #### 问题设定
 
@@ -592,7 +624,7 @@
 
 ### MIS.md：mismatch -> collapse 诊断 + MIS 概念
 
-入口：`tex/literature/MIS.md`
+入口：`tex/literature/Math/MIS.md`
 
 #### 问题设定
 
@@ -640,7 +672,7 @@
 
 ### IcePop.md：MoE mismatch 直觉 + IcePop objective
 
-入口：`tex/literature/IcePop.md`
+入口：`tex/literature/Math/IcePop.md`
 
 #### 问题设定
 
@@ -668,14 +700,14 @@
 
 #### 理论结论与证明过程入口
 
-- 理论入口：`tex/literature/IcePop.md` 的 “Lemma (Compounding Probability Discrepancy)” 这一节（在 mismatch effects 段落之后）。
+- 理论入口：`tex/literature/Math/IcePop.md` 的 “Lemma (Compounding Probability Discrepancy)” 这一节（在 mismatch effects 段落之后）。
 - 算法入口：`# Unleash MoE RL with IcePop: Discard All Noisy Gradient Updates!`（包含 mask 的直觉与规则化描述）。
 
 ---
 
 ### Brief Introduction of Policy Gradient In LLM Reasoning：PG 定理与 surrogate objective（写作级模板）
 
-入口：`tex/literature/Brief Introduction of Policy Gradient In LLM Reasoning.md`
+入口：`tex/literature/Math/Brief Introduction of Policy Gradient In LLM Reasoning.md`
 
 #### 问题设定
 
@@ -707,7 +739,7 @@
 
 ### Theory of On-Policy Distillation：OPD 的目标函数与 policy gradient（含 proof）
 
-入口：`tex/literature/Theory of On-Policy Distillation.md`
+入口：`tex/literature/Math/Theory of On-Policy Distillation.md`
 
 #### 问题设定
 
@@ -748,7 +780,7 @@
 
 ### how does rl policy entropy converge during iteration：策略熵随迭代如何变化（NPG/KL-regularized 更新）
 
-入口：`tex/literature/How Does RL Policy Entropy Converge During Iteration.md`
+入口：`tex/literature/Math/How Does RL Policy Entropy Converge During Iteration.md`
 
 这份笔记回答一个很具体的问题：**在策略迭代/梯度迭代过程中，什么时候 entropy 会下降，什么时候 entropy 可能上升？**
 它不是一篇完整 paper，但给了一个在写作与分析时很实用的“承重结论”：entropy 的一阶变化可以写成一个协方差。
@@ -791,7 +823,7 @@
 
 ### Why Does Entropy Decrease Often Indicate Training Convergence in RL：entropy -> gradient norm / KL 位移（skydownacai）
 
-入口：`tex/literature/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`
+入口：`tex/literature/Math/Why Does Entropy Decrease Often Indicate Training Convergence in RL.md`
 
 这份笔记更像“读书笔记 + 推导草稿”：它试图从 softmax 参数化的曲率出发解释一个经验现象：**entropy 逐步降低时，训练往往进入收敛/变慢阶段**。
 
@@ -827,3 +859,11 @@
   - 用泰勒展开得到 KL 的二阶项；
   - 识别 Hessian 为 Fisher；
   - 用 $||\Delta||_\infty$ + entropy 上界 Fisher 二次型（最后一步显式调用不等式 1）。
+
+## 2026-09-23：LOO baseline 的文献归属
+
+核对 [Ahmadian et al., ACL 2024, §2.2—2.3](https://aclanthology.org/2024.acl-long.662.pdf)：原文分开介绍 REINFORCE baseline 与 RLOO，多样本 leave-one-out 公式在§2.3，并另引 Kool et al. (2019)。附录不再把具体 LOO 构造直接归给 Williams (1992)，改用条件独立和零均值 score 的取消恒等式说明其 control-variate 含义，LLM 应用引用已有 ahmadian2024back。此处不作该构造的最早历史归属判定，也不沿用外部论文的无条件方差优势措辞。
+
+## 2026-09-23：GSPO clipped objective 与二元序列 gate
+
+核对 [GSPO v2, §4.1, Eq. (5)—(7)](https://arxiv.org/html/2507.18071v2#S4.SS1)：原文使用响应级 advantage、长度归一化 likelihood ratio，以及 PPO-style 的 unclipped/clipped 两项最小值；不是 ratio 越界就置零的二元区间 mask。仓库 loss.py 的 gspo 分支同样将几何均值 ratio 送入 min surrogate。附录 prefix-tighter 证明中的“GSPO / sequence-level ratio gate”标签改为 binary geometric-mean ratio gate，与主文已有范围一致；几何均值稀释的统计恒等式仍适用，但二元拒绝数比较不能直接外推为 GSPO 梯度、方差或奖励比较。未重新评估其经验性能。

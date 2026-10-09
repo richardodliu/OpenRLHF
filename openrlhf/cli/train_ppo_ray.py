@@ -64,7 +64,7 @@ def train(args):
             pg if args.colocate_all_models and not args.async_train else None,
             args.vllm_gpu_memory_utilization,
             args.vllm_enable_sleep,
-            "processed_logprobs" if args.enable_vllm_is_correction else None,
+            "processed_logprobs" if args.enable_vllm_is_correction or args.policy_loss_type == "token_is" else None,
             agent_func_path=args.agent_func_path,
             remote_rm_url=args.remote_rm_url,
         )
@@ -373,7 +373,7 @@ if __name__ == "__main__":
     parser.add_argument("--kl_target", type=float, default=None)
     parser.add_argument("--kl_horizon", type=int, default=10000)
     parser.add_argument("--init_kl_coef", type=float, default=0.01, help="KL penalty in PPO")
-    parser.add_argument("--policy_loss_type", type=str, default="ppo", choices=["ppo", "gspo"])
+    parser.add_argument("--policy_loss_type", type=str, default="ppo", choices=["ppo", "gspo", "token_is"])
     parser.add_argument(
         "--kl_estimator",
         type=str,

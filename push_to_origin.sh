@@ -15,7 +15,6 @@ EXCLUDE_FILES=(
     "REINFORCE_PRO_MAX_issues.md"
     "push_to_origin.sh"
     "sync_upstream.sh"
-    "test_n_design.py"
     "test_reinforce_pro_max.py"
 )
 

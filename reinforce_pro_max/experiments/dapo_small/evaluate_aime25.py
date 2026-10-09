@@ -84,6 +84,19 @@ def main():
     parser.add_argument("--suite", choices=["math"], default="math")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
+    control = args.output.resolve().parent.parent / "evaluation-policy.json"
+    if control.exists() and json.loads(control.read_text()).get("skip_future_evaluations"):
+        # Compatibility with a supervisor already loaded before the policy change.
+        # _SUCCESS acknowledges the skip command, not a completed benchmark.
+        record = dict(status="skipped", evaluated=False, reason=json.loads(control.read_text())["reason"])
+        atomic_json(args.output / "SKIPPED.json", record)
+        atomic_json(args.output / "_SUCCESS", record)
+        import subprocess
+        import sys
+        subprocess.run([sys.executable, str(HERE / "summarize_training_avg8.py"),
+                        str(control.parent)], check=True)
+        print(json.dumps(record), flush=True)
+        return
     import importlib.metadata
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True)

@@ -1,190 +1,57 @@
-# REINFORCE Pro Max：论文设计与结构说明
+# REINFORCE Pro Max 论文维护
 
-本文档用于描述论文 **REINFORCE Pro Max** 的整体设计、章节结构、符号与宏约定，以及主要理论结论（定理/引理/命题）的陈述与证明分布位置。
+更新：2026-09-25，两策略目标修订。
 
-> 本文档由历史 planning 资料（原 `tex/plan/` 下的 Markdown）整理合并而来，并以当前论文实际代码与结构为准：`tex/main.tex` 与 `tex/main/*.tex`。
+## 唯一投稿入口与编译
 
----
+- 分支 `iclr`；唯一入口 `tex/iclr2027_submission.tex`。
+- 科学内容位于 `tex/main/paper-abstract.tex`、`paper-body.tex`、`core-appendix.tex` 和 `reference.bib`。
+- 运行 `bash compile_iclr.sh`；独立临时目录编译、检查引用和篇幅，成功后只导出根目录 `iclr2027_submission.pdf`。成功、失败、中断均清理本次中间产物。
+- 正文在第 9 页底部结束，全文不超过 30 页。只能调整文字，不改模板、字体、页边距或通过空白控制篇幅。
+- 第 10 页声明依次为 AI USE STATEMENT、ETHICS STATEMENT、REPRODUCIBILITY STATEMENT。
 
-## 1. 文档定位与维护原则
+## 方法边界
 
-### 1.1 读者与用途
+- Max：给正负 advantage 分别分配正缩放系数。RLOO 为输入，数值保护为实现细节。
+- Pro：causal prefix mask。只比较 rollout p 与 current q；rho=q/p。
+- 前缀几何均值只用于决定 0/1 mask；实际目标为 active-token mean of M*rho*H。
+- 不引入独立 old policy，不做 PPO clipping，不额外乘 old/rollout IS。
+- 当前前向重算 mask，反向 detach mask；rho 保留梯度。detach 不等于两个候选策略间 mask 不变。
+- 统一使用 mask/masking；不用 gate，也不以 filter/filtering 作为 Pro 的机制名称。TRM/DPPO 的组织顺序用于介绍 masked objective、masking criterion，再进行目标分解。
 
-- **读者**：论文作者/合作者、未来维护者、需要对照实现的工程同学。
-- **用途**：
-  - 快速理解论文的“结构骨架”（每个 section 放什么、为什么这么组织）。
-  - 快速定位“某个定义/定理/证明”在哪个 `.tex` 文件。
-  - 确保符号体系与实现/参考文献保持一致，减少记号漂移。
+## 最小证明主线
 
-### 1.2 不变项（不改科学结论）
+1. Max：保留两系数、二元系数及已有条件方向结论，不扩充辅助性质。
+2. Pro：U-G+N 精确目标分解；对 M*rho 用条件归一化与下侧重入分解证明保留二阶矩界。
+3. 奖励：沿用 DPPO 乘积展开、TRM 条件 continuation TV 与 Mixed 边缘前缀 TV。
+4. 目标连接：比较各自重新计算 mask 的 S(q)、S(p)。rho(p)=1，M(p)=1。
+   点态残差为 (rho-1)*(lambda*A-H)+rho*(1-M)*H；D_lambda 为两项绝对值之和的 token 平均。
+   因而 J(q)-J(p) >= E[L*(Delta S-D_lambda)]/(lambda*n)-B(p,q)。无 clipping penalty。
+5. 正例与反例均用实际 current/rollout mask。正例 zeta=1/100、delta=1/30 给出 19/600 的正下界；反例在同一 current-policy 参数族内展示目标上升、奖励下降。
 
-- **不改变**论文的核心科学结论与贡献逻辑（方法实现以仓库中的代码与 `reinforce_pro_max/` 设计文档为准）。
-- **允许改变**表达方式：符号规范化、证明步骤补全、结构重排（在不改变结论的前提下）。
+## 证明技术来源
 
----
+- DPPO：`tex/literature/DPPO/paper/method.tex` 的 masked objective，以及 `llm_bound.tex` 的奖励差恒等式。
+- TRM：`tex/literature/TRM/main_arxiv.tex` 的序列 mask、Adaptive/Mixed 误差界及条件序列 TV 技术。
+- Seq-MIS：保留权重的局部包络技术；Pro 增加前缀下侧重入项。
+- 论文保留规范引用；前缀几何均值不等于全词表散度约束。
 
-## 2. `tex/` 目录布局（source of truth）
+## 形式化范围与实现
 
-### 2.1 入口与公共配置
+`formal/TwoPolicyObjective.lean` 检查新版目标的点态分解、候选 mask 残差、绝对值界和缩放后的 raw 下界。总体期望连接和新版参数例子的完整推导写在论文中；有限例子的补充精确检查为 `reinforce_pro_max/check_two_policy_examples.py`。这些检查不能代替参数化证明。
 
-- `tex/main.tex`：论文入口（title/abstract + `\input{main/...}`）。
-- `tex/env.tex`：LaTeX 包、超链接、列表/算法等环境配置（含 theorem 环境定义）。
-- `tex/math.tex`：数学记号与常用宏（policy、divergence 等）。
-- `tex/main/reference.bib`：BibTeX 数据库（`plainnat` + `natbib`）。
-- `tex/literature/`：参考材料（gold standard），用于对齐记号与证明风格。
+旧 `ProMaxObjective`、`ProMaxCertificate`、`EOSCertificateBridge` 和旧正例模块包含三策略 clipped/fixed-mask 结果；保留依赖，但不当作新版总体定理的完整机器证明。当前对应范围见 `formal/PAPER_COVERAGE.json`。
 
-### 2.2 章节拆分文件
+仓库 `PolicyLoss` 的 `token_is` 分支与本轮冻结训练源保持核心公式一致；PPO 历史分支不是本文方法。梯度与 causal-mask 回归使用 `experiments/dapo_small/check_prefix_is.py`。
 
-所有正文与附录均拆分在 `tex/main/` 下：
+理论总体结论要求文中 token-count reduction；实际微批次/跨 rank 聚合的差别须按附录中的归约恒等式判断，不能由局部 loss 公式推断整个分布式训练已满足全部前提。训练中的冻结源码不得因论文修改而变更。
 
-- `tex/main/1-intro.tex`：Introduction
-- `tex/main/3-preliminaries.tex`：Preliminaries（含 Notation/Assumptions/Error decomposition）
-- `tex/main/4-method.tex`：方法主体（REINFORCE Max + REINFORCE Pro）
-- `tex/main/5-theory.tex`：Unified Framework（算法伪代码、统一视角、对比表）
-- `tex/main/2-related.tex`：Related Work
-- `tex/main/6-experiment.tex`：Experiments（结构性验证）
-- `tex/main/7-conclusion.tex`：Conclusion
-- `tex/main/appendix.tex`：Appendix（完整证明与技术补充）
 
-> 注意：`tex/main/` 的文件名前缀数字是历史遗留，**不保证**与 LaTeX 的实际 section 编号一致；章节顺序以 `tex/main.tex` 的 `\input{...}` 为准。
+## 2026-09-26 恢复全理论投稿稿
 
----
+当前稿件不含训练实验、经验比较、实验图表或实验配置附录。摘要、结论和 Reproducibility statement 同步移除经验结果及实验附件说明。
+恢复实验整合前的正文/附录组织：二元系数推导、长度协方差、总体奖励证明、正例与失败边界回到正文；无新增定理，30 项数学陈述与回退前逐字一致。
 
-## 3. 论文结构（以 `tex/main.tex` 为准）
-
-### 3.1 阅读顺序与文件映射
-
-| 阅读顺序 | 章节标题（`\section{...}`） | label | 文件 | 主要职责 |
-|---:|---|---|---|---|
-| 0 | Abstract | — | `tex/main.tex` | 给出问题、两大挑战、两组件与主要理论主张 |
-| 1 | Introduction | `sec:introduction` | `tex/main/1-intro.tex` | 动机 + 两大挑战 + 贡献点与组织结构 |
-| 2 | Preliminaries | `sec:preliminaries` | `tex/main/3-preliminaries.tex` | 统一符号、假设、error decomposition 与信赖域背景 |
-| 3 | REINFORCE Max: Variance-Reduced Advantage Estimation | `sec:reinforce-max` | `tex/main/4-method.tex` | RLOO baseline + token expansion + 自适应非对称归一化 |
-| 4 | REINFORCE Pro: Causal Off-Policy Correction | `sec:reinforce-pro` | `tex/main/4-method.tex` | prefix cumulative IS + tighter masking + trust-region proxy |
-| 5 | The Unified Framework | `sec:unified` | `tex/main/5-theory.tex` | 统一视角、算法伪代码（Algorithm）、方法对比表 |
-| 6 | Related Work | `sec:related` | `tex/main/2-related.tex` | critic-free RL 与 off-policy/信赖域相关工作定位 |
-| 7 | Experiments | `sec:experiments` | `tex/main/6-experiment.tex` | 用受控模拟验证结构性主张（非大规模 benchmark） |
-| 8 | Conclusion | `sec:conclusion` | `tex/main/7-conclusion.tex` | 总结贡献、范围边界、未来工作 |
-| 9 | Appendix | — | `tex/main/appendix.tex` | 完整证明与补充：RLOO、$\gamma\!=\!1$、prefix theorem、uniform scale 等 |
-
-### 3.2 结构设计动机（为何这样排）
-
-- **Preliminaries** 先把三套 policy、两种 ratio（PPO ratio vs rollout mismatch）与 error decomposition 说清楚，避免后文“同名不同义”。
-- 方法部分在同一文件 `4-method.tex` 内按“Max → Pro”组织，便于读者先理解 advantage 端的方差控制，再理解 off-policy 端的因果过滤。
-- **Unified Framework** 单独成章，把两组件如何对应到 error decomposition 的两个因子进行统一叙述，并给出可执行的算法伪代码。
-
----
-
-## 4. 核心设计（Method-level）
-
-### 4.1 两大挑战（论文的“问题定义”）
-
-1. **高方差 advantage 估计**：critic-free 场景下 advantage 只能来自 reward；均值 baseline 与全局归一化在“高度偏斜 reward”下会引入不稳定（符号翻转、尺度扭曲）。
-2. **rollout 与训练的 off-policy mismatch**：推理引擎（如 vLLM）与训练框架的策略不一致，且误差会沿自回归因果结构累积放大。
-
-### 4.2 REINFORCE Max（控制 advantage 因子）
-
-由三步组成：
-
-- **RLOO baseline**：对 prompt group（同一 prompt 的 $n$ 个 sample）做 leave-one-out baseline，避免样本与自身 baseline 相关（便于二阶矩分析）。
-- **Token expansion**：在 sparse reward 且 $\gamma=1$ 时，$A_{i,t}$ 在序列内可取常数 shaped reward。
-- **Adaptive asymmetric normalization**：用正/负不同缩放 $\alpha,\beta$，在不改变符号的前提下对非零 token 满足经验均值/方差约束，避免全局标准化引发的 sign flip。
-
-### 4.3 REINFORCE Pro（控制 context shift / mismatch 因子）
-
-核心是 **prefix cumulative IS**：
-
-- 定义 per-token mismatch log-ratio：$\ell_t=\log\piold(y_t|c_t)-\log\piroll(y_t|c_t)$。
-- 用 prefix 平均（几何均值的 log）构造因果统计量：$\exp(L_t/P_t)$，并据阈值区间 $[\lambda,\Lambda]$ 做 **prefix mask**。
-- 与 token-level / seq-level 方法比较：prefix 过滤能在“早期偏离但后续单步都不出界”的模式下屏蔽更多 off-policy token（在明确充分条件下）。
-- 与 trust-region 的连接：通过 KL chain rule 给出“prefix log-ratio 与 prefix KL”的期望恒等式，并把阈值化解释为 per-position sample-level proxy。
-
----
-
-## 5. 理论结论与证明地图（Theorem/Proof Map）
-
-下表用于快速定位“陈述在哪、证明在哪、作用是什么”。**label 以论文源码为准**。
-
-| label | 类型 | 陈述位置 | 完整证明/补充位置 | 作用 |
-|---|---|---|---|---|
-| `eq:error-decomp` | Equation | `tex/main/3-preliminaries.tex` | — | 将 surrogate 误差分解为 advantage 因子 × context shift 因子 |
-| `sec:assumptions` | Section | `tex/main/3-preliminaries.tex` | — | 支撑 error decomposition 与 IS/TV/KL 讨论的假设范围 |
-| `def:rloo` / `eq:rloo-baseline` | Definition/Eq | `tex/main/4-method.tex` | `app:rloo-proof` | 定义 leave-one-out baseline 与 shaped reward |
-| `prop:rloo-variance` | Proposition | `tex/main/appendix.tex` | 同处（含二阶矩分解） | 给出 unbiasedness、baseline independence、二阶矩分解等性质 |
-| `sec:token-expand` / `eq:token-advantage` | Section/Eq | `tex/main/4-method.tex` | `app:gamma-one` | 说明 sparse reward 下 token expansion 的合理性（$\gamma=1$） |
-| `def:adaptive-norm` | Definition | `tex/main/4-method.tex` | — | 定义 $\alpha/\beta$ 非对称归一化与经验约束（mean=0, var=1） |
-| `eq:alpha-beta` / `prop:alpha-beta` | Eq/Proposition | `tex/main/4-method.tex` | — | 给出 $\alpha,\beta$ 的闭式解与等价约束写法 |
-| `prop:gradient-direction` | Proposition | `tex/main/4-method.tex` | — | 证明该归一化保持梯度方向/不引入符号翻转 |
-| `def:prefix-is` | Definition | `tex/main/4-method.tex` | — | 定义 prefix cumulative IS（action mask-aware 的 $L_t,P_t$） |
-| `thm:prefix-tighter` | Theorem | `tex/main/4-method.tex` | `app:prefix-proof` | 在明确充分条件下，对比 token/seq 方法给出 tighter masking 结论 |
-| `lem:cumsum-kl` | Lemma | `tex/main/4-method.tex` | — | KL chain rule 形式：prefix log-ratio 期望与 prefix KL 的恒等式 |
-| `rem:prefix-proxy` | Remark | `tex/main/4-method.tex` | — | 将 prefix thresholding 解释为 trust-region style proxy（范围限定） |
-| `cor:per-position-trust` | Corollary | `tex/main/4-method.tex` | — | 把 prefix 阈值化写成 per-position 的 sample-level 约束 |
-| `eq:promax-loss` | Equation | `tex/main/4-method.tex` | — | 给出 Pro Max 的 loss 结构（mask × detached IS × PPOClip） |
-| `alg:promax` | Algorithm | `tex/main/5-theory.tex` | — | 全流程伪代码，明确 rollout / baseline / norm / prefix mask / loss |
-| `app:gamma-one` | Appendix section | `tex/main/appendix.tex` | 同处 | 形式化说明为何 $\gamma$ 取 1（与 sparse reward/推理任务一致） |
-| `app:uniform-scale` | Appendix section | `tex/main/appendix.tex` | 同处 | uniform reward 组的可选 uniform scale 技巧与梯度方向解释 |
-
----
-
-## 6. 符号、宏与引用规范（Notation & Macros）
-
-### 6.1 统一符号（见 `sec:notation`）
-
-论文把关键符号集中在 `tex/main/3-preliminaries.tex` 的 `\subsection{Notation}`：
-
-- prompt：$x$；第 $i$ 个 rollout：$y^{(i)}$；位置上下文：$c_t=(x,y_{<t})$。
-- 三套 policy：`\piroll`（rollout）、`\piold`（old actor）、`\pitheta`（current actor）。
-- 两类 ratio：
-  - PPO ratio：$\rho_t^{\mathrm{PPO}}=\pitheta/\piold$（**带梯度**）
-  - mismatch ratio：$w_t=\piold/\piroll$，$\ell_t=\log w_t$（**作为 detached 系数/过滤统计量**）
-
-### 6.2 宏的唯一来源
-
-- 新增/修改数学符号：优先在 `tex/math.tex` 增补，并在正文中使用宏（避免各处临时定义导致不一致）。
-- theorem/lemma/definition 等环境：统一在 `tex/env.tex` 定义。
-- `tex/math_commands.tex`：历史遗留宏集合，包含 `\usepackage` 与高风险重定义（如覆盖 `\eqref`）。**不要直接 `\input{math_commands.tex}`**；若确需其中某些宏，请“挑选并迁移”到 `tex/math.tex` 后再使用。
-
-### 6.3 交叉引用与 bib
-
-- 交叉引用：使用 `\Cref{...}`（`cleveref`）统一格式。
-- 文献引用：`natbib`，BibTeX 数据库为 `tex/main/reference.bib`。
-
----
-
-## 7. 论文与实现对应关系（Paper ↔ Code）
-
-论文是理论与结构性解释，工程实现与参数语义主要在以下位置对照：
-
-### 7.1 设计文档（实现语义的“解释层”）
-
-- `reinforce_pro_max/REINFORCE_MAX.md`：REINFORCE Max（RLOO + adaptive norm + uniform_scale）工程语义说明
-- `reinforce_pro_max/REINFORCE_PRO.md`：REINFORCE Pro（prefix cumulative mask）工程语义说明
-
-### 7.2 关键代码入口（实现层）
-
-- `openrlhf/trainer/ppo_utils/experience_maker.py`：advantage estimator（含 `reinforce_max`、RLOO、归一化等）
-- `openrlhf/models/loss.py`：vLLM IS correction（含 `reinforce_pro` 的 prefix cumulative mask）
-- `openrlhf/cli/train_ppo_ray.py`：命令行参数（`--advantage_estimator reinforce_max`、`--vllm_is_correction_type reinforce_pro` 等）
-
-> 维护建议：当论文符号/阈值/mask 定义变更时，优先检查上述三个路径是否仍一致；若不一致，应以实现与 `reinforce_pro_max/*.md` 为准更新论文表述。
-
----
-
-## 8. 构建与发布（编译、零 warning、自动推送）
-
-- 推荐编译入口：仓库根目录 `compile.sh`（执行 `pdflatex → bibtex → pdflatex` 多轮直到引用稳定）。
-- 约束：脚本会在日志中检测 `LaTeX Warning / Package Warning / Overfull|Underfull \\hbox / pdfTeX warning / BibTeX Warning--`，若出现则退出失败（避免把 warning 版本推到远端）。
-- 若只想本地编译、不提交不推送：`PUSH=0 bash compile.sh`
-
----
-
-## 9. 变更说明（由 `tex/plan/` 合并而来）
-
-历史上 `tex/plan/` 下存在两类 planning 文档：
-
-1. **工程拆分计划**：把单个 `main.tex` 拆成 `tex/main/*.tex` 子文件。该目标已经完成，当前结构以 `tex/main.tex` 为准。
-2. **论文写作大纲**：早期版本曾引用旧文件名（如 `reinforce_pro_max.tex`）与旧章节划分。其“结构化表达与定理地图”的有用部分已吸收到本文档中，过时内容已移除。
-
-从现在起，论文设计与结构的唯一维护入口为本文件：`tex/PAPER_DESIGN.md`。
-
+正文 9 页，第 9 页末行底部 730.056 pt；全文 24 页。模板、字号、页边距及空白控制未变。第 10 页声明顺序保持 AI / Ethics / Reproducibility。
+实验数据、脚本、曲线和运行记录仍在研究目录保存；此前投稿图迁至 `reinforce_pro_max/experiments/dapo_small/figures/math15b_submission_archive/`，不进入活动稿或理论补充包。论文回退不改变 GPU 训练任务。
+验证记录见 `reinforce_pro_max/audits/THEORY_RESTORE_20260926.md`，当前产物指纹见 `reinforce_pro_max/current_theory_validation.json`。实验整合前后的历史审计保留原始范围，不能视为当前稿件的新审稿结论。

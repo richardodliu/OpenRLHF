@@ -1,0 +1,23 @@
+{
+  "updated_utc": "2026-09-26T12:27:16.712143+00:00",
+  "paper_mode": "theory_only",
+  "pdf_sha256": "932dc7d981264c0362931c1d9ca89a0bce56f60ae42627888e6b89c99fe12b8c",
+  "pages": 24,
+  "main_end_page": 9,
+  "main_last_line_bottom_pt": 730.0560302734375,
+  "statement_count": 30,
+  "statement_contents_unchanged_from_pre_restore": true,
+  "terminology_hits": [],
+  "declaration_order": "AI / Ethics / Reproducibility",
+  "visual_review": "After the deadline wording fixes, only page 6 differs in rendering from the restored theory PDF. Page 6 visually inspected; page 9 and all other pages render identically. Main last line bottom remains 730.056 pt.",
+  "scope": "Theory-only manuscript; clarified microbatch weighting in main text and corrected stale current/rollout description in supplement statement map. Mathematical statements and Lean sources unchanged; no training/code/results changes.",
+  "restore_source": "/tmp/promax_prefix_analysis_supplement.zip",
+  "pre_restore_backup": "/tmp/promax_before_theory_restore_20260926_193212.zip",
+  "supplement_sha256": "c977498761b7eb5e81509e50516b496361489cabef04116f3fbc4aab91ffee53",
+  "supplement_path": "/tmp/promax_theory_deadline_fixed_20260926.zip",
+  "package_payload_files": 67,
+  "exact_example_checks": 7,
+  "paper_audit_build": "No new Lean build: all packaged Lean files byte-identical to prior audited supplement",
+  "unchanged_packaged_lean_files": 51,
+  "audit_note": "Structural and preservation checks; not a new semantic proof audit or acceptance assessment"
+}

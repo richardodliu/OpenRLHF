@@ -1,0 +1,15 @@
+REINFORCE Pro Max combines sign-dependent advantage scaling and causal
+prefix masking for critic-free language-model reinforcement learning.
+We analyze how these transformations affect update directions, retained
+importance weights, and the relation between the training objective and
+expected reward. For Max, we derive the binary-reward coefficients and
+conditional local ascent, retaining response-length and sample-dependent
+scaling effects. For Pro, we bound the retained-weight second moment by
+an envelope times the accepted importance mass, plus a lower-side reentry
+term. This term accounts for accepted tokens following a lower-prefix excursion. An exact decomposition connects the scaled,
+masked importance-weighted objective to the terminal-reward surrogate. Applying existing
+Adaptive and Mixed bounds gives a sufficient reward-improvement condition
+with explicit scaling and masking costs. A two-step family has bounded retained second moments and a positive
+reward lower bound despite arbitrarily large unmasked second moments.
+A shared-parameter counterexample exhibits simultaneous objective ascent
+and reward decrease.

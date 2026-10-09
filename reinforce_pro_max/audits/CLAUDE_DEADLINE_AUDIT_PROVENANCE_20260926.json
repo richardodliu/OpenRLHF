@@ -1,0 +1,14 @@
+{
+  "tool": "Claude Code",
+  "version": "2.1.282",
+  "session_id": "3b8c2b4e-42cf-4cdd-8412-d66f03409378",
+  "model": "claude-opus-5-5[1m]",
+  "completed_utc": "2026-09-26T09:08:37.058662+00:00",
+  "is_error": false,
+  "duration_ms": 803518,
+  "num_turns": 55,
+  "report": "reinforce_pro_max/audits/CLAUDE_DEADLINE_AUDIT_20260926.md",
+  "report_sha256": "94e909b48d16c36175c18c4a4cc3bc37527f53b9e8aee3658b9cdfe05bc26f70",
+  "scope": "Read-only final submission audit; no manuscript, experiment or result changes",
+  "input_manifest": "DEADLINE_AUDIT_INPUTS_20260926.json"
+}

@@ -32,6 +32,8 @@ OpenRLHF 是**首个**结合 **Ray + vLLM 分布式架构**与**统一 Agent 设
 
 📚 **了解更多**：[文档](https://openrlhf.readthedocs.io/) | [PPT](https://docs.google.com/presentation/d/1JRhB1d7csofx0PIZBmfyBdMluxNd5JLPpUHrrvVhGnk/edit?usp=sharing) | [技术报告](https://www.researchgate.net/publication/393414548_OpenRLHF_An_Easy-to-use_Scalable_and_High-performance_RLHF_Framework) | [视频](https://www.bilibili.com/video/BV1dv2jBxEQG/)
 
+本研究分支的论文、有限模型证明、实现说明与投稿状态统一从 [REINFORCE Pro Max 研究入口](reinforce_pro_max/README.md) 查看。
+
 ## 📖 目录
 
 - [🗞️ 新闻](#新闻)
@@ -255,12 +257,12 @@ OpenRLHF 提供完整的 RLHF 流程，具有基于 Agent 的灵活性：
 
 **可扩展性**
 - 张量并行的 DeepSpeed AutoTP（参见训练脚本中的 `--ds_tensor_parallel_size`）
-- 长上下文的 [RingAttention](./examples/test_scripts/train_dpo_ring_llama.sh)（`--ring_attn_size`）
+- 长上下文的 RingAttention（`--ring_attn_size`）
 - 使用 [SLURM](./examples/scripts/train_ppo_ray_slurm.sh) 的多节点训练
 
 **模型支持**
 - [LoRA/QLoRA](./examples/scripts/train_sft_mixtral_lora.sh)（`--lora_rank`、`--load_in_4bit`）
-- [专家混合（MoE）](./examples/test_scripts/train_sft_moe.sh)（`--aux_loss_coef`）
+- 专家混合（MoE）（`--aux_loss_coef`）
 - FlashAttention（`--attn_implementation`）
 - HuggingFace 聊天模板（`--apply_chat_template`）
 

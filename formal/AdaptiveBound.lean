@@ -293,6 +293,57 @@ theorem performance_lower_bound_adaptive (p q : Policy A) (R : List A → ℝ)
   have hb := (abs_le.mp (surrogate_error_adaptive_root p q R B ε δ hB hR N hs hTV hKL)).1
   linarith
 
+/-- TV controls a prefix expectation using bounds only at the represented
+history length; no conditions on irrelevant longer histories are needed. -/
+private theorem value_difference_tv_at_length (p q : Policy A) (R : List A → ℝ)
+    (B : ℝ) (n : ℕ) (hR : ∀ y, y.length = n → |R y| ≤ B) :
+    |value q R n [] - value p R n []| ≤
+      2 * B * acceptedPrefixTV p q (fun _ => 1) n := by
+  have hp := pathSum_mass_value p R n []
+  have hq := pathSum_mass_value q R n []
+  simp only [pathMass, one_mul, pathSum_eq_sum_ofFn, List.nil_append] at hp hq
+  rw [← hp, ← hq, ← Finset.sum_sub_distrib]
+  have hb := abs_signed_sum_le
+    (fun y : Fin n → A => pathMass q [] (List.ofFn y) - pathMass p [] (List.ofFn y))
+    (fun y => R (List.ofFn y)) B (fun y => hR _ (by simp))
+  simp only [sub_mul] at hb
+  simpa only [acceptedPrefixTV, one_mul, pathSum_eq_sum_ofFn, List.nil_append] using
+    (show _ ≤ 2 * B * ((1 / 2 : ℝ) *
+      ∑ y : Fin n → A, |pathMass q [] (List.ofFn y) - pathMass p [] (List.ofFn y)|) by
+      nlinarith only [hb])
+
+/-- TRM's Mixed-TV route uses the marginal prefix laws. Full-sequence TV
+is not inserted into a conditional future-TV bound. -/
+theorem surrogate_error_mixed_tv (p q : Policy A) (R : List A → ℝ) (B ε : ℝ)
+    (hB : 0 ≤ B) (hR : ∀ y, |R y| ≤ B) (N : ℕ)
+    (hTV : ∀ h, h.length < N → localTV p q h ≤ ε) :
+    |value q R N [] - value p R N [] - surrogate p q R N []| ≤
+      4 * B * (N : ℝ) * min 1 ε * acceptedPrefixTV p q (fun _ => 1) N := by
+  by_cases hN : N = 0
+  · subst N; simp [value, surrogate, additive]
+  have hε : 0 ≤ ε := le_trans (by unfold localTV; positivity)
+    (hTV [] (by simpa using Nat.pos_of_ne_zero hN))
+  have hc : 0 ≤ 2 * (2 * B * min 1 ε) := by positivity
+  rw [performance_difference, surrogate, additive_eq_prefix_sum, additive_eq_prefix_sum,
+    ← Finset.sum_sub_distrib]
+  calc
+    _ ≤ ∑ k ∈ Finset.range N,
+        |value q (gain p q R (N - 1 - k)) k [] - value p (gain p q R (N - 1 - k)) k []| :=
+      Finset.abs_sum_le_sum_abs _ _
+    _ ≤ ∑ _k ∈ Finset.range N,
+        2 * (2 * B * min 1 ε) * acceptedPrefixTV p q (fun _ => 1) N := by
+      apply Finset.sum_le_sum
+      intro k hk
+      have hkN := Finset.mem_range.mp hk
+      have hg : ∀ h, h.length = k → |gain p q R (N - 1 - k) h| ≤ 2 * B * min 1 ε := by
+        intro h hlen
+        exact (gain_abs_le p q R B hR _ h).trans
+          (mul_le_mul_of_nonneg_left (le_min (localTV_le_one p q h)
+            (hTV h (by omega))) (by positivity))
+      exact (value_difference_tv_at_length p q _ _ k hg).trans
+        (mul_le_mul_of_nonneg_left (prefixTV_mono p q hkN.le) hc)
+    _ = _ := by simp; ring
+
 section PromptFamily
 variable {X : Type*} [Fintype X]
 
@@ -351,6 +402,32 @@ theorem family_performance_lower_bound_adaptive
   rw [family_surrogate_remainder_identity μ p q R (fun x h a => (hs x h a).mp)]
   have hb := (abs_le.mp (family_remainder_adaptive μ p q R hμ B ε δ hB hR N hs hTV hKL)).2
   linarith
+/-- Average the Mixed-TV bound over the same finite prompt law as the
+existing reward theorem, retaining its actual full-response TV. -/
+theorem family_reward_error_mixed_tv
+    (μ : X → ℝ) (p q : X → Policy A) (R : X → List A → ℝ)
+    (hμ : ∀ x, 0 ≤ μ x) (B ε : ℝ) (hB : 0 ≤ B)
+    (hR : ∀ x y, |R x y| ≤ B) (N : ℕ)
+    (hTV : ∀ x h, h.length < N → localTV (p x) (q x) h ≤ ε) :
+    |familyValue μ q R N - familyValue μ p R N - familySurrogate μ p q R N| ≤
+      4 * B * (N : ℝ) * min 1 ε *
+        (∑ x, μ x * acceptedPrefixTV (p x) (q x) (fun _ => 1) N) := by
+  have hb := abs_weighted_sum_le_sum μ
+    (fun x => value (q x) (R x) N [] - value (p x) (R x) N [] - surrogate (p x) (q x) (R x) N [])
+    (fun x => 4 * B * (N : ℝ) * min 1 ε * acceptedPrefixTV (p x) (q x) (fun _ => 1) N)
+    hμ (fun x => surrogate_error_mixed_tv (p x) (q x) (R x) B ε hB (hR x) N (hTV x))
+  simp only [mul_sub, Finset.sum_sub_distrib] at hb
+  change |familyValue μ q R N - familyValue μ p R N - familySurrogate μ p q R N| ≤ _ at hb
+  have hc : (∑ x, μ x * (4 * B * (N : ℝ) * min 1 ε *
+        acceptedPrefixTV (p x) (q x) (fun _ => 1) N)) =
+      4 * B * (N : ℝ) * min 1 ε *
+        (∑ x, μ x * acceptedPrefixTV (p x) (q x) (fun _ => 1) N) := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro x _
+    ring
+  rwa [hc] at hb
+
 end PromptFamily
 
 end REINFORCEProMax.AutoregressiveTree

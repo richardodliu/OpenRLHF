@@ -1,0 +1,19 @@
+{
+  "source_run": "promax_dapo_math15b_full_four_arm_20260925",
+  "files_sha256": {
+    "training_avg8_summary.json": "6b4d1c171a3e468b23eb7e0f8f1a972c874e61708a5605541748ac79d6373da8",
+    "plan.json": "3050b356b95b509ee77b6025b5f588441d6e93852815cb0302141cf36a91c3ca",
+    "paper_settings.json": "e408f45388611c1725203f326d01fbc2498822c9f6854b9382c865d80d8381e7",
+    "paper_summary.json": "49efeb63588fb902684080640ac3df1acf93e3a6029fdedccbcc7265738074c4",
+    "paper_curves.csv": "0b079bd371628c889041beb5cd428585103fbb447574fbe23faeb2a891032713",
+    "analysis.json": "3b57eb930d980927dcdc16ce4ebb76d365b98e91a678d69afa0f388d6f9cf63f",
+    "baseline/training_avg8.csv": "aac4442738ccdad8659e27e215975860e5bb5df93938ab013b9dd80bc6aa9ed8",
+    "baseline/curve.csv": "ed4a845a3a2c503b09645f1cd4714b1a3173a8690b63560f2e11138360992b23",
+    "pro_max/training_avg8.csv": "3316dc43e41fe647b796b02264bb92083c499f4514a7bd1f5d2a05ae627d2700",
+    "pro_max/curve.csv": "620e98fbbb81d5b9a41c9ff8db8a9068c53c8912765caff1624fe1229ce91189",
+    "max_only/training_avg8.csv": "c611fbb382dc0d01c791c1eb4e867315767be5dcff25133c064140d97a300679",
+    "max_only/curve.csv": "e6d6fb81a0e150ded228ff35c43c2023c5b6a3df5ec9a00743da7261c1e3c796",
+    "pro_only/training_avg8.csv": "4fc8033680b4822f357274f042f56e3bbb436cca729ae973ee473239ac70709a",
+    "pro_only/curve.csv": "72272875cc6fd62703baa39c8cf8654e0f85a021110e831d667c67b195862586"
+  }
+}

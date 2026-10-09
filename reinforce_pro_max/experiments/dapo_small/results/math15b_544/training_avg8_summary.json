@@ -1,0 +1,39 @@
+{
+  "metric": "online_training_avg_at_8",
+  "samples_per_prompt": 8,
+  "scope": "Training rollout correctness under the policy at each step; not final-model dataset accuracy or held-out evaluation.",
+  "arms": {
+    "baseline": {
+      "recorded_steps": 544,
+      "last_step_avg_at_8": 0.265625,
+      "first_50_steps_avg_at_8": 0.110546875,
+      "last_50_steps_avg_at_8": 0.27734375,
+      "all_recorded_steps_avg_at_8": 0.24009076286764705,
+      "curve": "baseline/training_avg8.csv"
+    },
+    "max_only": {
+      "recorded_steps": 544,
+      "last_step_avg_at_8": 0.17578125,
+      "first_50_steps_avg_at_8": 0.12828125,
+      "last_50_steps_avg_at_8": 0.29078125,
+      "all_recorded_steps_avg_at_8": 0.24569163602941177,
+      "curve": "max_only/training_avg8.csv"
+    },
+    "pro_only": {
+      "recorded_steps": 544,
+      "last_step_avg_at_8": 0.33203125,
+      "first_50_steps_avg_at_8": 0.115625,
+      "last_50_steps_avg_at_8": 0.29734375,
+      "all_recorded_steps_avg_at_8": 0.25142894071691174,
+      "curve": "pro_only/training_avg8.csv"
+    },
+    "pro_max": {
+      "recorded_steps": 544,
+      "last_step_avg_at_8": 0.32421875,
+      "first_50_steps_avg_at_8": 0.118359375,
+      "last_50_steps_avg_at_8": 0.286875,
+      "all_recorded_steps_avg_at_8": 0.2510770909926471,
+      "curve": "pro_max/training_avg8.csv"
+    }
+  }
+}

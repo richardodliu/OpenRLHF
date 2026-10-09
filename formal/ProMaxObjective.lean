@@ -148,4 +148,97 @@ theorem finite_promax_objective_error_bound (a M w r c A H : I → ℝ)
       exact add_le_add_right habs _
     _ ≤ _ := add_le_add_right (add_le_add hg hn) _
 
+/-- The signed gate/normalization correction to an increment depends on
+the ratio increment, rather than the two absolute objective discrepancies. -/
+theorem correction_increment_eq (a M w r r₀ A H : I → ℝ) :
+    (gateCorrection a M w r A - gateCorrection a M w r₀ A) -
+      (normalizationCorrection a M w r A H - normalizationCorrection a M w r₀ A H) =
+        ∑ i, a i * w i * (r i - r₀ i) * (A i - M i * H i) := by
+  unfold gateCorrection normalizationCorrection
+  rw [← Finset.sum_sub_distrib, ← Finset.sum_sub_distrib, ← Finset.sum_sub_distrib]
+  apply Finset.sum_congr rfl
+  intro i _
+  ring
+
+noncomputable def incrementDistortion (a M w r r₀ A H : I → ℝ) : ℝ :=
+  ∑ i, a i * w i * |r i - r₀ i| * |A i - M i * H i|
+
+theorem correction_increment_abs_le (a M w r r₀ A H : I → ℝ)
+    (ha : ∀ i, 0 ≤ a i) (hw : ∀ i, 0 ≤ w i) :
+    |(gateCorrection a M w r A - gateCorrection a M w r₀ A) -
+      (normalizationCorrection a M w r A H - normalizationCorrection a M w r₀ A H)| ≤
+        incrementDistortion a M w r r₀ A H := by
+  rw [correction_increment_eq]
+  calc
+    _ ≤ ∑ i, |a i * w i * (r i - r₀ i) * (A i - M i * H i)| :=
+      Finset.abs_sum_le_sum_abs _ _
+    _ = _ := by
+      unfold incrementDistortion
+      apply Finset.sum_congr rfl
+      intro i _
+      simp only [abs_mul, abs_of_nonneg (ha i), abs_of_nonneg (hw i)]
+
+/-- A one-sided certificate in terms of the actual objective gain. The
+candidate clipping penalty may be dropped, but the reference penalty may
+not: the reference policy is rollout, not necessarily the frozen snapshot. -/
+theorem raw_increment_ge_objective_increment (a M w r r₀ c c₀ A H : I → ℝ)
+    (ha : ∀ i, 0 ≤ a i) (hM : ∀ i, 0 ≤ M i) (hw : ∀ i, 0 ≤ w i) :
+    objective a M w r c H - objective a M w r₀ c₀ H -
+        incrementDistortion a M w r r₀ A H - clippingPenalty a M w r₀ c₀ H ≤
+      rawSurrogate a w r A - rawSurrogate a w r₀ A := by
+  have heq := corrected_objective_delta a M w r r₀ c c₀ A H
+  have hcorr := (abs_le.mp (correction_increment_abs_le a M w r r₀ A H ha hw)).1
+  have hc := finite_clipping_penalty_nonnegative a M w r c H ha hM hw
+  linarith
+
+/-- A positive reference scale changes the units of the objective, not the
+algorithm. Comparing H with scale*A avoids charging a common positive
+scale as distortion; scale=1 recovers the original margin. -/
+theorem raw_increment_ge_scaled_objective_increment (a M w r r₀ c c₀ A H : I → ℝ)
+    (scale : ℝ) (hscale : 0 < scale)
+    (ha : ∀ i, 0 ≤ a i) (hM : ∀ i, 0 ≤ M i) (hw : ∀ i, 0 ≤ w i) :
+    (objective a M w r c H - objective a M w r₀ c₀ H -
+        incrementDistortion a M w r r₀ (fun i => scale * A i) H -
+        clippingPenalty a M w r₀ c₀ H) / scale ≤
+      rawSurrogate a w r A - rawSurrogate a w r₀ A := by
+  have hb := raw_increment_ge_objective_increment a M w r r₀ c c₀
+    (fun i => scale * A i) H ha hM hw
+  apply (div_le_iff₀ hscale).mpr
+  have heq : rawSurrogate a w r (fun i => scale * A i) -
+      rawSurrogate a w r₀ (fun i => scale * A i) =
+      (rawSurrogate a w r A - rawSurrogate a w r₀ A) * scale := by
+    unfold rawSurrogate
+    rw [sub_mul, Finset.sum_mul, Finset.sum_mul]
+    congr 1 <;> apply Finset.sum_congr rfl <;> intro i _ <;> ring
+  rwa [heq] at hb
+
+/-- Composition with the reward bound on the original certificate event.
+This deterministic transfer introduces no new probabilistic independence
+assumption and claims no superiority of one gate or normalization. -/
+theorem reward_gain_ge_objective_margin (a M w r r₀ c c₀ A H : I → ℝ)
+    (μ η B gain : ℝ) (hμ : 0 ≤ μ)
+    (ha : ∀ i, 0 ≤ a i) (hM : ∀ i, 0 ≤ M i) (hw : ∀ i, 0 ≤ w i)
+    (hcert : μ * (rawSurrogate a w r A - rawSurrogate a w r₀ A - η) - B ≤ gain) :
+    μ * (objective a M w r c H - objective a M w r₀ c₀ H -
+      incrementDistortion a M w r r₀ A H - clippingPenalty a M w r₀ c₀ H - η) - B ≤ gain := by
+  have hraw := raw_increment_ge_objective_increment a M w r r₀ c c₀ A H ha hM hw
+  exact le_trans (sub_le_sub_right (mul_le_mul_of_nonneg_left
+    (sub_le_sub_right hraw η) hμ) B) hcert
+
+/-- Strict objective margin is sufficient on the same certificate event. -/
+theorem reward_gain_positive_of_objective_margin (a M w r r₀ c c₀ A H : I → ℝ)
+    (μ η B gain : ℝ) (hμ : 0 < μ)
+    (ha : ∀ i, 0 ≤ a i) (hM : ∀ i, 0 ≤ M i) (hw : ∀ i, 0 ≤ w i)
+    (hcert : μ * (rawSurrogate a w r A - rawSurrogate a w r₀ A - η) - B ≤ gain)
+    (hmargin : incrementDistortion a M w r r₀ A H + clippingPenalty a M w r₀ c₀ H +
+      η + B / μ < objective a M w r c H - objective a M w r₀ c₀ H) :
+    0 < gain := by
+  have hbound := reward_gain_ge_objective_margin a M w r r₀ c c₀ A H
+    μ η B gain (le_of_lt hμ) ha hM hw hcert
+  have hdiv : B / μ < objective a M w r c H - objective a M w r₀ c₀ H -
+      incrementDistortion a M w r r₀ A H - clippingPenalty a M w r₀ c₀ H - η := by
+    linarith
+  have hmul := (div_lt_iff₀ hμ).mp hdiv
+  nlinarith
+
 end REINFORCEProMax.Objective

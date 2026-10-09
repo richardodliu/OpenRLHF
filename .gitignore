@@ -50,6 +50,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
 
 # Translations
 *.mo
@@ -149,3 +150,15 @@ core
 *jianh*
 *test_scripts*
 */checkpoint/*
+
+# Local paper build intermediates (keep reference-paper .bbl files).
+/tex/*.aux
+/tex/*.bbl
+/tex/*.blg
+/tex/*.out
+/tex/*.toc
+/tex/*.lof
+/tex/*.lot
+/tex/*.fls
+/tex/*.fdb_latexmk
+/tex/*.synctex.gz

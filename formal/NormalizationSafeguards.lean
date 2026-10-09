@@ -55,6 +55,15 @@ theorem signScale_preserves_sign (α β x : ℝ) (hα : 0 < α) (hβ : 0 < β) :
   · have hp := mul_pos hα h
     simp [signScale, h, not_lt_of_gt h, hp, not_lt_of_gt hp, ne_of_gt hp, ne_of_gt h]
 
+/-- Ordering is preserved with the same fixed factors, not between independently
+normalized groups. This scalar property does not preserve a summed gradient direction. -/
+theorem signScale_strictMono (α β : ℝ) (hα : 0 < α) (hβ : 0 < β) :
+    StrictMono (signScale α β) := by
+  intro x y hxy
+  unfold signScale
+  split_ifs <;> nlinarith [mul_pos hα (sub_pos.mpr hxy),
+    mul_pos hβ (sub_pos.mpr hxy)]
+
 noncomputable def positiveClamp (ε K x : ℝ) : ℝ := min (max x ε) K
 
 theorem positiveClamp_pos (ε K x : ℝ) (hε : 0 < ε) (hK : 0 < K) :
@@ -64,6 +73,12 @@ theorem positiveClamp_pos (ε K x : ℝ) (hε : 0 < ε) (hK : 0 < K) :
 theorem positiveClamp_mem (ε K x : ℝ) (hεK : ε ≤ K) :
     ε ≤ positiveClamp ε K x ∧ positiveClamp ε K x ≤ K := by
   exact ⟨le_min (le_max_right _ _) hεK, min_le_right _ _⟩
+
+/-- Positive factor clamps retain scalar ordering on the normalization branch. -/
+theorem clamped_signScale_strictMono (ε K α β : ℝ) (hε : 0 < ε) (hK : 0 < K) :
+    StrictMono (signScale (positiveClamp ε K α) (positiveClamp ε K β)) :=
+  signScale_strictMono _ _ (positiveClamp_pos _ _ _ hε hK)
+    (positiveClamp_pos _ _ _ hε hK)
 
 /-- With the product cap inactive, epsilon preserves centering but changes variance. -/
 theorem stabilized_closed_form (P N Qp Qn m ε : ℝ)

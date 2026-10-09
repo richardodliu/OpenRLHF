@@ -154,6 +154,31 @@ theorem adaptive_closed_form
       _ = (m / (Qp + (P / N) ^ 2 * Qn)) * (Qp + (P / N) ^ 2 * Qn) := by rw [hsqrt]
       _ = m := by field_simp [ne_of_gt hden]
 
+/-- The ideal constraints determine a unique positive pair; this statement
+is restricted to nonempty positive and negative token classes. -/
+theorem adaptive_closed_form_unique
+    (P N Qp Qn m α β : ℝ)
+    (hP : 0 < P) (hN : 0 < N) (hQp : 0 < Qp) (hQn : 0 < Qn)
+    (hm : 0 < m) (hα : 0 < α)
+    (hmean : α * P - β * N = 0)
+    (hsecond : α^2 * Qp + β^2 * Qn = m) :
+    α = Real.sqrt (m / (Qp + (P / N)^2 * Qn)) ∧
+    β = Real.sqrt (m / (Qp + (P / N)^2 * Qn)) * (P / N) := by
+  have hβ : β = α * (P / N) := by
+    apply (mul_right_cancel₀ (ne_of_gt hN))
+    field_simp
+    nlinarith [hmean]
+  have hd : 0 < Qp + (P / N)^2 * Qn := by positivity
+  have hs : α^2 = m / (Qp + (P / N)^2 * Qn) := by
+    apply (eq_div_iff (ne_of_gt hd)).mpr
+    rw [hβ] at hsecond
+    nlinarith [hsecond]
+  have he : α = Real.sqrt (m / (Qp + (P / N)^2 * Qn)) := by
+    apply (sq_eq_sq₀ (le_of_lt hα) (Real.sqrt_nonneg _)).mp
+    rw [Real.sq_sqrt (le_of_lt (div_pos hm hd))]
+    exact hs
+  exact ⟨he, hβ.trans (by rw [he])⟩
+
 /- In the idealized ±1 reward case, the asymmetric scales have an exact
    length-mass form: their squared magnitudes are the opposite-sign token
    mass ratios. -/

@@ -27,6 +27,10 @@ def execute(args,cwd,env,folder,kind):
 def environment():
  e=os.environ.copy();e.update(PYTHONPATH=str(R/'source'),CUDA_VISIBLE_DEVICES='0,1,2,3,4,5,6,7',WANDB_MODE='disabled',OMP_NUM_THREADS='4',TOKENIZERS_PARALLELISM='false',PYTHONUNBUFFERED='1',VLLM_WORKER_MULTIPROC_METHOD='spawn');e['PATH']=str(Path(sys.executable).parent)+':'+e.get('PATH','');e.pop('WANDB_API_KEY',None);e.pop('RAY_ADDRESS',None);return e
 def evaluate(name,model):
+ control=R/'evaluation-policy.json'
+ if control.exists() and json.loads(control.read_text()).get('skip_future_evaluations'):
+  print(json.dumps({'evaluation':'skipped','run':name,'reason':json.loads(control.read_text())['reason']}),flush=True)
+  return
  for path,expected in json.loads((R/'evaluation-inputs.json').read_text()).items():assert digest(path)==expected,path
  folder=R/name/'evaluation';env=environment();env['CUDA_VISIBLE_DEVICES']='0,1,2,3';state('evaluating',run=name)
  execute([sys.executable,'-u','/volume/pt-train/users/rbliu/github/OpenRLHF/reinforce_pro_max/experiments/dapo_small/evaluate_aime25.py','--model',str(model),'--output',str(folder),'--suite','math'],R,env,folder,'eval')
@@ -41,16 +45,19 @@ def main():
  assert json.loads((R/'preflight.json').read_text())['status']=='passed'
  assert json.loads((R/'reward-validation.json').read_text())['status']=='passed'
  for relative,expected in json.loads((R/'frozen-sha256.json').read_text()).items():assert digest(R/relative)==expected,relative
- for arm,cfg in P['arms'].items():
+ queue=R/'queue-switch.json'
+ active=json.loads(queue.read_text())['active_arms'] if queue.exists() else list(P['arms'])
+ for arm in active:
+  cfg=P['arms'][arm]
   run=R/arm;run.mkdir(exist_ok=True);args=list(P['original_argv']);args[0]=sys.executable
-  changes={'--advantage_estimator':cfg['estimator'],'--prompt_data':str(R/'train.jsonl'),'--max_samples':'3200','--save_path':str(run/'final_model'),'--ckpt_path':str(run/'checkpoints'),'--save_steps':'-1','--max_ckpt_num':'1','--use_tensorboard':str(run/'tensorboard')}
+  changes={'--advantage_estimator':cfg['estimator'],'--prompt_data':str(R/'train.jsonl'),'--max_samples':str(P.get('train_prompts',3200)),'--save_path':str(run/'final_model'),'--ckpt_path':str(run/'checkpoints'),'--save_steps':'-1','--max_ckpt_num':'1','--use_tensorboard':str(run/'tensorboard')}
   for flag,value in changes.items():args[args.index(flag)+1]=value
   if cfg['gate']=='none':
    args.remove('--enable_vllm_is_correction')
    i=args.index('--vllm_is_correction_type');del args[i:i+2]
   else:args[args.index('--vllm_is_correction_type')+1]=cfg['gate']
   if cfg['global_normalization']:args.append('--study_global_rloo_norm')
-  env=environment();env['PROMAX_STUDY_METRICS']=str(run/'metrics');state('training',run=arm,planned_updates=100)
+  env=environment();env['PROMAX_STUDY_METRICS']=str(run/'metrics');state('training',run=arm,planned_updates=P.get("updates_per_arm",100))
   execute(args,R/'source',env,run,'train');evaluate(arm,run/'final_model');summarize()
  evaluate('initial',P['model']);summarize();subprocess.run([sys.executable,str(R/'analyze.py')],check=True);state('complete',summary=str(R/'analysis.json'))
 if __name__=='__main__':

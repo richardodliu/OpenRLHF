@@ -1,0 +1,59 @@
+{
+  "pdf_pages": 23,
+  "main_end_page": 9,
+  "main_last_text_bottom_pt": 730.0560302734375,
+  "page10_statement_order": [
+    "AI USE STATEMENT",
+    "ETHICS STATEMENT",
+    "REPRODUCIBILITY STATEMENT"
+  ],
+  "pdf_sha256": "b8697da4390fc815923f4f11ea9b519ff92824f37b708f50aefc68ae4bf9816d",
+  "exact_example_checks": {
+    "status": "passed",
+    "arithmetic": "exact rational",
+    "checks": [
+      {
+        "example": "positive",
+        "B": "8/5",
+        "margin": "33/1000",
+        "lower_bound": "19/600"
+      },
+      {
+        "example": "positive",
+        "B": "2",
+        "margin": "33/1000",
+        "lower_bound": "19/600"
+      },
+      {
+        "example": "positive",
+        "B": "10",
+        "margin": "33/1000",
+        "lower_bound": "19/600"
+      },
+      {
+        "example": "positive",
+        "B": "1000",
+        "margin": "33/1000",
+        "lower_bound": "19/600"
+      },
+      {
+        "example": "shared_parameter",
+        "delta": "1/1000",
+        "objective_increment": "1/4000",
+        "reward_increment": "-1/2000"
+      },
+      {
+        "example": "shared_parameter",
+        "delta": "1/90",
+        "objective_increment": "1/360",
+        "reward_increment": "-1/180"
+      },
+      {
+        "example": "shared_parameter",
+        "delta": "1/45",
+        "objective_increment": "1/180",
+        "reward_increment": "-1/90"
+      }
+    ]
+  }
+}

@@ -32,6 +32,8 @@ OpenRLHF is **the first** high-performance, production-ready open-source RLHF fr
 
 📚 **Learn More**: [Documentation](https://openrlhf.readthedocs.io/) | [Slides](https://docs.google.com/presentation/d/1JRhB1d7csofx0PIZBmfyBdMluxNd5JLPpUHrrvVhGnk/edit?usp=sharing) | [Technical Report](https://www.researchgate.net/publication/393414548_OpenRLHF_An_Easy-to-use_Scalable_and_High-performance_RLHF_Framework) | [Video](https://www.bilibili.com/video/BV1dv2jBxEQG/)
 
+This research checkout includes [REINFORCE Pro Max](reinforce_pro_max/README.md): paper sources, finite-model proofs, implementation notes, and the current submission status.
+
 ## 📖 Table of Contents
 
 - [🗞️ News](#news)
@@ -254,12 +256,12 @@ OpenRLHF provides a complete RLHF pipeline with agent-based flexibility:
 
 **Scalability**
 - DeepSpeed AutoTP for tensor parallelism (see `--ds_tensor_parallel_size` in training scripts)
-- [RingAttention](./examples/test_scripts/train_dpo_ring_llama.sh) for long context (`--ring_attn_size`)
+- RingAttention for long context (`--ring_attn_size`)
 - Multi-node training with [SLURM](./examples/scripts/train_ppo_ray_slurm.sh)
 
 **Model Support**
 - [LoRA/QLoRA](./examples/scripts/train_sft_mixtral_lora.sh) (`--lora_rank`, `--load_in_4bit`)
-- [Mixture of Experts (MoE)](./examples/test_scripts/train_sft_moe.sh) (`--aux_loss_coef`)
+- Mixture of Experts (MoE) (`--aux_loss_coef`)
 - FlashAttention (`--attn_implementation`)
 - HuggingFace chat templates (`--apply_chat_template`)
 

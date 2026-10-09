@@ -182,14 +182,10 @@ theorem response_local_improvement {m : ℕ} (hm : m ≠ 0)
   have hp := hnorm.self_of_nhds
   have hlower := response_class_multiplier_lower_bound hm (p θ) b uniform length
     ε cap maxScale Lmax hp0 hp hε.le hε1 hεK hposL hmax hmass hL
-  have hb := population_ascent_bound p b θ D hd hpos hnorm
+  exact population_local_improvement p b θ D hd hpos hnorm
     (fun q => ne_of_gt (hmass q))
     (responseCoefficient (m := m) uniform b length ε cap maxScale)
-    (ε / Lmax) hlower
-  have ha := lt_of_lt_of_le (sub_pos.mpr hmargin) hb
-  have hderiv := (finite_policy_uniform_correction p b θ D 0 1 0 hd hpos hnorm).1
-  exact ⟨success_gradient_correct p b θ D hd hpos hnorm, ha,
-    local_improvement_of_positive_derivative _ θ _ _ hderiv ha⟩
+    (hmargin.trans_le (mul_le_mul_of_nonneg_right hlower (sq_nonneg _)))
 
 /-- With class-dependent lengths, nonstationarity alone is enough: the
 complete expected update has a strictly positive common multiplier. -/

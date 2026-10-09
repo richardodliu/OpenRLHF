@@ -1,0 +1,1190 @@
+\appendix
+\section{Finite model and reward reference}
+\label{sec:preliminaries}
+
+The proofs use a common finite autoregressive model: prompts and tokens have finite support,
+terminal rewards are bounded, and a shared absorbing EOS transition pads
+responses to horizon $T$. The EOS-emitting action is active; subsequent padding has action mask zero. Write $p=\piroll$ and $q=\pitheta$. On active rollout support,
+\begin{equation}
+ \rho_t=q(y_t\mid c_t)/p(y_t\mid c_t).
+ \label{eq:ratio}
+\end{equation}
+\begin{equation}
+ \log\rho_t=\log q(y_t\mid c_t)-\log p(y_t\mid c_t).
+ \label{eq:log-ratio}
+\end{equation}
+The action mask is predictable from the history. All reductions use its
+active positions. The analyzed objective uses one current-to-rollout ratio, a detached
+prefix mask, no PPO clipping, no KL or entropy term, and sparse terminal reward.
+Let $d_t^p$ denote the rollout law of the history before action $t$.
+For finite distributions, $\DTV(p,q)=\tfrac12\sum_a|p_a-q_a|$ and
+$\DKL(p\|q)=\sum_{a:p_a>0}p_a\log(p_a/q_a)$.
+
+\begin{assumption}[Mutual Policy Support]
+\label{asm:support}
+For all contexts $c_t$ and tokens $y_t$ in the vocabulary,
+\begin{equation*}
+    \piroll(y_t|c_t) > 0
+    \quad\Longleftrightarrow\quad
+    \pitheta(y_t|c_t) > 0.
+\end{equation*}
+On this common support, $\rho_t$ and $\log\rho_t$ are well-defined,
+and conditional normalization gives $\E_{\piroll}[\rho_t\mid c_t]=1$.
+Tokens with zero mass under both policies contribute zero to rollout
+expectations and KL/TV sums; their ratios are set to $1$. The common
+support may be a proper subset of the vocabulary.
+\end{assumption}
+
+\begin{definition}[Uniform Token-Level Divergence Bounds and Expected Per-Position TV]
+\label{def:max-div}
+For the policy pair $(\piroll,\pitheta)$, let $\epsilon,\delta\ge0$ denote finite uniform upper bounds whenever the result invoking them assumes such bounds:
+\begin{align*}
+    \Dtvtok(c_t;\piroll,\pitheta)&\le\epsilon, \\
+    \Dkltok(c_t;\piroll,\pitheta)&\le\delta,
+    \qquad \text{for all relevant }t,c_t.
+\end{align*}
+The KL direction is $\piroll\|\pitheta$. The relevant contexts include all histories before the common horizon in the model under consideration, uniformly over its prompts. On the finite context set, mutual support makes the divergences finite, and their maxima provide uniform bounds.
+Define the rollout-weighted expected per-position TV by
+\[
+    \Dbar_t:=\E_{c_t\sim d_t^{\piroll}}
+      [\Dtvtok(c_t;\piroll,\pitheta)].
+\]
+\end{definition}
+
+Samples are generated from a behavior policy $\piroll$ that generally differs from $\pitheta$. Following~\citet{kakade2002approximately},
+the standard surrogate objective uses the per-step advantage under $\piroll$,
+\begin{equation*}
+    A_t^{\piroll}(c_t, y_t)
+    := \E_{\piroll}\!\big[R(x, y)\mid c_t, y_t\big] - \E_{\piroll}\!\big[R(x, y)\mid c_t\big].
+\end{equation*}
+This yields the per-step surrogate
+\begin{equation}
+    \mathcal{L}_{\piroll}(\pitheta) = \sum_{t=1}^T \E_{c_t \sim d_t^{\piroll}}\!\Big[m_t(c_t)\,\E_{y_t \sim \piroll(\cdot|c_t)}\!\big[\rho_t \, A_t^{\piroll}(c_t, y_t)\big]\Big],
+    \label{eq:surrogate}
+\end{equation}
+where $m_t(c_t)\in\{0,1\}$ is the predictable action mask from
+\Cref{def:impl-surrogate}. In the unpadded fixed-horizon model $m_t\equiv1$;
+with EOS padding it removes post-termination contexts, whose shared absorbing
+transition has zero advantage and unit ratio.
+The ratio $\rho_t$ is defined in Eq.~\eqref{eq:ratio}.
+
+\begin{definition}[Trajectory-Level Surrogate]
+\label{def:impl-surrogate}
+Let $b$ be a baseline that is independent of the sampled trajectory $y$ conditional on the prompt $x$ (e.g., a prompt-level baseline
+computed from other independent rollout samples in the same prompt group). The rollout policy and the baseline sampling law are fixed
+during the update. Let $m_t=m_t(c_t)\in\{0,1\}$ denote the predictable action mask: it equals one while generation is active, including
+the action that emits EOS, and zero at subsequent padding positions. Define the trajectory-level advantage
+\begin{equation*}
+    A := R(x, y) - b.
+\end{equation*}
+The unclipped, unnormalized trajectory-level surrogate underlying critic-free implementations is
+\begin{equation*}
+    \tilde{\mathcal{L}}_{\piroll}(\pitheta) := \E_{\piroll}\!\Big[A \cdot \sum_{t=1}^T m_t\rho_t\Big].
+\end{equation*}
+\end{definition}
+
+\begin{proposition}[Exact Centered Surrogate Equivalence]
+\label{prop:surrogate-equivalence}
+For finite prompt, action, and continuation supports, under mutual policy support and the finite/EOS-padded horizon convention, assume that the expectations below exist and that $b$ and
+$m_t$ satisfy \Cref{def:impl-surrogate}. Then, for any current policy $\pitheta$,
+\begin{equation}
+    \tilde{\mathcal L}_{\piroll}(\pitheta)
+    -\tilde{\mathcal L}_{\piroll}(\piroll)
+    =\mathcal L_{\piroll}(\pitheta)
+    =\E_{\piroll}\!\left[R(x,y)\sum_{t=1}^{T}m_t(\rho_t-1)\right].
+    \label{eq:surrogate-equivalence}
+\end{equation}
+The subtracted quantity is constant during the policy update; the identity holds for every candidate policy with the stated support.
+\end{proposition}
+
+Equality averages over response and baseline laws. Random-length batch
+reductions are treated in \Cref{sec:population-transfer}.
+
+\subsection{Centered Surrogate Equivalence and Error Decomposition}
+\label[appsec]{app:surrogate-equivalence}
+
+\begin{proof}[Proof of \Cref{prop:surrogate-equivalence}]
+Write $Q_t(c_t,a)=\E_{\piroll}[R\mid c_t,a]$, $V_t(c_t)=\E_{\piroll}[R\mid c_t]$, and
+$\bar b(x)=\E[b\mid x]$. Conditional independence of $b$ and policy normalization give
+\begin{equation*}
+    \E_{\piroll}[(R-b)\rho_t\mid c_t]
+    =\sum_a\pitheta(a\mid c_t)(Q_t(c_t,a)-V_t(c_t))
+      +V_t(c_t)-\bar b(x).
+\end{equation*}
+The last two terms are independent of $\pitheta$. At $\pitheta=\piroll$ the advantage sum is zero.
+Multiplying by the predictable mask $m_t(c_t)$, averaging over rollout contexts, and summing over $t$ proves the first equality.
+The second follows by replacing $b$ by zero and using
+$\E_{\piroll}[R(\rho_t-1)\mid c_t]=\sum_a\pitheta(a\mid c_t)(Q_t(c_t,a)-V_t(c_t))$.
+On post-EOS padding states the advantage is zero and the ratio is one.
+\end{proof}
+
+The argument integrates both the continuation law and the independent
+baseline law at each context. Random-length batch reductions are treated
+in \Cref{prop:promax-objective-split,sec:population-transfer}.
+
+\subsection{Population reward bound}
+We use the Adaptive and Mixed bounds of \citet{li2025trm} in the finite
+model above, with bounded signed rewards and an average over prompts.
+The proof records the terminal-reward and EOS correspondence needed for
+the subsequent Max/Pro objective comparison.
+\begin{theorem}[Finite-tree reward error bound]
+\label{thm:adaptive-bound}
+For a finite prompt distribution and finite vocabulary, let both policies be
+normalized history-dependent kernels satisfying \Cref{asm:support} and the
+fixed/EOS-padded horizon convention. Suppose $|R|\le R_{\max}$ with
+$R_{\max}\ge0$, and let $\epsilon,\delta$ bound the local TV and reverse KL
+at every context before horizon $T$, as in \Cref{def:max-div}. Then
+\begin{equation}
+    B_{\mathrm{Adap}}^{*} = 4 R_{\max} \sum_{t=1}^{T} \Dbar_t \cdot \min\!\Big(1,\;(T\!-\!t)\,\epsilon,\;\sqrt{\tfrac{(T-t)\,\delta}{2}}\Big),
+    \label{eq:adaptive-bound}
+\end{equation}
+and, writing $P_x^p,P_x^q$ for the complete response laws,
+\[
+ B_{\rm Mix}=4R_{\max}T\min(1,\epsilon)
+       \E_x\operatorname{TV}(P_x^p,P_x^q),\qquad
+ B=\min\{B_{\mathrm{Adap}}^{*},B_{\rm Mix}\}.
+\]
+Then
+\begin{equation*}
+    |J(\pitheta)-J(\piroll)-\mathcal L_{\piroll}(\pitheta)|
+    \le B,
+    \qquad
+    J(\pitheta)-J(\piroll)
+    \ge \mathcal L_{\piroll}(\pitheta)-B.
+\end{equation*}
+\end{theorem}
+
+\subsection{Reward decomposition and sequence error}
+\label[appsec]{app:adaptive-proof}
+
+\begin{proof}[Proof of \Cref{thm:adaptive-bound}]
+We combine DPPO's product decomposition
+\citep[Appendix~B.1]{qi2026rethinkingtrustregionllm} with TRM's conditional-TV
+and marginal-prefix arguments \citep[Appendices~D and C.2]{li2025trm}.
+\Cref{prop:surrogate-equivalence} incorporates RLOO centering and EOS.
+\emph{Step 1: exact reward decomposition.}
+Fix a prompt and write $p=\piroll$, $q=\pitheta$.
+On rollout support, the trajectory likelihood ratio is $\prod_{t=1}^T\rho_t$.
+Telescoping this product gives
+\[
+ \prod_{t=1}^T\rho_t-1
+ =\sum_{t=1}^T(\rho_t-1)\prod_{j>t}\rho_j.
+\]
+Changing measure and subtracting the raw surrogate therefore yields
+\[
+ J(q)-J(p)-\mathcal S_p(q)
+ =\E_p\!\left[R\sum_{t=1}^T(\rho_t-1)
+                  \left(\prod_{j>t}\rho_j-1\right)\right].
+\]
+\emph{Step 2: bound the continuation factor.}
+Condition on the full prefix $c_{t+1}=(x,y_{\le t})$, which fixes
+$\rho_t-1$. The remaining product is the likelihood ratio of the two
+conditional continuation laws $P^q_{>t}(\cdot\mid c_{t+1})$ and
+$P^p_{>t}(\cdot\mid c_{t+1})$. Consequently,
+\[
+ \E_p\!\left[\left|\prod_{j>t}\rho_j-1\right|\,\middle|\,c_{t+1}\right]
+ =2\DTV(P^p_{>t},P^q_{>t}).
+\]
+For $n=T-t$ remaining actions, normalization bounds this TV by one.
+The conditional sequence-TV argument of
+\citet[Appendix~B.2]{qi2026rethinkingtrustregionllm} gives the sharper step
+\[
+ \operatorname{TV}(P^p_{>t},P^q_{>t})\le
+ \sum_{j=t+1}^{T}\E_{p(\cdot\mid c_{t+1})}
+ \operatorname{TV}\bigl(p(\cdot\mid c_j),q(\cdot\mid c_j)\bigr)
+ \le n\epsilon.
+\]
+To obtain the first inequality, telescope the two products of conditional
+probabilities, using rollout factors before position $j$ and candidate
+factors after it. The triangle inequality separates each local difference;
+summing the candidate continuation gives one, leaving the rollout-weighted
+local TVs. The kernels may depend on the complete history. The KL chain rule and Pinsker's inequality, as used by
+\citet[Appendix~D]{li2025trm}, give $\sqrt{n\delta/2}$.
+Thus it is at most $b_n=\min(1,n\epsilon,\sqrt{n\delta/2})$ at every
+continuation history.
+\emph{Step 3: aggregate the error.} The tower property and $|R|\le R_{\max}$ give
+\begin{align*}
+ |J(q)-J(p)-\mathcal S_p(q)|
+ &\le 2R_{\max}\sum_{t=1}^T b_{T-t}\E_p|\rho_t-1|\\
+ &=4R_{\max}\sum_{t=1}^T b_{T-t}\bar D_t.
+\end{align*}
+The last equality uses conditional ratio normalization at each context.
+All divergence bounds concern contexts before $T$; conditioning in the
+tower step retains the dependence of the continuation on the current action.
+Averaging over prompts proves the stated bound and its one-sided version.
+On shared absorbing EOS transitions $\rho_t=1$, so padding contributes
+neither a surrogate term nor a local divergence.
+
+\emph{Alternative bound: marginal prefix shift.} Follow the argument of
+\citet[Appendix~C.2]{li2025trm}. Write $d_t^p,d_t^q$ for the laws of the full prefix and
+$g_t(c_t)=\E_{a\sim q(\cdot\mid c_t)}A_t^p(c_t,a)$.
+The performance-difference identity yields
+\[
+ J(q)-J(p)-\mathcal S_p(q)
+ =\sum_t\bigl(\E_{d_t^q}g_t-\E_{d_t^p}g_t\bigr).
+\]
+Since $|Q_t^p|\le R_{\max}$, conditional normalization gives
+$|g_t|\le2R_{\max}\min(1,\epsilon)$.
+Total variation contracts under marginalization, giving
+$\operatorname{TV}(d_t^p,d_t^q)\le\operatorname{TV}(P_x^p,P_x^q)$.
+Applying the bounded-function expectation inequality at each position,
+summing over $t$, and averaging over prompts gives $B_{\rm Mix}$.
+Both bounds control the same absolute error, hence their minimum is valid.
+The Mixed bound uses marginal prefix laws; the Adaptive bound controls
+continuation laws conditional on each history and current action.
+\end{proof}
+
+\paragraph{Relation to DPPO and TRM bounds.}
+Using $\bar D_t\le\epsilon$ with $b_{T-t}\le(T-t)\epsilon$, or
+using $b_{T-t}\le1$, recovers DPPO's two bounds
+\citep[Appendix~B.2--B.3]{qi2026rethinkingtrustregionllm}:
+\[
+ B_{\rm Adap}\le\min\!\left\{2R_{\max}T(T-1)\epsilon^2,
+                                 4R_{\max}\sum_t\bar D_t\right\}.
+\]
+Pinsker gives $\bar D_t\le\sqrt{\delta/2}$; integrating $\sqrt{x}$
+bounds $\sum_{k<T}\sqrt{k}\le2T^{3/2}/3$, yielding
+$B_{\rm Adap}\le(4/3)R_{\max}\delta T^{3/2}$, TRM's
+Pinsker--Marginal rate \citep{li2025trm}. Retaining $\bar D_t$ avoids
+charging the largest divergence at every position. For remaining length
+$h=T-t$ and $\epsilon>0$, $h\epsilon\le\sqrt{h\delta/2}$ for
+$0<h\le\delta/(2\epsilon^2)$; beyond this crossover the KL factor is
+smaller. Both capped factors equal one if both reach one, and vanish at
+$h=0$. If $\epsilon=0$, the TV factor is zero throughout.
+
+TRM's complete-sequence KL variant follows from the Mixed proof
+\citep[Appendix~C.2]{li2025trm}. Let
+$K_x=D_{\rm KL}(P_x^p\|P_x^q)$ and $\bar K=\E_xK_x$.
+Applying Pinsker to the local advantage shift and full-response TV gives
+\begin{align*}
+ |J(q)-J(p)-\mathcal S_p(q)|&\le B_{\rm Mix}^{\rm KL},\\
+ B_{\rm Mix}^{\rm KL}&:=4R_{\max}T\min(1,\sqrt{\delta/2})
+                         \E_x\min(1,\sqrt{K_x/2})\\
+ &\le4R_{\max}T\min(1,\sqrt{\delta/2})\min(1,\sqrt{\bar K/2}).
+\end{align*}
+The last step uses concavity of $u\mapsto\min(1,\sqrt{u/2})$.
+With inactive caps the last expression is $2R_{\max}T\sqrt{\delta\bar K}$,
+useful when $\bar K\ll T\delta$. This KL alternative need not improve
+the exact-TV bound. Their minimum with $B_{\rm Adap}$ can replace $B$
+in \Cref{thm:promax-population}; scaling and rejection costs remain in
+the margin, and policy-divergence bounds remain assumptions.
+
+\section{REINFORCE Max: construction and conditional effectiveness}
+\label{sec:reinforce-max}
+
+Max's defining operation is separate positive scaling of positive and
+negative advantages. The balance and second-moment constraints determine
+the factors; the update analysis below uses RLOO inputs.
+The score-function and independent-baseline identities are standard
+policy-gradient tools \citep{williams1992simple,ahmadian2024back}.
+Conditioning on sibling responses retains the dependence of each factor
+and the token denominator on the sampled group.
+
+\subsection{RLOO and terminal-reward expansion}
+\label[appsec]{app:rloo-proof}
+\begin{definition}[Leave-One-Out Baseline]
+\label{def:rloo}
+Assume $n \ge 2$. For sample $i$, the baseline and shaped reward are:
+\begin{equation}
+    b_i = \frac{1}{n-1}\sum_{j \neq i} r_j, \qquad \tilde{r}_i = r_i - b_i.
+    \label{eq:rloo-baseline}
+\end{equation}
+\end{definition}
+
+With sparse terminal reward, zero KL coefficient and $\gamma=1$,
+each active token has the undiscounted signal $A_{i,t}=A_i=R_i-b_i$.
+The response scores satisfy $u_\theta(y)=\sum_t m_t\nabla_\theta\log
+p_\theta(y_t\mid c_t)$ by differentiating the finite autoregressive product.
+\label[appsec]{app:gamma-one}
+
+\begin{remark}[Raw RLOO baseline identities]
+\label{rem:rloo-variance}
+Fix a prompt $x$, parameters in $\mathbb R^d$, and a fixed finite response
+support. In a neighborhood of the evaluated parameter, assume that
+$p_\theta(y\mid x)$ is positive, differentiable and normalized, and that
+$R(x,y)$ is parameter-independent. For $n\ge2$ iid responses, set
+$f_i=\nabla\log p_\theta(y_i\mid x)$, $r_i=R(x,y_i)$,
+$b_i=(n-1)^{-1}\sum_{j\ne i}r_j$, and
+$\hat g=n^{-1}\sum_i(r_i-b_i)f_i$. Then
+\[
+ \E[\hat g\mid x]=\nabla J_x(\theta),\qquad
+ J_x(\theta)=\E_{p_\theta(\cdot\mid x)}R(x,y).
+\]
+For $\bar r=n^{-1}\sum_i r_i$, the mean-baseline estimator satisfies
+$n^{-1}\sum_i(r_i-\bar r)f_i=(n-1)\hat g/n$ on every group.
+These statements concern the raw response-averaged estimator, before
+normalization, masking or a random token denominator.
+\end{remark}
+\begin{proof}
+Differentiating finite sums gives $\E[f_i\mid x]=0$ and
+$\E[r_i f_i\mid x]=\nabla J_x$. The sibling baseline $b_i$ is independent
+of $(r_i,f_i)$ given $x$, so $\E[b_if_i\mid x]=0$; average over $i$.
+The scaling identity follows from $r_i-\bar r=(n-1)(r_i-b_i)/n$.
+
+\end{proof}
+
+\subsection{Token normalization}
+\label{sec:adaptive-norm}
+All token sets below contain active positions only.
+\begin{definition}[Adaptive Normalization]
+\label{def:adaptive-norm}
+For one prompt group, let $\mathcal P=\{(i,t):A_{i,t}>0\}$ and
+$\mathcal N=\{(i,t):A_{i,t}<0\}$, restricted to active tokens.
+Set $\hat A=\alpha A$ on $\mathcal P$, $\hat A=\beta A$ on
+$\mathcal N$, and $\hat A=0$ on zero-advantage tokens.
+For nonempty sign classes, write
+\begin{gather*}
+ S_+=\sum_{\mathcal P}A>0,\qquad S_-=-\sum_{\mathcal N}A>0,\\
+ Q_+=\sum_{\mathcal P}A^2,\qquad Q_-=\sum_{\mathcal N}A^2,\qquad
+ d=|\mathcal P|+|\mathcal N|.
+\end{gather*}
+The ideal factors $\alpha,\beta>0$ enforce zero signed token mass and unit
+second moment over these $d$ nonzero tokens:
+\[
+ \alpha S_+-\beta S_-=0,\qquad \alpha^2Q_++\beta^2Q_-=d.
+\]
+Their unique positive solution is
+\begin{equation}
+ \kappa=\frac{S_+}{S_-},\qquad
+ \alpha=\sqrt{\frac{d}{Q_++\kappa^2Q_-}},\qquad \beta=\kappa\alpha.
+ \label{eq:alpha-beta}
+\end{equation}
+\end{definition}
+The first constraint fixes $\beta/\alpha=\kappa$; substitution into the
+second fixes $\alpha^2$, and positivity selects its positive square root.
+For exact RLOO with positive active lengths, an empty sign class
+implies all advantages are zero. Such groups use the identity fallback
+in \Cref{app:numerical}; the two moment constraints apply to groups
+with both signs present. The implemented stabilizer, caps and clamps are treated
+separately in \Cref{prop:normalization-safeguards}.
+
+\begin{proposition}[Scale invariance of ideal normalization]
+\label{prop:normalization-scale-invariance}
+Fix a finite active-token set with both advantage signs present and use the
+ideal normalization of \Cref{def:adaptive-norm}. For every $c>0$, replacing
+all advantages by $cA$ leaves every normalized advantage unchanged.
+Consequently, for any nondegenerate group with $n\ge2$, applying the same ideal asymmetric
+normalization to the mean-baseline and RLOO signals gives identical token
+coefficients, including with unequal response lengths:
+\begin{equation}
+    A_i^{\mathrm{mean}}=\frac{n-1}{n}A_i^{\mathrm{RLOO}}
+    \quad\Longrightarrow\quad
+    \mathcal N(A^{\mathrm{mean}})=\mathcal N(A^{\mathrm{RLOO}}),
+    \label{eq:normalized-baseline-equivalence}
+\end{equation}
+where $\mathcal N$ denotes this ideal normalization with the same active
+positions and the exact, unregularized two-factor formula.
+\end{proposition}
+
+\begin{corollary}[Equivalence to token-weighted standardization for binary rewards]
+\label{cor:binary-token-standardization}
+Under \Cref{prop:binary-rloo-normalization}, let $\mu_{\mathrm{tok}}$ and
+$\sigma_{\mathrm{tok}}>0$ be the empirical mean and population standard
+deviation of the raw advantages over the active tokens of this prompt group.
+Then the ideal asymmetric coefficients also satisfy
+$\hat A_{i,t}=(A_{i,t}-\mu_{\mathrm{tok}})/\sigma_{\mathrm{tok}}$.
+\end{corollary}
+
+\subsection{The Normalization Mechanism for Actual RLOO Signals}
+\label[appsec]{app:adaptive-mechanism}
+
+\paragraph{Signed token mass.}
+For binary rewards, the raw positive-to-negative token mass ratio
+$\bar T_+/\bar T_-$ reflects unequal class-conditional lengths.
+The ideal rule balances this mass before importance weighting, masking,
+and multiplication by score vectors.
+With one success and nine equally long failures, the $0/1$ RLOO amplitudes
+are $1,-1/9$ and $\alpha=\beta=3$, so the negative magnitude increases
+to $1/3$. Importance weights, masks, and score vectors still affect the update.
+
+\begin{proof}[Proof of \Cref{prop:normalization-scale-invariance}]
+For $c>0$, replacing $A$ by $cA$ preserves the sign sets and token count,
+multiplies both first sums by $c$ and both squared sums by $c^2$.
+Thus $\kappa$ is unchanged, $D$ becomes $c^2D$, and the factors become
+$\alpha/c,\beta/c$, leaving their products with $cA$ unchanged.
+The baseline identity follows from
+$r_i-\frac1n\sum_jr_j=\frac{n-1}{n}(r_i-\frac{\sum_jr_j-r_i}{n-1})$
+and $c=(n-1)/n>0$.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{cor:binary-token-standardization}]
+Write $a=a_+>0$, $b=a_->0$. The token mean and variance are
+\[
+ \mu=\frac{Pa-Nb}{P+N},\qquad
+ v=\frac{PN(a+b)^2}{(P+N)^2}>0.
+\]
+The centered coefficients are $N(a+b)/(P+N)$ and $-P(a+b)/(P+N)$.
+Dividing by $\sqrt v$ gives $\sqrt{N/P}$ and $-\sqrt{P/N}$,
+which match \Cref{eq:binary-normalized-amplitudes}.
+\end{proof}
+
+\paragraph{From ideal balance to implemented coefficients.}
+\begin{proposition}[Moment Residuals of the Implemented Normalization]
+\label{prop:normalization-safeguards}
+Suppose both active token-sign groups are nonempty and all inputs are finite.
+Write
+\[
+P=\sum_{\mathcal P}A_{i,t},\quad N=-\sum_{\mathcal N}A_{i,t},\quad
+Q_+=\sum_{\mathcal P}A_{i,t}^2,\quad Q_-=\sum_{\mathcal N}A_{i,t}^2,
+\]
+and let $m=|\mathcal P|+|\mathcal N|$, $\kappa=P/N$,
+$D=Q_++\kappa^2Q_-$, $\eta=\varepsilon_{\mathrm{num}}>0$.
+On the normalization branch, which additionally requires $P,N\ge\eta$
+so that the small-sum fallback is inactive, the pre-clamp scales are
+\[
+D_c=Q_++\min(\kappa^2Q_-,C)+\eta,\qquad
+\alpha_0=\sqrt{m/D_c},\qquad \beta_0=\alpha_0\kappa,
+\]
+where $C=10^8$ is the intermediate cap. The advantages scaled by
+$\alpha_0,\beta_0$ have empirical mean zero and second moment $D/D_c$. In particular, if
+$\kappa^2Q_-\le C$, then the empirical variance $v_0$ satisfies
+\begin{equation}
+    v_0=\frac{D}{D+\eta}<1,\qquad
+    1-v_0=\frac{\eta}{D+\eta}\le\frac{\eta}{D}.
+    \label{eq:normalization-stabilizer-deficit}
+\end{equation}
+In general,
+\[
+    \frac{D}{D_c}-1
+    =\frac{\kappa^2Q_- -\min(\kappa^2Q_-,C)-\eta}{D_c},
+\]
+so the product cap can change the second moment in either direction relative to one.
+Let $a,b$ be the final clamped scales and let $\mu,v_2$ be the resulting
+empirical mean and second moment on the $m$ nonzero active tokens. Then
+\begin{align*}
+    \mu&=\frac{aP-bN}{m},
+    &|\mu|&\le\frac{|a-\alpha_0|P+|b-\beta_0|N}{m},\\
+    v_2&=\frac{a^2Q_++b^2Q_-}{m},
+    &\left|v_2-\frac{D}{D_c}\right|
+    &\le\frac{|a-\alpha_0||a+\alpha_0|Q_+
+               +|b-\beta_0||b+\beta_0|Q_-}{m}.
+\end{align*}
+The empirical variance after factor clamping is $v_2-\mu^2$.
+Positive clamping bounds preserve advantage signs and within-sign ordering.
+These statements describe the normalization branch in exact real arithmetic;
+when a fallback is taken, the active advantages are unchanged.
+\end{proposition}
+\begin{proof}
+Partition the active index set into positive, negative, and zero advantages.
+The scaled first and second sums are $aP-bN$ and $a^2Q_++b^2Q_-$.
+Substituting $\beta_0=\alpha_0P/N$ gives zero first sum, and
+$\alpha_0^2=m/D_c$ gives second moment $D/D_c$.
+The stabilizer deficit and product-cap identity follow by subtracting one.
+For the factor-clamp bounds, use
+\[
+aP-bN=(a-\alpha_0)P-(b-\beta_0)N
+\]
+and $a^2-\alpha_0^2=(a-\alpha_0)(a+\alpha_0)$, with the analogous identity
+for $b$, and apply the triangle inequality. Positivity of the clamped
+factors gives sign and within-sign order preservation.
+\end{proof}
+
+\paragraph{Numerical implementation.}
+On the normalization branch with inactive product and factor clamps, the
+stabilizer multiplies both ideal amplitudes by
+$\sqrt{D/(D+\varepsilon_{\mathrm{num}})}$. Their ratio and zero signed
+mass are preserved, but fixed epsilon breaks exact reward-scale invariance.
+\Cref{prop:normalization-safeguards} covers clamps and fallbacks.
+
+\subsection{Numerical safeguards}
+\label[appsec]{app:numerical}
+The moment formulas and proof are given in
+\Cref{prop:normalization-safeguards}.
+
+The implementation returns the raw signal if there are no active tokens,
+one sign class is absent, either signed mass is below the numerical epsilon,
+or a factor is nonfinite. Otherwise it uses epsilon $10^{-8}$, product cap
+$10^8$, and factor bounds $[10^{-8},10]$. The analysis uses exact real arithmetic. A fallback preserves the raw
+advantages and their token mean, which can be nonzero for unequal lengths.
+
+\subsection{Complete update and aggregation}
+\label[appsec]{app:uniform-scale}
+The default algorithm disables uniform scale. For the optional branch,
+a homogeneous group replaces its signal by $R_i/n$ and skips normalization;
+an all-zero group contributes zero. The following eligibility condition
+identifies this branch for binary rewards. Adding a common reward offset
+changes the replacement signal by that offset divided by $n$.
+
+\begin{lemma}[Binary uniform-scale eligibility]
+\label{lem:uniform-eligibility}
+For $n\ge2$ rewards in $\{0,1\}$, the implementation's strict sample-standard-deviation
+test $\mathrm{std}(r)<\varepsilon_{\rm tol}$ selects exactly homogeneous
+groups if $\varepsilon_{\rm tol}>0$ and $n\varepsilon_{\rm tol}^2\le1$.
+Thus the implemented tolerance $10^{-8}$ has this property for
+$2\le n\le10^{16}$ in exact arithmetic.
+\end{lemma}
+\begin{proof}
+If $k$ rewards equal one, the sample variance is
+$k(n-k)/(n(n-1))$. It vanishes for homogeneous groups; for
+$1\le k\le n-1$, the identity
+$k(n-k)-(n-1)=(k-1)(n-k-1)\ge0$ gives
+$\mathrm{std}(r)^2\ge1/n\ge\varepsilon_{\rm tol}^2$.
+The strict test therefore excludes mixed groups, including at equality.
+
+\end{proof}
+
+For the binary update results below, fix a finite response policy
+$p_\theta$ that is differentiable at $\theta$, nonnegative and normalized
+in a neighborhood of $\theta$. Rewards are fixed independently of the
+parameter. Write $s(\theta)=\Pr_{p_\theta}(R=1)$ and assume $0<s<1$.
+The response score is $u_\theta(y)=\nabla\log p_\theta(y)$ on positive
+support and zero on zero-mass responses. Normalization coefficients are
+held fixed when forming the score update. These are on-policy population
+statements; the optional uniform branch, when used, selects only
+homogeneous binary groups.
+
+\begin{proposition}[Complete binary update under class-dependent lengths]
+\label{prop:binary-complete-update}
+Consider the same finite on-policy model with rewards $R\in\{0,1\}$
+and $n=m+1\ge2$ iid responses, and divide by this group's total active-token count. Assume that every response with
+label $q\in\{0,1\}$ has a deterministic active length $L_q$ satisfying
+$0<L_q\le L_{\max}$. Let the positive/negative factors be computed from
+the length-weighted RLOO advantages using the implemented additive
+stabilizer, intermediate product cap, factor clamps and identity fallback,
+with numerical lower clamp $\eta\in(0,1]$ and upper clamp at least $\eta$.
+Let $L$ be the sampled total active-token count and $H_i$ the actual
+signal before reduction. The response-score coefficient is $C_i=H_i/L$. On-policy, with every prefix mask accepted, the complete expected sequence-score update satisfies
+\begin{equation*}
+    \mathbb E\!\left[\sum_{i=1}^{n}C_i(Y_{1:n})
+        u_\theta(Y_i)\right]
+      = \Lambda\,\nabla_\theta s,
+    \qquad
+    \Lambda\ge \frac{\eta}{L_{\max}}>0,
+\end{equation*}
+where $s=\Pr_{p_\theta}(R=1)$. This holds both with uniform-scale
+disabled and with the optional $0/1$ uniform-scale replacement on homogeneous
+groups. The multiplier may depend on $p_\theta$, the sibling count and the
+lengths, but it is common to every parameter direction.
+\end{proposition}
+
+The main text gives the conditioning proof. Within-class length variation
+introduces the coefficient--score covariance in
+\Cref{prop:binary-length-covariance}.
+
+\begin{corollary}[Local true-reward improvement of the complete binary update]
+\label{cor:binary-local-improvement}
+Fix a prompt, binary rewards $R\in\{0,1\}$, and $n\ge2$ iid responses
+from the finite differentiable policy above, with parameters in a real
+Hilbert space and a policy that is nonnegative and normalized in a
+neighborhood of $\theta$. Assume $0<s(\theta)<1$, where
+$s(\theta)=\Pr_{p_\theta}(R=1)$. At the on-policy point, let every prefix
+mask accept. Allow arbitrary content-dependent
+active lengths $0<L(y)\le L_{\max}$ and retain the actual stabilizer,
+product cap, factor clamps and identity fallback. The lower factor clamp
+is $0<\eta\le1$ and the upper clamp is at least $\eta$.
+The optional uniform-scale branch may be enabled or disabled; when enabled,
+assume its uniformity test selects exactly homogeneous groups
+(as ensured by \Cref{lem:uniform-eligibility}).
+Using the actual response-score coefficients $C_i$ and variances in
+\Cref{prop:binary-length-covariance}, set
+\begin{equation*}
+ g:=\nabla s(\theta),\qquad
+ U:=\mathbb E\!\left[\sum_{i=1}^n C_i(Y_{1:n})u_\theta(Y_i)\right],
+ \qquad f_g(y):=\langle g,u_\theta(y)\rangle.
+\end{equation*}
+The actual class multiplier satisfies $\Lambda_C\ge\eta/L_{\max}>0$, and
+\begin{align*}
+ \langle g,U\rangle
+ &\ge \Lambda_C\|g\|^2-\sqrt{V_C\,n\,V_{f,g}}\\
+ &\ge \frac{\eta}{L_{\max}}\|g\|^2-\sqrt{V_C\,n\,V_{f,g}}.
+\end{align*}
+If $\sqrt{V_C\,n\,V_{f,g}}<\Lambda_C\|g\|^2$, there exists
+$r>0$ such that every $0<t<r$ satisfies
+\begin{equation*}
+ s(\theta+tU)>s(\theta).
+\end{equation*}
+The simpler condition
+$\sqrt{V_C\,n\,V_{f,g}}<\eta\|g\|^2/L_{\max}$ is sufficient but can
+be more conservative than using the actual $\Lambda_C$.
+Under the class-dependent-length premise of
+\Cref{prop:binary-complete-update}, $g\ne0$ alone suffices for this local
+improvement: $U=\Lambda g$ with $\Lambda\ge\eta/L_{\max}>0$.
+\end{corollary}
+
+\begin{proof}
+For each fixed sibling draw, the sibling mean reward lies in $[0,1]$.
+Positive normalization factors are bounded below by $\eta$, and the sampled
+total length is at most $nL_{\max}$. Averaging the resulting success/failure
+coefficient contrast within each class gives
+$\Lambda_C\ge\eta/L_{\max}$ even when length varies with content.
+The optional all-success replacement adds a nonnegative contrast.
+Apply \Cref{prop:binary-length-covariance} with $v=g$ and use the
+finite-policy identity
+$\mathbb E[\mathbf 1_{\{R=1\}}f_g(Y)]=\|g\|^2$ to obtain the displayed
+lower bound. A positive right-hand side implies
+$\left.\frac{d}{dt}s(\theta+tU)\right|_{t=0}=\langle g,U\rangle>0$.
+By differentiability, the difference quotient is positive for every
+sufficiently small positive $t$, proving strict improvement.
+For class-dependent lengths, \Cref{prop:binary-complete-update} directly
+gives $\langle g,U\rangle=\Lambda\|g\|^2>0$ whenever $g\ne0$.
+
+\end{proof}
+
+The alignment quantity $\langle g,U\rangle$ is the first-order progress
+term in the SGA decomposition of \citet[Section~2]{li2025sga}.
+Here conditioning on sibling responses and reward classes identifies that
+term for the actual normalization and token denominator; Cauchy--Schwarz
+controls the remaining length--score covariance. Differentiability then
+gives a step-size neighborhood for the population direction $U$.
+The stochastic SGA bound additionally involves the second moment of the
+entire sampled update. The retained-weight bound below concerns one
+coefficient, while \Cref{thm:promax-population} evaluates finite candidate
+changes through objective corrections and a population remainder.
+
+\begin{corollary}[Aggregating prompt-specific population updates]
+\label{cor:prompt-ascent}
+Let $\mu$ be a fixed probability law on finitely many prompts. For each
+prompt $x$, let $s_x$ be differentiable at $\theta$ in a real Hilbert space,
+$g_x=\nabla s_x(\theta)$, and let its conditional population update have
+the decomposition $U_x=\Lambda_x g_x+e_x$. The fixed-prompt results above
+supply $\Lambda_x$ and the within-class residual $e_x$ for their stated
+sampling and reduction. Define
+\[
+ J=\sum_x\mu_xs_x,\quad G=\sum_x\mu_xg_x=\nabla J(\theta),\quad
+ U=\sum_x\mu_xU_x,\quad \bar\Lambda=\mathbb E_\mu\Lambda_x,
+ \quad f_x=\langle G,g_x\rangle.
+\]
+Then
+\begin{equation}
+ \langle G,U\rangle\ge
+ \bar\Lambda\|G\|^2-
+ \sqrt{\operatorname{Var}_\mu(\Lambda_x)\operatorname{Var}_\mu(f_x)}
+ -\mathbb E_\mu|\langle G,e_x\rangle|.
+ \label{eq:prompt-ascent}
+\end{equation}
+If the right-hand side is strictly positive, then
+$J(\theta+tU)>J(\theta)$ for every sufficiently small $t>0$.
+\end{corollary}
+\begin{proof}
+Differentiate the finite sum to identify $G$. Since
+$\mathbb E_\mu f_x=\|G\|^2$, expanding the pairing gives
+\[
+ \langle G,U\rangle=\bar\Lambda\|G\|^2+
+ \operatorname{Cov}_\mu(\Lambda_x,f_x)+
+ \mathbb E_\mu\langle G,e_x\rangle.
+\]
+Cauchy--Schwarz bounds the covariance; the last term is bounded below
+by its negative mean absolute value. A positive directional derivative
+implies local improvement by differentiability.
+\end{proof}
+
+Positive prompt-specific multipliers can reverse the aggregate direction.
+For example, two equally weighted scalar gradients $1,-2$
+and positive multipliers $5,1$ have $G=-1/2$, $U=3/2$, and
+$GU=-3/4$. This algebraic example isolates the effect of reweighting conflicting
+prompt gradients.
+A common positive multiplier and $e_x=0$ give
+$\langle G,U\rangle=\bar\Lambda\|G\|^2>0$ when $G\ne0$.
+
+The preceding mixture averages group-normalized updates. A shared batch
+token denominator instead couples groups through their lengths. The next
+result derives the effective coefficient for this global-token reduction.
+
+\begin{proposition}[Effective coefficients for a shared batch denominator]
+\label{prop:batch-denominator}
+Sample $K\ge1$ independent, unmasked prompt groups $B_1,\ldots,B_K$
+from the same finite joint law $P(x)\prod_i p_x(y_i)$. Within each group,
+retain the actual normalized response coefficients $H_i(B)$, including
+configured safeguards and the binary uniform-scale branch. At the on-policy
+point with accepted masks, let
+$F_v(B)=\sum_i H_i(B)\langle v,u_x(Y_i)\rangle$ be the unreduced score
+contribution in direction $v$, and let $L(B)>0$ be the group token count.
+For independent other groups $B'_1,\ldots,B'_{K-1}$, define
+\[
+ \psi_K(l):=K\,\mathbb E\!\left[
+  \frac{1}{l+\sum_{j=1}^{K-1}L(B'_j)}\right].
+\]
+Then the expected global-token-reduced update satisfies
+\begin{equation}
+ \mathbb E\!\left[\frac{\sum_{k=1}^K F_v(B_k)}
+                           {\sum_{k=1}^K L(B_k)}\right]
+ =\mathbb E_B[\psi_K(L(B))F_v(B)].
+ \label{eq:batch-denominator}
+\end{equation}
+If $0<l_{\min}\le L(B)\le l_{\max}$ for all groups, then
+$1/l_{\max}\le\psi_K(L(B))\le1/l_{\min}$.
+For $K=1$, $\psi_1(L)=1/L$. For general $K$, define
+$C_i^{(K)}(B)=\psi_K(L(B))H_i(B)$.
+Using these coefficients in \Cref{prop:binary-length-covariance} gives the
+exact prompt-conditional multiplier and residual for the shared-denominator
+update. Their prompt average can then be evaluated by
+\Cref{cor:prompt-ascent} using the coefficients induced by the shared
+batch denominator.
+
+For binary $0/1$ rewards, suppose both classes have positive probability
+at the prompt under consideration, with factor-clamp bounds
+$[\eta,s_{\max}]$ satisfying $0<\eta\le\min\{1,s_{\max}\}$. For every $K\ge1$, the multiplier induced
+by the actual safeguarded coefficients satisfies
+\begin{equation}
+ \Lambda_x^{(K)}\ge\frac{n\eta}{l_{\max}}>0.
+ \label{eq:shared-batch-multiplier}
+\end{equation}
+In particular, a uniform per-response length bound $L_{\max}$ permits
+$l_{\max}=nL_{\max}$ and gives $\Lambda_x^{(K)}\ge\eta/L_{\max}$.
+The optional homogeneous binary uniform-scale branch preserves this bound;
+\Cref{lem:uniform-eligibility} gives the condition under which the actual
+tolerance test selects exactly those groups.
+For content-dependent lengths, the within-class covariance residual enters
+the ascent condition alongside this positive multiplier.
+\end{proposition}
+\begin{proof}
+Separate one group from the other $K-1$ groups in the finite product law.
+Conditioning on the selected group leaves its numerator fixed. All $K$
+coordinates have the same conditional expression, giving
+Eq.~\eqref{eq:batch-denominator}. The denominator lies between
+$Kl_{\min}$ and $Kl_{\max}$, proving the bounds. Expanding $F_v$ gives
+$C_i^{(K)}$ without assuming independence between length, normalization and
+score. Conditioning further on the prompt and sibling responses yields the
+same within-class covariance identity, now with $C_i^{(K)}$.
+To prove Eq.~\eqref{eq:shared-batch-multiplier}, fix the sibling responses
+and let their mean reward be $u\in[0,1]$. The safeguarded factors, including
+the identity fallback, are at least $\eta$. Since
+$\psi_K\ge1/l_{\max}$, the current coefficient is at least
+$\eta(1-u)/l_{\max}$ on success and at most
+$-\eta u/l_{\max}$ on failure. The uniform-scale branch only adds a
+nonnegative coefficient on all-success groups. Taking class means gives a
+contrast of at least $\eta/l_{\max}$ for each coordinate; averaging over
+siblings and summing the $n$ coordinates proves the bound while retaining
+the joint dependence of length and score.
+
+\end{proof}
+
+\section{REINFORCE Pro: the implemented prefix mask}
+\subsection{Prefix statistic and causal mask}
+\label{sec:reinforce-pro}
+\label{sec:prefix-is}
+
+Throughout this section the mask uses the current-to-rollout ratio
+$\rho_t=q(y_t\mid c_t)/p(y_t\mid c_t)$. The same ratio supplies the
+single differentiable token weight in the objective. Write
+$\ell_-=1-\epslow$ and $\ell_+=1+\epshigh$.
+All prefix counts use active positions. The mask is recomputed at the
+current policy and detached during differentiation; the token ratio
+retains its gradient. Rejected positions may become accepted later.
+
+\begin{definition}[Prefix geometric-mean ratio]
+\label{def:prefix-is}
+For current-to-rollout ratios $\rho_t$, define the prefix statistic
+\begin{equation}
+    \rhoprefix{t}
+    := \exp\!\left(\frac{1}{t}\sum_{s=1}^{t} \log \rho_s\right)
+    = \left(\prod_{s=1}^{t}\rho_s\right)^{\frac{1}{t}},
+    \qquad
+    t\in\{1,\ldots,T\}.
+    \label{eq:prefix-is}
+\end{equation}
+Here $t$ counts active positions. On a padded horizon, the geometric mean
+uses $\sum_{s\le t}m_s\log \rho_s$ and denominator $\sum_{s\le t}m_s$;
+EOS-padding positions have $m_t=0$. Increasing enumeration of any binary
+mask's active positions preserves both the prefix average and rejection
+count. At active positions the count is at least one, so the denominator
+clamp preserves it. These identities hold for contiguous and noncontiguous
+masks in exact arithmetic.
+\end{definition}
+
+\begin{definition}[Causal Prefix Mask]
+\label{def:prefix-trm-proxy}
+Given thresholds $\epslow\in(0,1)$ and $\epshigh>0$, define the per-position prefix mask
+\begin{equation}
+    M_t^{\mathrm{pre}} := \mathbb{I}\!\big[\rhoprefix{t} \in [1-\epslow, 1+\epshigh]\big].
+    \label{eq:prefix-mask}
+\end{equation}
+\end{definition}
+
+\paragraph{Expected log statistic and prefix KL.}
+The conditional-expectation calculation used for sampled KL estimators in
+\citet[Appendix, Sample-Based Estimators]{li2025trm} also identifies the
+population quantity underlying the prefix statistic. Fix a prompt and a
+nonrandom depth $t$, with positive mutual support and integrable log ratios.
+For an autoregressive process with $t$ active positions, let $P_{1:t}^p$
+and $P_{1:t}^q$ denote its prefix laws. Then
+\begin{equation}
+ -\E_p[\log\rhoprefix{t}]
+ =\frac1t\sum_{s=1}^t\E_p\!\left[
+ D_{\rm KL}\bigl(p(\cdot\mid c_s)\|q(\cdot\mid c_s)\bigr)\right]
+ =\frac1t D_{\rm KL}(P_{1:t}^p\|P_{1:t}^q).
+ \label{eq:prefix-expected-kl}
+\end{equation}
+Indeed, conditioning on $c_s$ gives
+$\E_p[\log\rho_s\mid c_s]=-D_{\rm KL}(p(\cdot\mid c_s)\|q(\cdot\mid c_s))$.
+Summing and using $P_{1:t}^q/P_{1:t}^p=\prod_{s\le t}\rho_s$
+proves both equalities. Thus the negative log statistic estimates the
+per-position prefix KL in expectation. Individual log ratios can cancel,
+so the two-sided mask tests a sampled statistic rather than bounding every
+context's KL. In an EOS-padded process the same identity holds with
+$\rho_s=1$ after termination and denominator $t$; the implemented statistic
+instead divides by its active count. Conditioning on survival or acceptance,
+or substituting a random active length for $t$, changes the expectation and
+requires that conditioning or denominator to remain explicit.
+
+\subsection{Retained-weight bounds}
+\begin{proposition}[Unbounded retained weights under prefix acceptance]
+\label{prop:prefix-weight-limit}
+Fix any finite mask thresholds $0<\ell_-\le1\le\ell_+$.
+Over normalized two-action, two-step policies with strictly positive
+support, the retained coefficient $M_2\rho_2$ and its rollout second moment
+are unbounded under prefix acceptance.
+Specifically, for every $K\ge1$ there are policies $p=\piroll$ and
+$q$ such that on $y=(1,1)$,
+\[
+ \rho_1=K^{-1},\quad \rho_2=K,\quad M_2=1,\quad
+ p(y)=\frac{K}{(K+1)^2},\qquad
+ \E_p[(M_2\rho_2)^2]\ge\frac{K^3}{(K+1)^2}\ge\frac K4.
+\]
+\end{proposition}
+\begin{proof}
+At the empty history set $p(1)=K/(K+1)$ and $q(1)=1/(K+1)$;
+at every nonempty history interchange these probabilities. Assign the
+complementary probability to action $0$. Both policies are normalized and
+strictly positive. On $(1,1)$ the ratio product is one, so the second prefix
+is accepted at every such threshold. Its contribution to the second moment
+is $p(1,1)K^2=K^3/(K+1)^2$. All other contributions are nonnegative, and
+$(K+1)^2\le4K^2$ for $K\ge1$. Both the coefficient and its second moment
+grow without bound as $K$ increases.
+For this same pair, the root token-level TV is $(K-1)/(K+1)$,
+which approaches one while the displayed second prefix remains accepted.
+\end{proof}
+
+As in the token/sequence IS analysis of
+\citet[Analyses~1--2]{li2025tokensequence}, we use conditional ratio
+normalization to control second moments. The Seq-MIS analysis of
+\citet[Section~1.3]{li2025sequencemasking} squares a pointwise weight
+envelope. For the retained coefficient alone, we instead use
+$M_t\rho_t^2\le C M_t\rho_t$ on histories with envelope $C$, keeping the accepted
+importance mass when averaging. Prefix reentry contributes a separate term.
+Multiplying by the RLOO signal and policy score introduces the additional
+factors of a gradient estimator.
+
+\begin{theorem}[Retained-weight moments and lower-side reentry]
+\label{thm:prefix-reentry-moment}
+Consider the finite normalized policy pair $(p,q)=(\piroll,\pitheta)$ with
+mutual support. Let $\rho_t=q(y_t\mid y_{<t})/p(y_t\mid y_{<t})$,
+$W_t=\prod_{s\le t}\rho_s$, and
+$M_t=\mathbf 1\{-\tau_-\le t^{-1}\log W_t\le\tau_+\}$ for
+$\tau_\pm\ge0$. Set $W_0=M_0=1$ and define
+\[
+ C_t=\exp\{t\tau_+ +(t-1)\tau_-\},\qquad
+ \mathcal R_t^-=\E_p\!\left[
+ \mathbf 1\{\log W_{t-1}<-(t-1)\tau_-\}M_t\rho_t^2\right].
+\]
+If $\log W_{t-1}\ge-(t-1)\tau_-$ and $M_t=1$, then $\rho_t\le C_t$.
+Moreover,
+\begin{equation}
+ \E_p[(M_t\rho_t)^2]\le C_t\E_p[M_t\rho_t]+\mathcal R_t^-
+ \le C_t+\mathcal R_t^-.
+ \label{eq:prefix-reentry-moment}
+\end{equation}
+If $t\le T$, $T\tau_+\le a$, $T\tau_-\le b$, and
+$\mathcal R_t^-\le r$, then
+$\E_p[(M_t\rho_t)^2]\le e^{a+b}+r$.
+If no prefix below the lower threshold is followed by an accepted token
+on rollout support, $\mathcal R_t^-=0$; upper-side reentry is allowed.
+\end{theorem}
+\begin{proof}
+\emph{Step 1: local envelope.} For an accepted current token, subtracting
+the previous log-product from
+$\log W_t\le t\tau_+$ gives $\rho_t\le C_t$ whenever the preceding prefix
+is above its lower threshold.
+\emph{Step 2: conditional normalization.} The local envelope bounds
+the conditional second moment by $C_t\E_p[M_t\rho_t\mid h]$.
+At every history, $\E_p[M_t\rho_t\mid h]\le\sum_y q(y\mid h)=1$.
+\emph{Step 3: history decomposition.} Average the first term over histories
+above the lower threshold and enlarge it to all histories by nonnegativity;
+the complementary histories contribute exactly $\mathcal R_t^-$.
+This gives the retained-mass bound, and averaging the unit first-moment bound
+gives its coarser form. The horizon bound follows from
+$t\tau_++(t-1)\tau_-\le T\tau_++T\tau_-\le a+b$.
+An upper excursion satisfies $\log W_{t-1}>(t-1)\tau_+$, so an accepted
+next token has $\log \rho_t<\tau_+$ and requires no additional moment term.
+For EOS-padded responses, $M_t$ in this calculation is the full-tree prefix
+mask. At active positions it agrees with the implemented mask, so the
+active coefficient is $m_tM_t\rho_t$. Its unconditional second moment is at
+most $\E_p[(M_t\rho_t)^2]$, since $m_t\in\{0,1\}$. The bound therefore also
+controls the implemented active coefficient; its reentry term is computed
+on the full padded tree, including any post-EOS transitions.
+\end{proof}
+
+\begin{example}[Nonzero retention with bounded moments]
+\label{ex:prefix-half-retention}
+Fix a horizon $T\ge1$, symmetric log-threshold $\tau\ge0$, and
+$K>0$ with $\log K>T\tau$. On an alphabet $\{0,1,2\}$, set the first-token
+probabilities to
+\[
+ p_1=\left(\frac12,\frac{1}{2(K+1)},\frac{K}{2(K+1)}\right),\qquad
+ q_1=\left(\frac12,\frac{K}{2(K+1)},\frac{1}{2(K+1)}\right).
+\]
+At every nonempty history, let both policies be uniform on the three tokens.
+These policies are normalized and strictly positive. Their first-token
+ratios are $(1,K,K^{-1})$; every later token ratio is one. Hence, at every
+$1\le t\le T$, the prefix mask accepts exactly the paths whose first token
+is zero. In particular,
+\begin{equation}
+ \Pr_p(M_t=1)=\frac12,\qquad
+ \mathcal R_t^-=0,\qquad
+ \E_p[(M_t\rho_t)^2]=\frac12.
+ \label{eq:prefix-half-retention}
+\end{equation}
+The unmasked first-token second moment is
+$\E_p[\rho_1^2]=(K+K^{-1})/2$, which can be arbitrarily large.
+\end{example}
+\begin{proof}
+Along a path starting with token $1$ or $2$, the cumulative log-ratio is
+respectively $\log K$ or $-\log K$ at every depth. Its average lies outside
+$[-\tau,\tau]$ through depth $T$. Along the token-$0$ branch it is zero.
+Acceptance therefore depends only on the first token and never changes
+within this horizon. The neutral branch has rollout mass $1/2$, and its
+retained weights are all one, proving Eq.~\eqref{eq:prefix-half-retention}.
+Summing $p_1(a)(q_1(a)/p_1(a))^2$ gives the unmasked second moment.
+\end{proof}
+
+\subsection{Consequences for causal rejection}
+The prefix log-average determines how acceptance evolves along a response.
+
+\begin{lemma}[Stability of Prefix Geometric Means]
+\label{lem:prefix-stability}
+Fix thresholds $\epslow\in(0,1)$ and $\epshigh>0$, and define $\rhoprefix{t}$ as in Eq.~\eqref{eq:prefix-is}. If
+\begin{equation*}
+    \rhoprefix{t}\in[1-\epslow,1+\epshigh]
+    \qquad\text{and}\qquad
+    \rho_{t+1}\in[1-\epslow,1+\epshigh],
+\end{equation*}
+then $\rhoprefix{t+1}\in[1-\epslow,1+\epshigh]$.
+\end{lemma}
+\begin{proof}
+The identity
+\[
+ \log\rhoprefix{t+1}
+ =\frac{t}{t+1}\log\rhoprefix{t}+\frac{1}{t+1}\log \rho_{t+1}
+\]
+is a convex combination of two numbers in
+$[\log(1-\epslow),\log(1+\epshigh)]$. Exponentiating preserves the bounds.
+\end{proof}
+The same cumulative log-ratio gives the following early- and late-deviation bounds.
+
+\begin{theorem}[Conditional prefix rejection patterns]
+\label{thm:prefix-tighter}
+Compare the prefix mask $M_t^{\rm pre}$ of \Cref{def:prefix-trm-proxy},
+the token-level IcePop mask $M_t^{\rm tok}$, and the sequence mask
+\[
+ M_t^{\rm seq}=\mathbf1\!\left\{
+ \exp\!\left(T^{-1}\sum_{s=1}^T\log \rho_s\right)
+ \in[1-\epslow,1+\epshigh]\right\}.
+\]
+All use the same current-to-rollout ratios and interval, with $\epslow\in(0,1)$,
+$\epshigh>0$. Assume mutual rollout/current support and set
+$\tau_+=\log(1+\epshigh)$, $\tau_-=-\log(1-\epslow)$.
+\begin{enumerate}
+\item[(a)] \textbf{Early deviation.} Suppose $\rho_1$ is outside the interval
+and $|\log \rho_t|\le\varepsilon$ for $t>1$, where
+$0\le\varepsilon\le\min(\tau_+,\tau_-)$. IcePop rejects only position one; the prefix mask also
+rejects it. If $\log \rho_1>\tau_+$, prefix rejection persists whenever
+\begin{equation}
+ t<\frac{\log \rho_1+\varepsilon}{\tau_++\varepsilon}.
+ \label{eq:early-upper-sufficient}
+\end{equation}
+If $\log \rho_1<-\tau_-$, it persists whenever
+\begin{equation}
+ t<\frac{-\log \rho_1+\varepsilon}{\tau_-+\varepsilon}.
+ \label{eq:early-lower-sufficient}
+\end{equation}
+Thus the prefix mask rejects at least as many tokens as IcePop in this regime.
+\item[(b)] \textbf{Late deviation.} Suppose $\rho_{t^*}$ is outside the interval
+for some $t^*\in\{1,\ldots,T\}$, while
+$|\log \rho_t|\le\varepsilon$ for $t\ne t^*$, where
+$0\le\varepsilon\le\min(\tau_+,\tau_-)$. Every prefix before $t^*$ is accepted, so
+\[
+ |\{t:M_t^{\rm pre}=0\}|\le T-t^*+1,
+ \qquad |\{t:M_t^{\rm seq}=0\}|\in\{0,T\}.
+\]
+\end{enumerate}
+\end{theorem}
+\label{app:prefix-proof}
+\begin{proof}
+Write $z_s=\log \rho_s$. The three masks test, respectively,
+$z_t$, $t^{-1}\sum_{s\le t}z_s$, and $T^{-1}\sum_{s\le T}z_s$
+against the same interval $[-\tau_-,\tau_+]$.
+
+\textbf{(a) Early deviation.}
+Every $t>1$ is accepted by the token mask because
+$z_t\in[-\varepsilon,\varepsilon]\subseteq[-\tau_-,\tau_+]$;
+position one is rejected by both token and prefix masks.
+For every $1\le t\le T$, the bounded later increments give
+\[
+ \frac{z_1-(t-1)\varepsilon}{t}
+ \le \frac1t\sum_{s\le t}z_s
+ \le \frac{z_1+(t-1)\varepsilon}{t}.
+\]
+The left bound exceeds $\tau_+$ under
+\Cref{eq:early-upper-sufficient}; the right bound is below $-\tau_-$
+under \Cref{eq:early-lower-sufficient}. Both denominators are positive. The strict windows give persistent
+rejection; rejection at position one gives the token-count comparison.
+
+\textbf{(b) Late deviation.}
+For $t<t^*$ every summand of the prefix average lies in the acceptance
+interval, so its average does too. The rejected positions are therefore
+a subset of $\{t^*,\ldots,T\}$, of size at most $T-t^*+1$.
+The constant sequence mask rejects zero or $T$ tokens.
+\end{proof}
+
+\paragraph{Response length and retained token mass.}
+\citet[Appendix, Length-Neutral Trust Region Masking]{li2025trm}
+distinguish a fixed threshold from length-independent acceptance. For Pro,
+define the retained fraction of a response with $\ell$ active tokens by
+$r_\ell=\ell^{-1}\sum_{t=1}^{\ell}M_t$. For random active length $L$,
+linearity gives the exact conditional identity
+\[
+ \E_p[r_L\mid L=\ell]
+ =\frac1\ell\sum_{t=1}^{\ell}\Pr_p(M_t=1\mid L=\ell).
+\]
+No independence between prefix decisions is needed. Under the late-deviation
+premises of \Cref{thm:prefix-tighter}, $r_\ell\ge(t^*-1)/\ell$.
+Under its early upper-deviation premises, writing
+$b=(\log\rho_1+\varepsilon)/(\tau_++\varepsilon)$ gives
+$r_\ell\le1-\ell^{-1}|\{t\in\{1,\ldots,\ell\}:t<b\}|$;
+the lower-deviation case uses $b=(-\log\rho_1+\varepsilon)/(\tau_-+\varepsilon)$.
+These follow by counting the accepted prefix or the guaranteed rejection
+window. They describe how deviation location and duration affect retained
+mass. For a whole-sequence maximum rule, independent per-token violations
+with probability $v$ give acceptance $(1-v)^\ell$, as in TRM's illustrative
+model. Pro uses dependent running averages with possible reentry, so its
+retention is governed by the displayed conditional average instead.
+
+The interaction with Max can be stated exactly on a sampled prompt group.
+Let $\mathcal I_+$ and $\mathcal I_-$ be its positive and negative active-token
+sets, $S_\pm=\sum_{k\in\mathcal I_\pm}|A_k|$, and assume both are nonempty.
+For the ideal coefficients, write $B=\alpha S_+=\beta S_->0$ and define
+$\eta_\pm=S_\pm^{-1}\sum_{k\in\mathcal I_\pm}M_k|A_k|$.
+Then, before importance weighting and multiplication by score vectors,
+\begin{equation}
+ \sum_k M_k\hat A_k=B(\eta_+-\eta_-),\qquad
+ \left|\sum_kM_k\hat A_k\right|
+ \le B\bigl[(1-\eta_+)+(1-\eta_-)\bigr].
+ \label{eq:masked-sign-mass}
+\end{equation}
+Substitute $\hat A_k=\alpha A_k$ or $\beta A_k$ on the two sign sets to
+obtain the equality; the inequality follows by the triangle inequality.
+For binary rewards, advantages are constant within each sign class, so
+$\eta_\pm$ are precisely its retained token fractions. Masking preserves
+ideal signed-mass balance exactly when those fractions agree. For actual
+protected coefficients, the corresponding equality is
+$\sum_kM_k\hat A_k=\alpha S_+\eta_+-\beta S_-\eta_-$.
+This identifies the effect of unequal class retention without altering the
+algorithm. The reward bound uses the importance-weighted discarded magnitude
+$\sum_k\rho_k(1-M_k)|\hat A_k|$ in $LD_\lambda$, rather than an unweighted
+retention fraction, to account for its objective cost.
+
+\section{Combined update and reward-improvement condition}
+\label{sec:unified}
+\label{sec:population-transfer}
+
+Following the surrogate-minus-remainder structure of
+\citet{qi2026rethinkingtrustregionllm,li2025trm}, we express the masked
+RLOO objective through its raw surrogate, retaining normalization and
+reduction effects. The masking term adapts the discarded-contribution
+analysis of \citet[Section~1.3]{li2025sequencemasking} to tokenwise masks.
+
+For each candidate $q$, recompute $M_k(q)$ using the same ratio
+$\rho_k(q)=q/p$ that appears in the objective:
+\begin{equation}
+ \mathcal L^{\rm ProMax}(q)=-\sum_k\omega_kM_k(q)\rho_k(q)\hat A_k.
+ \label{eq:promax-loss}
+\end{equation}
+The sampled advantages and nonnegative reduction weights are fixed.
+The implementation detaches $M$ and $\hat A$, and differentiates $\rho$.
+Consequently the update is
+$\sum_k\omega_kM_k\rho_k\hat A_k\nabla\log q$.
+This agrees with the ordinary objective gradient within any open region
+where every sampled mask decision is constant. No derivative of a hard
+threshold is required to define the implemented update at its boundary.
+
+\begin{proposition}[Finite-Batch ProMax Objective Decomposition]
+\label{prop:promax-objective-split}
+Let $k=(i,t)$ index a sampled response and position. Write $A_k=R_i-b_i$
+for its raw RLOO signal, $\hat A_k$ for the actual scaled signal,
+$\rho_k=q/p\ge0$, and $M_k=M_k(q)\in\{0,1\}$.
+Let $\omega_k\ge0$ include the action mask and reduction weights;
+for the active-token mean, $\omega_{i,t}=m_{i,t}/\sum_{j,s}m_{j,s}$.
+Define
+\begin{align*}
+ S_{\rm PM}&=\sum_k\omega_kM_k\rho_k\hat A_k,&
+ U&=\sum_k\omega_k\rho_k A_k,\\
+ G&=\sum_k\omega_k\rho_k(1-M_k)A_k,&
+ N&=\sum_k\omega_k\rho_k M_k(\hat A_k-A_k).
+\end{align*}
+Then
+\begin{equation}
+ S_{\rm PM}=U-G+N,
+ \label{eq:promax-objective-split}
+\end{equation}
+and
+\[
+ |S_{\rm PM}-U|\le\sum_k\omega_k\rho_k(1-M_k)|A_k|
+ +\sum_k\omega_k\rho_kM_k|\hat A_k-A_k|.
+\]
+\end{proposition}
+\begin{proof}
+Add and subtract $\sum_k\omega_k\rho_kM_k A_k$.
+The triangle inequality and nonnegative weights give the bound.
+The calculation is pointwise, so the mask may depend on $q$, the prefix,
+and the sampled action.
+\end{proof}
+
+\subsection{Scaling, masking, and the combined reward bound}
+The proof of \Cref{thm:promax-population} connects the DPPO/TRM raw
+surrogate to the actual objective in three steps: a pointwise residual,
+conditional cancellation of each independent sibling baseline, and the
+sequence-error bound. The deterministic reference scale $\lambda>0$ stays
+outside the expectation; sampled Max factors, current-policy masks and
+token counts stay inside $D_\lambda$. Common scaling $H=\lambda A$ removes
+the scaling residual, and full retention removes the rejection residual.
+The following support and reduction conventions specify that correspondence
+for variable-length responses and accumulated microbatches.
+
+\subsection{Support and EOS in the population bound}
+\label[appsec]{app:promax-support}
+
+Set $m(h)=\mathbf 1\{\mathrm{EOS}\notin h\}$, including the EOS-emitting
+action. On sampled support, mutual support gives $\rho=q/p$; at the
+rollout reference $q=p$, this ratio and its prefix geometric mean equal one.
+After EOS, the common absorbing transition has probability one, so
+$\rho=1$ and $m(h)(\rho-1)=\rho-1$ for every raw RLOO signal.
+Batches containing a zero-mass response have zero sampling mass and
+contribute zero under any finite ratio convention. For a nonempty
+horizon, the first response token is active, giving active length at least one.
+
+\paragraph{Active-token reduction.}
+For a group contribution $Z$ and active token count $L$, averaging group
+token means gives $\E[Z/L]$, while a population token mean is $\E[Z]/\E[L]$.
+Their difference is
+\[
+ \E[Z/L]-\frac{\E[Z]}{\E[L]}
+ =-\frac{\E[(L-\E[L])Z/L]}{\E[L]}.
+\]
+The population theorem retains the random $L$ inside its expectation;
+\Cref{prop:batch-denominator} treats the shared-batch expected update.
+
+For microbatch $j$, let $N_j>0$ be its response count, $L_j>0$ its
+active-token count, and $Z_j$ its unreduced surrogate contribution at the same
+candidate policy. Write $N_\Sigma=\sum_jN_j$ and $L_\Sigma=\sum_jL_j$.
+Token-count weighting reconstructs the full-batch objective:
+\[
+ \sum_j\frac{L_j}{L_\Sigma}\frac{Z_j}{L_j}
+ =\frac{\sum_jZ_j}{L_\Sigma}.
+\]
+The accompanying implementation's dynamic batching instead assigns
+response-count weights $N_j/N_\Sigma$ to its microbatch token means.
+The resulting difference is exactly
+\[
+ \sum_j\frac{N_j}{N_\Sigma}\frac{Z_j}{L_j}
+ -\frac{\sum_jZ_j}{L_\Sigma}
+ =\sum_j\left(\frac{N_j}{N_\Sigma}-\frac{L_j}{L_\Sigma}\right)
+                  \frac{Z_j}{L_j}.
+\]
+These identities follow by distributing the sums. The finite-batch decomposition
+uses weights $m_{i,t}/L_\Sigma$ or $N_jm_{i,t}/(N_\Sigma L_j)$, respectively.
+With equal response counts per data-parallel rank, $j$ can index all
+rank--microbatch pairs. Denote the displayed difference by $E_{\rm red}(q)$
+and hold the sampled partition fixed. Substituting
+$\Delta S_{\rm batch}=\Delta S_{\rm dynamic}-[E_{\rm red}(q)-E_{\rm red}(p)]$
+into \Cref{thm:promax-population}, with token-weighted $D_{\lambda,\rm batch}$,
+gives the reward bound for the dynamic objective.

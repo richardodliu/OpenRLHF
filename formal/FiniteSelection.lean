@@ -78,5 +78,68 @@ theorem selected_false_improvement_bound {n : ℕ} (hn : n ≠ 0)
     (Finset.sum_le_sum fun j _ => false_improvement_certificate_bound hn p (Z j) L hp0 hp
       l (κ j) μ (cost j) (ε j) (gain j) hl hμ (hε j) hL (hcenter j) (hperf j))
 
+
+/-- Average conditional failure bounds over a finite training-data law.
+The evaluation law may depend on training; no unconditional independence
+between the trained policy and its evaluation trajectories is assumed. -/
+theorem conditional_failure_average {D : Type*} [Fintype D]
+    (train : D → ℝ) (eval : D → A → ℝ) (budget : D → ℝ)
+    (event : D → A → Prop) [∀ d, DecidablePred (event d)]
+    (htrain : ∀ d, 0 ≤ train d)
+    (hconditional : ∀ d, (∑ a ∈ Finset.univ.filter (event d), eval d a) ≤ budget d) :
+    (∑ d, ∑ a ∈ Finset.univ.filter (event d), train d * eval d a) ≤
+      ∑ d, train d * budget d := by
+  apply Finset.sum_le_sum
+  intro d _
+  rw [← Finset.mul_sum]
+  exact mul_le_mul_of_nonneg_left (hconditional d) (htrain d)
+
+theorem conditional_failure_uniform_budget {D : Type*} [Fintype D]
+    (train : D → ℝ) (eval : D → A → ℝ) (α : ℝ)
+    (event : D → A → Prop) [∀ d, DecidablePred (event d)]
+    (htrain : ∀ d, 0 ≤ train d) (ht : ∑ d, train d = 1)
+    (hconditional : ∀ d, (∑ a ∈ Finset.univ.filter (event d), eval d a) ≤ α) :
+    (∑ d, ∑ a ∈ Finset.univ.filter (event d), train d * eval d a) ≤ α := by
+  have hb := conditional_failure_average train eval (fun _ => α) event htrain hconditional
+  simpa [← Finset.sum_mul, ht] using hb
+
+/-- The conditional iid evaluation construction is a normalized joint law. -/
+theorem training_evaluation_mass_normalized {D : Type*} [Fintype D]
+    (train : D → ℝ) (p : D → A → ℝ)
+    (ht : ∑ d, train d = 1) (hp : ∀ d, ∑ a, p d a = 1) (n : ℕ) :
+    (∑ d, ∑ s : Fin n → A, train d * iidMass (p d) s) = 1 := by
+  simp_rw [← Finset.mul_sum, iid_mass_normalized _ (hp _) n, mul_one]
+  exact ht
+
+/-- Policies, candidates, thresholds and the selector may depend on finite
+training data. Given that data, evaluation blocks obey the stated iid law.
+The unconditional false-certificate probability is at most the average
+conditional budget, including when the selector sees all evaluation blocks. -/
+theorem trained_selected_false_improvement_bound {D : Type*} [Fintype D]
+    {n : ℕ} (hn : n ≠ 0)
+    (train : D → ℝ) (p L : D → A → ℝ) (Z : D → J → A → ℝ)
+    (ht0 : ∀ d, 0 ≤ train d)
+    (hp0 : ∀ d a, 0 ≤ p d a) (hp : ∀ d, ∑ a, p d a = 1)
+    (l μ : D → ℝ) (κ cost ε gain : D → J → ℝ)
+    (hl : ∀ d, 0 < l d) (hμ : ∀ d, 0 < μ d)
+    (hε : ∀ d j, 0 < ε d j) (hL : ∀ d a, l d ≤ L d a)
+    (hcenter : ∀ d j, expectation (p d) (fun a => Z d j a - κ d j * L d a) = 0)
+    (hperf : ∀ d j, μ d * κ d j - cost d j ≤ gain d j)
+    (select : D → (Fin n → A) → J) :
+    (∑ d, ∑ s ∈ Finset.univ.filter (fun s : Fin n → A =>
+      gain d (select d s) ≤ 0 ∧ cost d (select d s) / μ d + ε d (select d s) <
+        sampleMean (Z d (select d s)) s / sampleMean (L d) s),
+        train d * iidMass (p d) s) ≤
+      ∑ d, train d * ∑ j,
+        expectation (p d) (fun a => (Z d j a - κ d j * L d a)^2) /
+          ((n : ℝ) * (l d)^2 * (ε d j)^2) := by
+  classical
+  apply conditional_failure_average
+  · exact ht0
+  · intro d
+    exact selected_false_improvement_bound hn (p d) (L d) (Z d)
+      (hp0 d) (hp d) (l d) (μ d) (κ d) (cost d) (ε d) (gain d)
+      (hl d) (hμ d) (hε d) (hL d) (hcenter d) (hperf d) (select d)
+
 end
 end REINFORCEProMax.BatchReduction

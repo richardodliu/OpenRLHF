@@ -1,0 +1,15 @@
+{
+  "branch": "iclr",
+  "head": "b276f7a55eeb64e99ef11c5e85c1a0328da6e458",
+  "files_sha256": {
+    "tex/iclr2027_submission.tex": "a4c5f84bac3bfc6d175da8b46cbc58ab553cad536639c18edd541206c8806a52",
+    "tex/main/paper-body.tex": "000fa579fafee0fccc79018c111eeb05bc39aeb9d921de5fe662c11faf89cc6b",
+    "tex/main/paper-abstract.tex": "16428e0938a8fc3217ab63d063263d55ff2d609b54004041ec9f634a2eb90e44",
+    "tex/main/core-appendix.tex": "55c0526638dcd03cea90a072d7dc8c301f9267a786cfa1a37263ea588683bdf5",
+    "tex/main/reference.bib": "ef67f095935f95b90c937799f0a2f4e1721c8a66765a5886cff60b804a7fd35d",
+    "iclr2027_submission.pdf": "396c251481b7e0454500ac89c9573ee40fe2187f0a7de3685e93b7f75a33e152",
+    "tex/figures/training_pro_only_vs_baseline.pdf": "3d1d77c8b4891eaa7b59e14cf140d3e799df7a92edb81596338963e51f4e0e02",
+    "tex/figures/training_pro_max_vs_baseline.pdf": "c1cb7a347c28389e616de17bb795abebbad8201f6e2d9e80151a15f90a19bc0e",
+    "tex/figures/training_max_only_vs_baseline.pdf": "46476a00fb822c1bf906ddf617212ebfe0cb89807d6e9af2a77c9a0594c07033"
+  }
+}
